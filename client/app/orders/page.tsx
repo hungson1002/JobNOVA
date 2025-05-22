@@ -1,44 +1,24 @@
-"use client"
+// "use client"
 
 import Link from "next/link"
 import Image from "next/image"
 import { format } from "date-fns"
-import {
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  XCircle,
-  RefreshCw,
-  MessageSquare,
-  ArrowLeft,
-} from "lucide-react"
+import { Clock, CheckCircle, AlertCircle, XCircle, RefreshCw, MessageSquare, ArrowLeft } from "lucide-react"
 import { useUser, useAuth } from "@clerk/nextjs"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 
 export default function OrdersPage() {
-  const { user, isLoaded, isSignedIn } = useUser()
-  const { getToken } = useAuth()
-  const [orders, setOrders] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
-  const [orderToCancel, setOrderToCancel] = useState<any>(null)
-
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { getToken } = useAuth();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
 
@@ -66,24 +46,13 @@ export default function OrdersPage() {
     )
   }
 
-  if (!isLoaded)
-    return <div className="container mx-auto py-8">Loading...</div>
-  if (!isSignedIn)
-    return (
-      <div className="container mx-auto py-8">
-        Please sign in to view your orders
-      </div>
-    )
+  if (!isLoaded) return <div className="container mx-auto py-8">Loading...</div>;
+  if (!isSignedIn) return <div className="container mx-auto py-8">Please sign in to view your orders</div>;
 
-  const activeOrders = orders.filter((o) =>
-    ["pending", "in_progress", "delivered"].includes(o.order_status)
-  )
-  const completedOrders = orders.filter(
-    (o) => o.order_status === "completed"
-  )
-  const cancelledOrders = orders.filter(
-    (o) => o.order_status === "cancelled"
-  )
+  // Mapping orders by status
+  const activeOrders = orders.filter(o => ["pending", "in_progress", "delivered"].includes(o.order_status));
+  const completedOrders = orders.filter(o => o.order_status === "completed");
+  const cancelledOrders = orders.filter(o => o.order_status === "cancelled");
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -108,32 +77,50 @@ export default function OrdersPage() {
           <TabsTrigger value="completed">Completed</TabsTrigger>
           <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
         </TabsList>
-
-        {[
-          { value: "all", list: orders },
-          { value: "active", list: activeOrders },
-          { value: "completed", list: completedOrders },
-          { value: "cancelled", list: cancelledOrders },
-        ].map(({ value, list }) => (
-          <TabsContent key={value} value={value} className="space-y-6">
-            {list.length === 0 ? (
-              <div className="text-center py-16 text-gray-500 text-lg font-medium">
-                You have no orders yet.
-              </div>
-            ) : (
-              list.map((order) => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  onCancelClick={(order) => {
-                    setOrderToCancel(order)
-                    setCancelDialogOpen(true)
-                  }}
-                />
-              ))
-            )}
-          </TabsContent>
-        ))}
+        <TabsContent value="all" className="space-y-6">
+          {orders.length === 0 ? (
+            <div className="text-center py-16 text-gray-500 text-lg font-medium">
+              You have no orders yet.
+            </div>
+          ) : (
+            orders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))
+          )}
+        </TabsContent>
+        <TabsContent value="active" className="space-y-6">
+          {activeOrders.length === 0 ? (
+            <div className="text-center py-16 text-gray-500 text-lg font-medium">
+              You have no orders yet.
+            </div>
+          ) : (
+            activeOrders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))
+          )}
+        </TabsContent>
+        <TabsContent value="completed" className="space-y-6">
+          {completedOrders.length === 0 ? (
+            <div className="text-center py-16 text-gray-500 text-lg font-medium">
+              You have no orders yet.
+            </div>
+          ) : (
+            completedOrders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))
+          )}
+        </TabsContent>
+        <TabsContent value="cancelled" className="space-y-6">
+          {cancelledOrders.length === 0 ? (
+            <div className="text-center py-16 text-gray-500 text-lg font-medium">
+              You have no orders yet.
+            </div>
+          ) : (
+            cancelledOrders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))
+          )}
+        </TabsContent>
       </Tabs>
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent>
@@ -184,7 +171,7 @@ export default function OrdersPage() {
         </DialogContent>
       </Dialog>
     </main>
-  )
+  );
 }
 
 function OrderCard({
@@ -243,14 +230,14 @@ function OrderCard({
             <Clock className="h-3 w-3" />
             Pending
           </Badge>
-        )
+        );
       case "in_progress":
         return (
           <Badge variant="outline" className="border-blue-500 text-blue-500">
             <RefreshCw className="h-3 w-3" />
             In Progress
           </Badge>
-        )
+        );
       case "delivered":
         return (
           <Badge
@@ -260,32 +247,32 @@ function OrderCard({
             <CheckCircle className="h-3 w-3" />
             Delivered
           </Badge>
-        )
+        );
       case "completed":
         return (
           <Badge className="bg-emerald-500 text-white">
             <CheckCircle className="h-3 w-3" />
             Completed
           </Badge>
-        )
+        );
       case "revision":
         return (
           <Badge variant="outline" className="border-purple-500 text-purple-500">
             <AlertCircle className="h-3 w-3" />
             Revision Requested
           </Badge>
-        )
+        );
       case "cancelled":
         return (
           <Badge variant="outline" className="border-red-500 text-red-500">
             <XCircle className="h-3 w-3" />
             Cancelled
           </Badge>
-        )
+        );
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>;
     }
-  }
+  };
 
   const getActionButtons = (status: string) => {
     switch (status) {
@@ -297,8 +284,16 @@ function OrderCard({
             </Button>
             <Button variant="outline">Request Revision</Button>
           </>
-        )
+        );
       case "in_progress":
+        return (
+          <>
+            <Button variant="outline">Contact Seller</Button>
+            <Button variant="outline" className="text-red-500 hover:bg-red-50">
+              Cancel Order
+            </Button>
+          </>
+        )
       case "pending":
         return (
           <>
@@ -310,42 +305,17 @@ function OrderCard({
               Cancel Order
             </Button>
           </>
-        )
+        );
       case "revision":
-        return <Button variant="outline">View Revision Request</Button>
+        return <Button variant="outline">View Revision Request</Button>;
       case "completed":
-        return (
-          <Button
-            variant="outline"
-            onClick={() => gig.id && router.push(`/gigs/${gig.id}`)}
-          >
-            Leave a Review
-          </Button>
-        )
+        return <Button variant="outline" onClick={() => gig.id && router.push(`/gigs/${gig.id}`)}>Leave a Review</Button>
       case "cancelled":
-        return null;
+        return <Button variant="outline">View Details</Button>
       default:
-        return null
+        return null;
     }
   }
-
-  const getGigImage = () => {
-    let images: string[] = [];
-    if (Array.isArray(gig.gig_images)) {
-      images = gig.gig_images;
-    } else if (typeof gig.gig_images === "string") {
-      try {
-        const arr = JSON.parse(gig.gig_images);
-        if (Array.isArray(arr)) images = arr;
-      } catch {}
-    }
-    if (images.length > 0) {
-      const firstImg = images.find((url) => !url.match(/\.(mp4|mov|avi|wmv)$/i));
-      if (firstImg) return firstImg;
-    }
-    if (gig.gig_image && typeof gig.gig_image === "string" && gig.gig_image.startsWith("http")) return gig.gig_image;
-    return "/placeholder.svg";
-  };
 
   return (
     <Card className="p-6 md:p-8 mb-4">
@@ -365,13 +335,7 @@ function OrderCard({
             <h2 className="text-xl font-bold mb-1">{gig.title || "Gig"}</h2>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-gray-500 text-sm">Seller:</span>
-              <Image
-                src={seller.avatar}
-                alt={seller.name}
-                width={28}
-                height={28}
-                className="rounded-full border"
-              />
+              <Image src={seller.avatar} alt={seller.name} width={28} height={28} className="rounded-full border" />
               <span className="font-medium text-gray-800">{seller.name}</span>
               <span className="text-xs text-gray-400 ml-1">{seller.level}</span>
             </div>
@@ -382,19 +346,11 @@ function OrderCard({
           <div className="flex flex-col gap-1 text-sm text-gray-600">
             <div className="flex justify-between gap-2">
               <span>Order Date:</span>
-              <span className="font-medium text-gray-900">
-                {order.order_date
-                  ? format(new Date(order.order_date), "MMM d, yyyy")
-                  : "-"}
-              </span>
+              <span className="font-medium text-gray-900">{order.order_date ? format(new Date(order.order_date), "MMM d, yyyy") : "-"}</span>
             </div>
             <div className="flex justify-between gap-2">
               <span>Delivery Date:</span>
-              <span className="font-medium text-gray-900">
-                {order.delivery_deadline
-                  ? format(new Date(order.delivery_deadline), "MMM d, yyyy")
-                  : "-"}
-              </span>
+              <span className="font-medium text-gray-900">{order.delivery_deadline ? format(new Date(order.delivery_deadline), "MMM d, yyyy") : "-"}</span>
             </div>
           </div>
           <div className="mt-2 text-lg font-bold text-emerald-700 flex items-center gap-2">
@@ -416,5 +372,5 @@ function OrderCard({
         </div>
       </CardFooter>
     </Card>
-  )
+  );
 }

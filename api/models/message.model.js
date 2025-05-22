@@ -11,7 +11,7 @@ const Message = (sequelize) =>
       },
       order_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: "orders",
           key: "id",
@@ -19,12 +19,17 @@ const Message = (sequelize) =>
       },
       ticket_id: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: true
       },
       ticket_status: {
         type: DataTypes.ENUM("open", "closed"),
         allowNull: false,
         defaultValue: "open",
+      },
+      is_direct_message: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false, // Phân biệt tin nhắn trực tiếp
       },
       sender_clerk_id: {
         type: DataTypes.STRING(255),
@@ -63,6 +68,7 @@ const Message = (sequelize) =>
       indexes: [
         { fields: ["order_id"] }, // Thêm index để tối ưu truy vấn
         { fields: ["ticket_id"] },
+        { fields: ["sender_clerk_id", "receiver_clerk_id"] }, // Thêm index để tối ưu truy vấn tin nhắn trực tiếp
       ],
     }
   );

@@ -4,7 +4,9 @@ import {
   deleteReview,
   updateReview,
   getAllReviews,
-  getReviewById
+  getReviewById,
+  updateHelpfulVote,
+  updateSellerResponse
 } from '../controllers/review.controller.js';
 import requireAuth from '../middleware/requireAuth.js';
 
@@ -18,6 +20,10 @@ router.get('/:id', getReviewById);
 router.post('/', requireAuth, createReview);
 // Cập nhật review
 router.patch('/:id', requireAuth, updateReview);
+// Cập nhật sellerResponse
+router.patch("/:id/seller-response", requireAuth, updateSellerResponse);
+// Cập nhật helpful vote
+router.post("/:id/helpful", requireAuth, updateHelpfulVote);
 // Xóa review
 router.delete('/:id', requireAuth, deleteReview);
 

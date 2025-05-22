@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowLeft, Search } from "lucide-react"
@@ -58,8 +59,12 @@ export default function MessagesPage({ searchParams }: { searchParams: { order?:
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [error, setError] = useState("")
-  const { user } = useUser()
-  const senderId = user?.id || ""
+  const [loading, setLoading] = useState(false) // <-- Add loading state
+  // const { user } = useUser()
+  const { userId, isLoaded, getToken } = useAuth(); // Sử dụng useAuth thay vì useUser
+  //nêu userId là id của người dùng đang đăng nhập
+  const senderId = userId || null // Lấy senderId từ userId
+  
   const socket = io("http://localhost:8800", {
     reconnection: true,
     reconnectionAttempts: 5,
@@ -69,6 +74,43 @@ export default function MessagesPage({ searchParams }: { searchParams: { order?:
     }
   })
 
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const fetchTickets = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const token = await getToken();
+        const response = await fetch(`http://localhost:8800/api/messages/tickets?clerk_id=${senderId}`, {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: TicketsApiResponse = await response.json();
+        if (data.success) {
+          setTickets(data.tickets || []);
+        } else {
+          setError(data.message || "Không thể tải danh sách ticket");
+        }
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(`Connecting error: ${err.message}`);
+        } else {
+          setError("Undefined connecting error");
+        }
+        console.error("Fetch tickets error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (senderId) fetchTickets();
+  }, [senderId, isLoaded]);
+
+  // Check if the user is loaded and signed in
   useEffect(() => {
     if (!senderId) {
       setError("Người dùng chưa đăng nhập")
@@ -192,10 +234,20 @@ export default function MessagesPage({ searchParams }: { searchParams: { order?:
         <h1 className="text-3xl font-bold">Messages</h1>
       </div>
 
+      {loading && (
+        <div className="flex items-center gap-2 text-gray-500 text-sm mb-4">
+          <svg className="animate-spin h-5 w-5 text-gray-400" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+          </svg>
+          Loading...
+        </div>
+      )}
+
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
-      {!error && tickets.length === 0 && (
-        <div className="text-gray-500 text-sm mb-4">Không có tin nhắn nào để hiển thị.</div>
+      {!loading && !error && tickets.length === 0 && (
+        <div className="text-gray-500 text-sm mb-4">No messages to display.</div>
       )}
 
       <div className="flex h-[calc(100vh-200px)] flex-col overflow-hidden rounded-lg border bg-white lg:flex-row">
@@ -325,5 +377,13 @@ function ConversationItem({ conversation, isSelected, onClick }: { conversation:
 }
 
 function useUser() {
-  return { user: { id: "user123" } }
+ //mock receiver_clerk_id thực tế
+  const user = {
+    id: "user_clerk_id",
+    name: "User Name",
+    avatar: "/placeholder.svg",
+    country: "Country",
+  }
+  return { user }
+
 }

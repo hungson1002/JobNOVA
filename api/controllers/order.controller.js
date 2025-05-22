@@ -153,28 +153,29 @@ export const getOrders = async (req, res, next) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       include: [
-        {
-          model: models.Gig,
-          as: "Gig",
-          attributes: ["id", "title", "gig_image", "gig_images"],
-        },
+        { model: models.Gig, attributes: ['id', 'title', 'gig_image'] },
       ],
       order: [["order_date", "DESC"]],
     });
+
+    const enrichedOrders = orders.rows.map((order) => ({
+      ...order.get({ plain: true }),
+      duration: order.order_date && order.delivery_deadline
+        ? Math.ceil((new Date(order.delivery_deadline) - new Date(order.order_date)) / (1000 * 60 * 60 * 24))
+        : 0,
+    }));
 
     return res.status(200).json({
       success: true,
       total: orders.count,
       pages: Math.ceil(orders.count / limit),
-      orders: orders.rows,
+      orders: enrichedOrders,
     });
   } catch (error) {
     console.error("❌ Error fetching orders:", error);
     return next(error);
   }
 };
-
-
 
 
 // Xác nhận đơn hàng (bỏ qua thanh toán)

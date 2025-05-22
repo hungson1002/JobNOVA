@@ -4,9 +4,9 @@ import createError from '../utils/createError.js';
 // Tạo đánh giá
 export const createReview = async (req, res, next) => {
   try {
-    const { order_id, gig_id, reviewer_clerk_id, rating, comment } = req.body;
-    if (!order_id || !gig_id || !reviewer_clerk_id || !rating) {
-      return res.status(400).json({ success: false, message: 'Missing required fields: order_id, gig_id, reviewer_clerk_id, or rating' });
+    const { order_id, gig_id, reviewer_clerk_id, rating, comment, sellerCommunication, qualityOfDelivery, valueOfDelivery } = req.body;
+    if (!order_id || !gig_id || !reviewer_clerk_id || !rating || !sellerCommunication || !qualityOfDelivery || !valueOfDelivery) {
+      return res.status(400).json({ success: false, message: "Missing required fields: order_id, gig_id, reviewer_clerk_id, rating, sellerCommunication, qualityOfDelivery, or valueOfDelivery" });
     }
     const review = await models.Review.create({
       order_id,
@@ -14,6 +14,11 @@ export const createReview = async (req, res, next) => {
       reviewer_clerk_id,
       rating,
       comment,
+      sellerCommunication,
+      qualityOfDelivery,
+      valueOfDelivery,
+      helpfulYes: 0,
+      helpfulNo: 0,
     });
     console.log(`Review created: id=${review.id}`);
     return res.status(201).json({ success: true, message: 'Review created successfully', review });
@@ -31,17 +36,134 @@ export const getAllReviews = async (req, res, next) => {
     const where = {};
     if (gig_id) where.gig_id = gig_id;
     if (order_id) where.order_id = order_id;
+    if (search) where.comment = { [Op.like]: `%${search}%` }; // Tìm kiếm theo comment
 
-    const reviews = await models.Review.findAndCountAll({
+  //   const reviews = await models.Review.findAndCountAll({
+  //     where,
+  //     limit: parseInt(limit),
+  //     offset: parseInt(offset),
+  //   });
+  //   return res.status(200).json({
+  //     success: true,
+  //     total: reviews.count,
+  //     pages: Math.ceil(reviews.count / limit),
+  //     reviews: reviews.rows,
+  //   });
+  // } catch (error) {
+  //   console.error('Error fetching reviews:', error.message);
+  //   return res.status(500).json({ success: false, message: 'Error fetching reviews', error: error.message });
+  // }
+  const reviews = await models.Review.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
+      include: [
+        {
+          model: models.User,
+          as: 'reviewer',
+          attributes: ['clerk_id', 'country'],
+        },
+        {
+          model: models.Order,
+          as: "order",
+          attributes: ["id", "total_price", "delivery_deadline"],
+        },
+        {
+          model: models.Gig,
+          as: "gig",
+          attributes: ["id", "seller_clerk_id"],
+          include: [
+            {
+              model: models.User,
+              as: "seller",
+              attributes: ["clerk_id", "name", "avatar"],
+            },
+          ],
+        },
+      ],
     });
+
+    // Tính toán tổng quan rating
+    const ratingSummary = await models.Review.findAll({
+      where: { gig_id },
+      attributes: [
+        [sequelize.fn('AVG', sequelize.col('rating')), 'average'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'total'],
+        [sequelize.literal(`SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END)`), '5'],
+        [sequelize.literal(`SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END)`), '4'],
+        [sequelize.literal(`SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END)`), '3'],
+        [sequelize.literal(`SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END)`), '2'],
+        [sequelize.literal(`SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END)`), '1'],
+      ],
+      raw: true,
+    });
+
+    // Tính toán rating breakdown
+    const ratingBreakdown = await models.Review.findAll({
+      where: { gig_id },
+      attributes: [
+        [sequelize.fn("AVG", sequelize.col("sellerCommunication")), "sellerCommunication"],
+        [sequelize.fn("AVG", sequelize.col("qualityOfDelivery")), "qualityOfDelivery"],
+        [sequelize.fn("AVG", sequelize.col("valueOfDelivery")), "valueOfDelivery"],
+      ],
+      raw: true,
+    });
+
+    // Map reviews để thêm thông tin country, price, duration, sellerResponse, helpful
+    const enrichedReviews = reviews.rows.map((review) => ({
+      ...review.get({ plain: true }),
+      user: {
+        name: review.reviewer?.name || "User",
+        avatar: review.reviewer?.avatar || "/placeholder.svg",
+        country: review.reviewer?.country || "Unknown",
+      },
+      price: review.order?.total_price || 50,
+      duration: review.order?.delivery_deadline
+        ? Math.ceil((new Date(review.order.delivery_deadline) - new Date(review.created_at)) / (1000 * 60 * 60 * 24))
+        : 13,
+      sellerResponse: review.sellerResponse || null,
+      helpful: {
+        yes: review.helpfulYes || 0,
+        no: review.helpfulNo || 0,
+      },
+      seller: {
+        name: review.gig?.seller?.name || "Seller",
+        avatar: review.gig?.seller?.avatar || "/placeholder.svg",
+      },
+    }));
+
+    // Sort reviews
+    let sortedReviews = enrichedReviews;
+    if (sort === 'relevant') {
+      sortedReviews.sort((a, b) => {
+        // Giả lập "most relevant": rating cao và mới nhất
+        const scoreA = a.rating * 1000 + (new Date(a.created_at).getTime() / 1000000);
+        const scoreB = b.rating * 1000 + (new Date(b.created_at).getTime() / 1000000);
+        return scoreB - scoreA;
+      });
+    }
+
     return res.status(200).json({
       success: true,
       total: reviews.count,
       pages: Math.ceil(reviews.count / limit),
-      reviews: reviews.rows,
+      reviews: sortedReviews,
+      ratingSummary: {
+        average: parseFloat(ratingSummary[0]?.average || 0).toFixed(1),
+        total: ratingSummary[0]?.total || 0,
+        breakdown: {
+          5: ratingSummary[0]?.['5'] || 0,
+          4: ratingSummary[0]?.['4'] || 0,
+          3: ratingSummary[0]?.['3'] || 0,
+          2: ratingSummary[0]?.['2'] || 0,
+          1: ratingSummary[0]?.['1'] || 0,
+        },
+      },
+      ratingBreakdown:{
+        sellerCommunication: parseFloat(ratingBreakdown[0]?.sellerCommunication || 0).toFixed(1),
+        qualityOfDelivery: parseFloat(ratingBreakdown[0]?.qualityOfDelivery || 0).toFixed(1),
+        valueOfDelivery: parseFloat(ratingBreakdown[0]?.valueOfDelivery || 0).toFixed(1),
+      }
     });
   } catch (error) {
     console.error('Error fetching reviews:', error.message);
@@ -53,11 +175,58 @@ export const getAllReviews = async (req, res, next) => {
 export const getReviewById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const review = await models.Review.findByPk(id);
+    const review = await models.Review.findByPk(id, {
+    include: [
+        {
+          model: models.User,
+          as: "reviewer",
+          attributes: ["clerk_id", "country"],
+        },
+        {
+          model: models.Order,
+          as: "order",
+          attributes: ["id", "total_price", "delivery_deadline"],
+        },
+        {
+          model: models.Gig,
+          as: "gig",
+          attributes: ["id", "seller_clerk_id"],
+          include: [
+            {
+              model: models.User,
+              as: "seller",
+              attributes: ["clerk_id", "name", "avatar"],
+            },
+          ],
+        },
+      ],
+    });
+
     if (!review) {
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
-    return res.status(200).json({ success: true, review });
+    const enrichedReview = {
+      ...review.get({ plain: true }),
+      user: {
+        name: review.reviewer?.name || "User",
+        avatar: review.reviewer?.avatar || "/placeholder.svg",
+        country: review.reviewer?.country || "Unknown",
+      },
+      price: review.order?.total_price || 50,
+      duration: review.order?.delivery_deadline
+        ? Math.ceil((new Date(review.order.delivery_deadline) - new Date(review.created_at)) / (1000 * 60 * 60 * 24))
+        : 13,
+      sellerResponse: review.sellerResponse || null,
+      helpful: {
+        yes: review.helpfulYes || 0,
+        no: review.helpfulNo || 0,
+      },
+      seller: {
+        name: review.gig?.seller?.name || "Seller",
+        avatar: review.gig?.seller?.avatar || "/placeholder.svg",
+      },
+    };
+    return res.status(200).json({ success: true, review: enrichedReview });
   } catch (error) {
     console.error('Error fetching review:', error.message);
     return res.status(500).json({ success: false, message: 'Error fetching review', error: error.message });
@@ -68,17 +237,17 @@ export const getReviewById = async (req, res, next) => {
 export const updateReview = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { rating, comment } = req.body;
+    const { rating, comment, sellerCommunication, qualityOfDelivery, valueOfDelivery } = req.body;
     const review = await models.Review.findByPk(id);
     if (!review) {
-      return res.status(404).json({ success: false, message: 'Review not found' });
+      return res.status(404).json({ success: false, message: "Review not found" });
     }
-    await review.update({ rating, comment });
+    await review.update({ rating, comment, sellerCommunication, qualityOfDelivery, valueOfDelivery });
     console.log(`Review updated: id=${id}`);
-    return res.status(200).json({ success: true, message: 'Review updated successfully', review });
+    return res.status(200).json({ success: true, message: "Review updated successfully", review });
   } catch (error) {
-    console.error('Error updating review:', error.message);
-    return res.status(500).json({ success: false, message: 'Error updating review', error: error.message });
+    console.error("Error updating review:", error.message);
+    return res.status(500).json({ success: false, message: "Error updating review", error: error.message });
   }
 };
 
@@ -96,6 +265,61 @@ export const deleteReview = async (req, res, next) => {
   } catch (error) {
     console.error('Error deleting review:', error.message);
     return res.status(500).json({ success: false, message: 'Error deleting review', error: error.message });
+  }
+};
+
+// Cập nhật sellerResponse
+export const updateSellerResponse = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { sellerResponse } = req.body;
+    const review = await models.Review.findByPk(id, {
+      include: [
+        {
+          model: models.Gig,
+          as: "gig",
+          attributes: ["seller_clerk_id"],
+        },
+      ],
+    });
+    if (!review) {
+      return res.status(404).json({ success: false, message: "Review not found" });
+    }
+    // Kiểm tra quyền: Chỉ seller của gig được cập nhật sellerResponse
+    if (review.gig.seller_clerk_id !== req.user.clerk_id) {
+      return res.status(403).json({ success: false, message: "Only the seller can update the response" });
+    }
+    await review.update({ sellerResponse });
+    console.log(`Seller response updated: reviewId=${id}`);
+    return res.status(200).json({ success: true, message: "Seller response updated successfully", review });
+  } catch (error) {
+    console.error("Error updating seller response:", error.message);
+    return res.status(500).json({ success: false, message: "Error updating seller response", error: error.message });
+  }
+};
+
+// Cập nhật helpful votes
+export const updateHelpfulVote = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { vote } = req.body; // "yes" hoặc "no"
+    if (!["yes", "no"].includes(vote)) {
+      return res.status(400).json({ success: false, message: "Invalid vote value" });
+    }
+    const review = await models.Review.findByPk(id);
+    if (!review) {
+      return res.status(404).json({ success: false, message: "Review not found" });
+    }
+    if (vote === "yes") {
+      await review.increment("helpfulYes");
+    } else {
+      await review.increment("helpfulNo");
+    }
+    console.log(`Helpful vote updated: reviewId=${id}, vote=${vote}`);
+    return res.status(200).json({ success: true, message: "Helpful vote updated successfully", review });
+  } catch (error) {
+    console.error("Error updating helpful vote:", error.message);
+    return res.status(500).json({ success: false, message: "Error updating helpful vote", error: error.message });
   }
 };
 

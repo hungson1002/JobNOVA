@@ -7,6 +7,8 @@ import { Separator } from "@/components/ui/separator"
 
 export default function OrderDetailsPage({ params }: { params: { id: string } }) {
   // Mock order data
+  type FileAttachment = { name: string; size: string }
+
   const order = {
     id: params.id,
     title: "Professional Logo Design",
@@ -21,8 +23,8 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
     attachments: [
       { name: "brief.pdf", size: "1.2 MB" },
       { name: "reference.jpg", size: "0.8 MB" },
-    ],
-    deliverables: [],
+    ] as FileAttachment[],
+    deliverables: [] as FileAttachment[],
     messages: 8,
   }
 
