@@ -32,14 +32,21 @@ interface Gig {
   city?: string;
   country?: string;
   status: string;
+  gig_images?: string[];
 }
 
 function mapGigToServiceCard(gig: Gig): any {
+  const mediaList = Array.isArray(gig.gig_images) && gig.gig_images.length > 0
+    ? gig.gig_images
+    : gig.gig_image
+    ? [gig.gig_image]
+    : ["/placeholder.svg"];
   return {
     id: gig.id,
     title: gig.title,
     price: gig.starting_price,
-    image: gig.gig_image || "/placeholder.svg",
+    image: mediaList[0],
+    gig_images: mediaList,
     seller: {
       name: gig.seller_clerk_id,
       avatar: "/placeholder.svg",

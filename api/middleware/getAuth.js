@@ -71,3 +71,11 @@ export const isSeller = (req, res, next) => {
   console.log(`✅ Seller access granted to ${req.user.clerk_id}`);
   next();
 };
+
+export const isSellerOrAdmin = (req, res, next) => {
+  const roles = req.user?.user_roles || [];
+  if (roles.includes("employer") || roles.includes("admin")) {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: "Access denied. Must be seller or admin." });
+};

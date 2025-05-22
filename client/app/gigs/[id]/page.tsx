@@ -525,6 +525,19 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                 ))}
               </div>
             </div>
+            {/* Requirements */}
+            {gig.requirements && Array.isArray(gig.requirements) && gig.requirements.length > 0 && (
+              <div className="mb-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-xl font-semibold">Requirements</h2>
+                <ul className="list-disc pl-6 space-y-2">
+                  {gig.requirements.map((req: any, idx: number) => (
+                    <li key={idx} className="text-gray-700">
+                      {req.requirement_text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Reviews */}
             <div ref={reviewsRef} className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">

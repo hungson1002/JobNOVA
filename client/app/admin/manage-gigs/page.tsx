@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CheckCircle, XCircle, Search, Filter, Eye } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { useAuth } from "@clerk/nextjs"
 
 interface Gig {
   id: number;
@@ -47,6 +48,7 @@ export default function ManageGigsPage() {
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const { getToken } = useAuth();
 
   const statusMap: Record<string, string> = {
     pending: "pending",
@@ -108,10 +110,12 @@ export default function ManageGigsPage() {
 
   const handleApprove = async (gigId: number) => {
     try {
+      const token = await getToken();
       const response = await fetch(`http://localhost:8800/api/gigs/${gigId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({ status: "active" }),
       });
@@ -135,10 +139,12 @@ export default function ManageGigsPage() {
 
   const handleReject = async (gigId: number) => {
     try {
+      const token = await getToken();
       const response = await fetch(`http://localhost:8800/api/gigs/${gigId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({ status: "rejected" }),
       });

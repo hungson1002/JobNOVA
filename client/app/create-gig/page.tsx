@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
+import { useAuth } from "@clerk/nextjs"
 
 const steps = [
   { title: "Basic Info & Category", desc: "Service title, description, category & job type" },
@@ -36,7 +37,7 @@ export default function CreateGigPage() {
   const router = useRouter()
 
   // TODO: Lấy seller_clerk_id từ user context/auth
-  const seller_clerk_id = "user_1" // demo, cần thay bằng user thực tế
+  const { getToken } = useAuth() // demo, cần thay bằng user thực tế
 
   useEffect(() => {
     fetch("http://localhost:8800/api/categories")
@@ -112,6 +113,7 @@ export default function CreateGigPage() {
     setError("")
     setStep(s => s - 1)
   }
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -121,7 +123,6 @@ export default function CreateGigPage() {
       return
     }
     const payload = {
-      seller_clerk_id,
       category_id: categoryId,
       job_type_id: jobTypeId,
       title,
@@ -134,10 +135,14 @@ export default function CreateGigPage() {
       faqs,
       requirements,
     }
+    const token = await getToken()
     try {
       const res = await fetch("http://localhost:8800/api/gigs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       })
       const data = await res.json()
