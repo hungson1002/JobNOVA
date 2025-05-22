@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs"
-import { BarChart, Bell, Briefcase, Camera, ChevronLeft, ChevronRight, Code, Database, Heart, LayoutDashboard, MessageSquare, Music, Palette, PenTool, Search, ShoppingCart, Smile, Video } from "lucide-react"
+import { BarChart, Bell, Briefcase, Camera, ChevronLeft, ChevronRight, Code, Database, Heart, LayoutDashboard, MessageSquare, Music, Palette, PenTool, Search, ShoppingCart, Smile, Video, User, FolderKanban } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -199,26 +199,38 @@ export function Navbar() {
               ) : isSignedIn ? (
                 <>
                   <LanguageCurrencySwitcher />
-                  {user && getDashboardLink() && (
+                  {/* Profile Icon */}
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link href={user?.username ? `/users/${user.username}` : "/profile"}>
+                          <Button variant="ghost" size="icon" className="hidden md:flex hover:bg-emerald-50 hover:text-emerald-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 ring-0 outline-none">
+                            <User className="h-5 w-5" />
+                          </Button>
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Profile</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  {/* My Job Icon - chỉ hiện khi là seller */}
+                  {isSeller ? (
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Link href={getDashboardLink()!} prefetch>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="hidden md:flex hover:bg-emerald-50 hover:text-emerald-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 ring-0 outline-none"
-                            >
-                              <LayoutDashboard className="h-5 w-5" />
+                          <Link href="/my-gigs">
+                            <Button variant="ghost" size="icon" className="hidden md:flex hover:bg-emerald-50 hover:text-emerald-600 transition-colors focus:outline-none focus:ring-0 focus-visible:ring-0 ring-0 outline-none">
+                              <FolderKanban className="h-5 w-5" />
                             </Button>
                           </Link>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Dashboard</p>
+                          <p>My Job</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  )}
+                  ) : null}
 
                   {/* Notify Dropdown on hover - fix hover gap */}
                   <div
