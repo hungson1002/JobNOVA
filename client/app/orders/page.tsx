@@ -1,7 +1,12 @@
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
 import { format } from "date-fns"
-import { Clock, CheckCircle, AlertCircle, XCircle, RefreshCw, MessageSquare } from "lucide-react"
+import { Clock, CheckCircle, AlertCircle, XCircle, RefreshCw, MessageSquare, ArrowLeft } from "lucide-react"
+import { useUser, useAuth } from "@clerk/nextjs"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,51 +14,117 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 
 export default function OrdersPage() {
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { getToken } = useAuth();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    const fetchOrders = async () => {
+      setLoading(true);
+      const token = await getToken();
+      const res = await fetch(`http://localhost:8800/api/orders/${user.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      setOrders(data.orders || []);
+      setLoading(false);
+    };
+    fetchOrders();
+  }, [isLoaded, isSignedIn, user, getToken]);
+
+  if (!isLoaded) return <div className="container mx-auto py-8">Loading...</div>;
+  if (!isSignedIn) return <div className="container mx-auto py-8">Please sign in to view your orders</div>;
+
+  // Mapping orders by status
+  const activeOrders = orders.filter(o => ["pending", "in_progress", "delivered"].includes(o.order_status));
+  const completedOrders = orders.filter(o => o.order_status === "completed");
+  const cancelledOrders = orders.filter(o => o.order_status === "cancelled");
+
   return (
     <main className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Manage Orders</h1>
-        <p className="text-gray-600">Track and manage your orders</p>
+      <div className="mb-8 flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center justify-center w-10 h-10 rounded border border-transparent hover:border-gray-300 hover:bg-gray-50 transition"
+          aria-label="Back"
+        >
+          <ArrowLeft className="h-5 w-5 text-black-600" />
+        </button>
+        <div>
+          <h1 className="text-3xl font-bold">Manage Orders</h1>
+          <p className="text-gray-600">Track and manage your orders</p>
+        </div>
       </div>
-
-      <Tabs defaultValue="active" className="w-full">
+      <Tabs defaultValue="all" className="w-full">
         <TabsList className="mb-6 grid w-full grid-cols-4 md:w-auto">
+          <TabsTrigger value="all">All Orders</TabsTrigger>
           <TabsTrigger value="active">Active</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
           <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-          <TabsTrigger value="all">All Orders</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="active" className="space-y-6">
-          {activeOrders.map((order) => (
-            <OrderCard key={order.id} order={order} />
-          ))}
-        </TabsContent>
-
-        <TabsContent value="completed" className="space-y-6">
-          {completedOrders.map((order) => (
-            <OrderCard key={order.id} order={order} />
-          ))}
-        </TabsContent>
-
-        <TabsContent value="cancelled" className="space-y-6">
-          {cancelledOrders.map((order) => (
-            <OrderCard key={order.id} order={order} />
-          ))}
-        </TabsContent>
-
         <TabsContent value="all" className="space-y-6">
-          {[...activeOrders, ...completedOrders, ...cancelledOrders].map((order) => (
-            <OrderCard key={order.id} order={order} />
-          ))}
+          {orders.length === 0 ? (
+            <div className="text-center py-16 text-gray-500 text-lg font-medium">
+              You have no orders yet.
+            </div>
+          ) : (
+            orders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))
+          )}
+        </TabsContent>
+        <TabsContent value="active" className="space-y-6">
+          {activeOrders.length === 0 ? (
+            <div className="text-center py-16 text-gray-500 text-lg font-medium">
+              You have no orders yet.
+            </div>
+          ) : (
+            activeOrders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))
+          )}
+        </TabsContent>
+        <TabsContent value="completed" className="space-y-6">
+          {completedOrders.length === 0 ? (
+            <div className="text-center py-16 text-gray-500 text-lg font-medium">
+              You have no orders yet.
+            </div>
+          ) : (
+            completedOrders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))
+          )}
+        </TabsContent>
+        <TabsContent value="cancelled" className="space-y-6">
+          {cancelledOrders.length === 0 ? (
+            <div className="text-center py-16 text-gray-500 text-lg font-medium">
+              You have no orders yet.
+            </div>
+          ) : (
+            cancelledOrders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))
+          )}
         </TabsContent>
       </Tabs>
     </main>
   )
 }
 
-function OrderCard({ order }) {
-  const getStatusBadge = (status) => {
+function OrderCard({ order }: { order: any }) {
+  const gig = order.Gig || {};
+  const seller = {
+    name: order.seller_clerk_id,
+    avatar: "/placeholder.svg",
+    level: "Seller",
+  };
+  const router = useRouter();
+
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
         return (
@@ -102,7 +173,7 @@ function OrderCard({ order }) {
     }
   }
 
-  const getActionButtons = (status) => {
+  const getActionButtons = (status: string) => {
     switch (status) {
       case "delivered":
         return (
@@ -132,7 +203,7 @@ function OrderCard({ order }) {
       case "revision":
         return <Button variant="outline">View Revision Request</Button>
       case "completed":
-        return <Button variant="outline">Leave a Review</Button>
+        return <Button variant="outline" onClick={() => gig.id && router.push(`/gigs/${gig.id}`)}>Leave a Review</Button>
       case "cancelled":
         return <Button variant="outline">View Details</Button>
       default:
@@ -141,62 +212,56 @@ function OrderCard({ order }) {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div>
-          <CardTitle className="text-xl">{order.title}</CardTitle>
-          <CardDescription>Order #{order.id}</CardDescription>
-        </div>
-        {getStatusBadge(order.status)}
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="flex items-start gap-4">
+    <Card className="p-6 md:p-8 mb-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        {/* Left: Gig + Seller */}
+        <div className="flex flex-col md:flex-row gap-6 flex-1">
+          <div className="flex-shrink-0 flex flex-col items-center gap-2">
             <Image
-              src={order.image || "/placeholder.svg?height=80&width=80"}
-              alt={order.title}
-              width={80}
-              height={80}
-              className="rounded-md object-cover"
+              src={gig.gig_image || "/placeholder.svg"}
+              alt={gig.title || "Gig"}
+              width={96}
+              height={96}
+              className="rounded-lg object-cover border w-24 h-24"
             />
-            <div>
-              <h3 className="font-medium">Seller Information</h3>
-              <div className="mt-2 flex items-center gap-2">
-                <Image
-                  src={order.seller.avatar || "/placeholder.svg?height=32&width=32"}
-                  alt={order.seller.name}
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
-                <div>
-                  <p className="font-medium">{order.seller.name}</p>
-                  <p className="text-sm text-gray-500">{order.seller.level}</p>
-                </div>
-              </div>
-            </div>
+            <span className="text-xs text-gray-400">Order #{order.id}</span>
           </div>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Order Date:</span>
-              <span>{format(new Date(order.orderDate), "MMM d, yyyy")}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Delivery Date:</span>
-              <span>{format(new Date(order.deliveryDate), "MMM d, yyyy")}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Package:</span>
-              <span>{order.package}</span>
-            </div>
-            <div className="flex justify-between font-medium">
-              <span>Total:</span>
-              <span>${order.price.toFixed(2)}</span>
+          <div className="flex flex-col justify-center gap-2 min-w-[180px]">
+            <h2 className="text-xl font-bold mb-1">{gig.title || "Gig"}</h2>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-gray-500 text-sm">Seller:</span>
+              <Image
+                src={seller.avatar}
+                alt={seller.name}
+                width={28}
+                height={28}
+                className="rounded-full border"
+              />
+              <span className="font-medium text-gray-800">{seller.name}</span>
+              <span className="text-xs text-gray-400 ml-1">{seller.level}</span>
             </div>
           </div>
         </div>
-      </CardContent>
-      <CardFooter className="flex flex-wrap justify-between gap-2">
+        {/* Right: Order info */}
+        <div className="flex flex-col gap-2 min-w-[220px] md:items-end">
+          <div className="mb-2">{getStatusBadge(order.order_status)}</div>
+          <div className="flex flex-col gap-1 text-sm text-gray-600">
+            <div className="flex justify-between gap-2">
+              <span>Order Date:</span>
+              <span className="font-medium text-gray-900">{order.order_date ? format(new Date(order.order_date), "MMM d, yyyy") : "-"}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span>Delivery Date:</span>
+              <span className="font-medium text-gray-900">{order.delivery_deadline ? format(new Date(order.delivery_deadline), "MMM d, yyyy") : "-"}</span>
+            </div>
+          </div>
+          <div className="mt-2 text-lg font-bold text-emerald-700 flex items-center gap-2">
+            <span>Total:</span>
+            <span className="text-2xl">${order.total_price}</span>
+          </div>
+        </div>
+      </div>
+      <CardFooter className="flex flex-wrap justify-between gap-2 mt-6 px-0">
         <Button variant="outline" size="sm" asChild>
           <Link href={`/orders/${order.id}`}>View Details</Link>
         </Button>
@@ -205,124 +270,9 @@ function OrderCard({ order }) {
             <MessageSquare className="h-4 w-4" />
             Message Seller
           </Button>
-          {getActionButtons(order.status)}
+          {getActionButtons(order.order_status)}
         </div>
       </CardFooter>
     </Card>
   )
 }
-
-// Sample data
-const activeOrders = [
-  {
-    id: "ORD-1234",
-    title: "Professional Logo Design",
-    status: "in_progress",
-    orderDate: "2025-05-01",
-    deliveryDate: "2025-05-08",
-    package: "Standard",
-    price: 50,
-    image: "/placeholder.svg?height=80&width=80",
-    seller: {
-      name: "AlexDesigns",
-      avatar: "/placeholder.svg?height=32&width=32",
-      level: "Level 2 Seller",
-    },
-  },
-  {
-    id: "ORD-1235",
-    title: "Website Development with WordPress",
-    status: "pending",
-    orderDate: "2025-05-03",
-    deliveryDate: "2025-05-17",
-    package: "Premium",
-    price: 120,
-    image: "/placeholder.svg?height=80&width=80",
-    seller: {
-      name: "WebMaster",
-      avatar: "/placeholder.svg?height=32&width=32",
-      level: "Top Rated",
-    },
-  },
-  {
-    id: "ORD-1236",
-    title: "SEO-Optimized Blog Content",
-    status: "delivered",
-    orderDate: "2025-04-28",
-    deliveryDate: "2025-05-05",
-    package: "Basic",
-    price: 45,
-    image: "/placeholder.svg?height=80&width=80",
-    seller: {
-      name: "ContentPro",
-      avatar: "/placeholder.svg?height=32&width=32",
-      level: "Level 1 Seller",
-    },
-  },
-  {
-    id: "ORD-1237",
-    title: "Social Media Marketing Strategy",
-    status: "revision",
-    orderDate: "2025-04-25",
-    deliveryDate: "2025-05-02",
-    package: "Standard",
-    price: 75,
-    image: "/placeholder.svg?height=80&width=80",
-    seller: {
-      name: "MarketingGuru",
-      avatar: "/placeholder.svg?height=32&width=32",
-      level: "Level 2 Seller",
-    },
-  },
-]
-
-const completedOrders = [
-  {
-    id: "ORD-1230",
-    title: "Professional Video Editing",
-    status: "completed",
-    orderDate: "2025-04-10",
-    deliveryDate: "2025-04-17",
-    package: "Premium",
-    price: 95,
-    image: "/placeholder.svg?height=80&width=80",
-    seller: {
-      name: "VideoWizard",
-      avatar: "/placeholder.svg?height=32&width=32",
-      level: "Level 2 Seller",
-    },
-  },
-  {
-    id: "ORD-1231",
-    title: "Voice Over for Commercial",
-    status: "completed",
-    orderDate: "2025-04-05",
-    deliveryDate: "2025-04-08",
-    package: "Basic",
-    price: 30,
-    image: "/placeholder.svg?height=80&width=80",
-    seller: {
-      name: "VoiceArtist",
-      avatar: "/placeholder.svg?height=32&width=32",
-      level: "Top Rated",
-    },
-  },
-]
-
-const cancelledOrders = [
-  {
-    id: "ORD-1228",
-    title: "Mobile App UI Design",
-    status: "cancelled",
-    orderDate: "2025-03-20",
-    deliveryDate: "2025-03-27",
-    package: "Standard",
-    price: 65,
-    image: "/placeholder.svg?height=80&width=80",
-    seller: {
-      name: "UIDesigner",
-      avatar: "/placeholder.svg?height=32&width=32",
-      level: "Level 1 Seller",
-    },
-  },
-]
