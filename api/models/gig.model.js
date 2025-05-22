@@ -64,7 +64,7 @@ const Gig = (sequelize) =>
       status: {
         type: DataTypes.STRING(50),
         allowNull: false,
-        defaultValue: "active",
+        defaultValue: "pending",
       },
     },
     {

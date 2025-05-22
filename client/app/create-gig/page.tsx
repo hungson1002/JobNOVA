@@ -1,464 +1,304 @@
 "use client"
 
-import { useState } from "react"
-import Image from "next/image"
-import { Plus, X, Upload, Info } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { DashboardSidebar } from "@/components/dashboard-sidebar"
-import { GigCreationWizard } from "@/components/gig-creation-wizard"
+import { toast } from "@/components/ui/use-toast"
+
+const steps = [
+  { title: "Basic Info & Category", desc: "Service title, description, category & job type" },
+  { title: "Pricing & Delivery", desc: "Set price & delivery time" },
+  { title: "Media & Location", desc: "Upload image & set location" },
+  { title: "FAQ & Requirements", desc: "Add FAQs and requirements for buyers" },
+]
 
 export default function CreateGigPage() {
-  const [images, setImages] = useState<string[]>([
-    "/placeholder.svg?height=200&width=300",
-    "/placeholder.svg?height=200&width=300",
-  ])
+  const [step, setStep] = useState(0)
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [categoryId, setCategoryId] = useState("")
+  const [jobTypeId, setJobTypeId] = useState("")
+  const [startingPrice, setStartingPrice] = useState("")
+  const [deliveryTime, setDeliveryTime] = useState("")
+  const [city, setCity] = useState("")
+  const [country, setCountry] = useState("")
+  const [gigImage, setGigImage] = useState("")
+  const [imageUploading, setImageUploading] = useState(false)
+  const [error, setError] = useState("")
+  const [categories, setCategories] = useState<{id: string, name: string}[]>([])
+  const [jobTypes, setJobTypes] = useState<{id: string, job_type: string}[]>([])
+  const [faqs, setFaqs] = useState([{ question: "", answer: "" }])
+  const [requirements, setRequirements] = useState([{ requirement_text: "" }])
+  const router = useRouter()
 
-  const handleAddImage = () => {
-    if (images.length < 5) {
-      setImages([...images, "/placeholder.svg?height=200&width=300"])
+  // TODO: Lấy seller_clerk_id từ user context/auth
+  const seller_clerk_id = "user_1" // demo, cần thay bằng user thực tế
+
+  useEffect(() => {
+    fetch("http://localhost:8800/api/categories")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.categories)) setCategories(data.categories)
+      })
+    fetch("http://localhost:8800/api/job-types")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.jobTypes)) setJobTypes(data.jobTypes)
+      })
+  }, [])
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return
+    const file = e.target.files[0]
+    setImageUploading(true)
+    setError("")
+    try {
+      const formData = new FormData()
+      formData.append("image", file)
+      const res = await fetch("http://localhost:8800/api/cloudinary/upload", {
+        method: "POST",
+        body: formData,
+      })
+      const data = await res.json()
+      if (data.success) {
+        setGigImage(data.imageUrl)
+      } else {
+        setError("Upload failed")
+      }
+    } catch (err) {
+      setError("Upload failed")
+    } finally {
+      setImageUploading(false)
     }
   }
 
-  const handleRemoveImage = (index: number) => {
-    const newImages = [...images]
-    newImages.splice(index, 1)
-    setImages(newImages)
+  // FAQ handlers
+  const handleFaqChange = (idx: number, field: string, value: string) => {
+    setFaqs(faqs => faqs.map((f, i) => i === idx ? { ...f, [field]: value } : f))
+  }
+  const addFaq = () => setFaqs(faqs => [...faqs, { question: "", answer: "" }])
+  const removeFaq = (idx: number) => setFaqs(faqs => faqs.length > 1 ? faqs.filter((_, i) => i !== idx) : faqs)
+
+  // Requirement handlers
+  const handleReqChange = (idx: number, value: string) => {
+    setRequirements(reqs => reqs.map((r, i) => i === idx ? { requirement_text: value } : r))
+  }
+  const addReq = () => setRequirements(reqs => [...reqs, { requirement_text: "" }])
+  const removeReq = (idx: number) => setRequirements(reqs => reqs.length > 1 ? reqs.filter((_, i) => i !== idx) : reqs)
+
+  const validateStep = () => {
+    if (step === 0 && (!title || !categoryId || !jobTypeId)) return "Title, category and job type are required."
+    if (step === 1 && (!startingPrice || !deliveryTime)) return "Price and delivery time are required."
+    if (step === 2 && !gigImage) return "Please upload an image."
+    if (step === 3 && (faqs.some(f => !f.question.trim() || !f.answer.trim()) || requirements.some(r => !r.requirement_text.trim()))) return "All FAQ and requirement fields are required."
+    return ""
   }
 
-  const steps = [
-    {
-      id: "overview",
-      title: "Overview",
-      description: "Basic information about your gig",
-    },
-    {
-      id: "pricing",
-      title: "Pricing",
-      description: "Set your packages and pricing",
-    },
-    {
-      id: "description",
-      title: "Description",
-      description: "Describe your service in detail",
-    },
-    {
-      id: "requirements",
-      title: "Requirements",
-      description: "What you need from buyers",
-    },
-    {
-      id: "gallery",
-      title: "Gallery",
-      description: "Add images and videos",
-    },
-    {
-      id: "publish",
-      title: "Publish",
-      description: "Review and publish your gig",
-    },
-  ]
+  const handleNext = () => {
+    const err = validateStep()
+    if (err) {
+      setError(err)
+      return
+    }
+    setError("")
+    setStep(s => s + 1)
+  }
+  const handleBack = () => {
+    setError("")
+    setStep(s => s - 1)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    if (!title || !categoryId || !jobTypeId || !startingPrice || !deliveryTime || !gigImage || faqs.some(f => !f.question.trim() || !f.answer.trim()) || requirements.some(r => !r.requirement_text.trim())) {
+      setError("Please fill all required fields, upload an image, and complete FAQ/Requirements.")
+      return
+    }
+    const payload = {
+      seller_clerk_id,
+      category_id: categoryId,
+      job_type_id: jobTypeId,
+      title,
+      description,
+      starting_price: parseFloat(startingPrice),
+      delivery_time: parseInt(deliveryTime),
+      gig_image: gigImage,
+      city,
+      country,
+      faqs,
+      requirements,
+    }
+    try {
+      const res = await fetch("http://localhost:8800/api/gigs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: "Your gig has been submitted for review. We'll notify you once it's approved.",
+        });
+        router.push("/dashboard/user");
+      } else {
+        setError(data.message || "Create failed");
+      }
+    } catch (err) {
+      setError("Create failed")
+    }
+  }
 
   return (
-    <main className="flex-1 bg-gray-50 dark:bg-gray-900">
-      <div className="flex min-h-screen flex-col lg:flex-row">
-        <DashboardSidebar />
-
-        <div className="flex-1 p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold">Create a New Gig</h1>
-            <p className="text-gray-600 dark:text-gray-400">Fill in the details to create your service offering</p>
-          </div>
-
-          <GigCreationWizard steps={steps} onComplete={() => alert("Gig created successfully!")}>
-            {/* Step 1: Overview */}
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="gig-title" className="text-base font-medium">
-                  Gig Title
-                </Label>
-                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                  Create a catchy title that describes your service clearly
-                </p>
-                <Input
-                  id="gig-title"
-                  placeholder="I will design a professional logo for your business"
-                  className="h-12"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="category" className="text-base font-medium">
-                  Category
-                </Label>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">Main category</p>
-                    <Select required>
-                      <SelectTrigger id="category">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="graphics-design">Graphics & Design</SelectItem>
-                        <SelectItem value="digital-marketing">Digital Marketing</SelectItem>
-                        <SelectItem value="writing-translation">Writing & Translation</SelectItem>
-                        <SelectItem value="video-animation">Video & Animation</SelectItem>
-                        <SelectItem value="music-audio">Music & Audio</SelectItem>
-                        <SelectItem value="programming-tech">Programming & Tech</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">Subcategory</p>
-                    <Select required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a subcategory" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="logo-design">Logo Design</SelectItem>
-                        <SelectItem value="brand-identity">Brand Identity</SelectItem>
-                        <SelectItem value="business-cards">Business Cards</SelectItem>
-                        <SelectItem value="social-media">Social Media Design</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="tags" className="text-base font-medium">
-                  Tags
-                </Label>
-                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                  Add up to 5 tags that best describe your gig (press Enter after each tag)
-                </p>
-                <Input id="tags" placeholder="e.g., logo, branding, design" className="h-12" />
-              </div>
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 py-12 px-2">
+      <form
+        className="w-full max-w-xl rounded-2xl shadow-2xl bg-white dark:bg-gray-900 p-10 border border-gray-100 dark:border-gray-800 flex flex-col gap-7 animate-fade-in"
+        onSubmit={handleSubmit}
+      >
+        {/* Stepper */}
+        <div className="flex items-center justify-center gap-4 mb-6">
+          {steps.map((s, idx) => (
+            <div key={s.title} className="flex items-center gap-2">
+              <div className={`rounded-full w-9 h-9 flex items-center justify-center text-lg font-bold transition-all duration-200
+                ${step === idx ? 'bg-emerald-600 text-white scale-110 shadow-lg' : 'bg-gray-200 dark:bg-gray-800 text-gray-500'}`}>{idx + 1}</div>
+              {idx < steps.length - 1 && <div className="w-8 h-1 rounded bg-gray-300 dark:bg-gray-700" />}
             </div>
-
-            {/* Step 2: Pricing */}
-            <div>
-              <h3 className="mb-4 text-lg font-medium">Packages & Pricing</h3>
-              <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-                Set up your service packages with different features and price points
-              </p>
-
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[800px] border-collapse">
-                  <thead>
-                    <tr className="border-b text-left">
-                      <th className="p-3"></th>
-                      <th className="p-3 text-center">Basic</th>
-                      <th className="p-3 text-center">Standard</th>
-                      <th className="p-3 text-center">Premium</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">Package Name</td>
-                      <td className="p-3">
-                        <Input placeholder="Basic" className="text-center" required />
-                      </td>
-                      <td className="p-3">
-                        <Input placeholder="Standard" className="text-center" required />
-                      </td>
-                      <td className="p-3">
-                        <Input placeholder="Premium" className="text-center" required />
-                      </td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">Description</td>
-                      <td className="p-3">
-                        <Textarea
-                          placeholder="Basic package description"
-                          className="h-20 resize-none text-center"
-                          required
-                        />
-                      </td>
-                      <td className="p-3">
-                        <Textarea
-                          placeholder="Standard package description"
-                          className="h-20 resize-none text-center"
-                          required
-                        />
-                      </td>
-                      <td className="p-3">
-                        <Textarea
-                          placeholder="Premium package description"
-                          className="h-20 resize-none text-center"
-                          required
-                        />
-                      </td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">Delivery Time</td>
-                      <td className="p-3">
-                        <Select required>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">1 day</SelectItem>
-                            <SelectItem value="2">2 days</SelectItem>
-                            <SelectItem value="3">3 days</SelectItem>
-                            <SelectItem value="5">5 days</SelectItem>
-                            <SelectItem value="7">7 days</SelectItem>
-                            <SelectItem value="14">14 days</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="p-3">
-                        <Select required>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">1 day</SelectItem>
-                            <SelectItem value="2">2 days</SelectItem>
-                            <SelectItem value="3">3 days</SelectItem>
-                            <SelectItem value="5">5 days</SelectItem>
-                            <SelectItem value="7">7 days</SelectItem>
-                            <SelectItem value="14">14 days</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="p-3">
-                        <Select required>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">1 day</SelectItem>
-                            <SelectItem value="2">2 days</SelectItem>
-                            <SelectItem value="3">3 days</SelectItem>
-                            <SelectItem value="5">5 days</SelectItem>
-                            <SelectItem value="7">7 days</SelectItem>
-                            <SelectItem value="14">14 days</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">Price ($)</td>
-                      <td className="p-3">
-                        <Input type="number" min="5" placeholder="25" className="text-center" required />
-                      </td>
-                      <td className="p-3">
-                        <Input type="number" min="5" placeholder="50" className="text-center" required />
-                      </td>
-                      <td className="p-3">
-                        <Input type="number" min="5" placeholder="100" className="text-center" required />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Step 3: Description */}
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="gig-description" className="text-base font-medium">
-                  Gig Description
-                </Label>
-                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                  Provide a detailed description of your service (min 120 characters)
-                </p>
-                <Textarea
-                  id="gig-description"
-                  placeholder="Describe your service in detail..."
-                  className="min-h-[200px]"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="gig-faq" className="text-base font-medium">
-                  Frequently Asked Questions
-                </Label>
-                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                  Add questions and answers to help buyers understand your service better
-                </p>
-                <div className="space-y-4">
-                  <div className="rounded-md border p-4 dark:border-gray-700">
-                    <div className="mb-3">
-                      <Label htmlFor="faq-question-1">Question</Label>
-                      <Input
-                        id="faq-question-1"
-                        placeholder="e.g., How many revisions do you offer?"
-                        className="mb-2"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="faq-answer-1">Answer</Label>
-                      <Textarea
-                        id="faq-answer-1"
-                        placeholder="Provide a detailed answer..."
-                        className="min-h-[100px]"
-                      />
-                    </div>
-                  </div>
-                  <Button type="button" variant="outline" className="w-full">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Another FAQ
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 4: Requirements */}
-            <div className="space-y-6">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="requirements" className="text-base font-medium">
-                    Buyer Requirements
-                  </Label>
-                  <div className="group relative">
-                    <Info className="h-4 w-4 text-gray-400" />
-                    <div className="absolute left-0 top-6 z-10 hidden w-64 rounded-md border bg-white p-3 text-sm shadow-md group-hover:block dark:border-gray-700 dark:bg-gray-800">
-                      Ask buyers for information you need to start working on their order.
-                    </div>
-                  </div>
-                </div>
-                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                  Specify what information you need from buyers to get started
-                </p>
-                <div className="space-y-4">
-                  <div className="rounded-md border p-4 dark:border-gray-700">
-                    <div className="mb-3">
-                      <Label htmlFor="requirement-1">Requirement</Label>
-                      <Input
-                        id="requirement-1"
-                        placeholder="e.g., What is your brand name and industry?"
-                        className="mb-2"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch id="required-1" defaultChecked />
-                      <Label htmlFor="required-1">Required</Label>
-                    </div>
-                  </div>
-                  <Button type="button" variant="outline" className="w-full">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Another Requirement
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 5: Gallery */}
-            <div className="space-y-6">
-              <div>
-                <Label className="text-base font-medium">Gig Images</Label>
-                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                  Upload high-quality images that showcase your service (max 5 images)
-                </p>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative aspect-video rounded-md border dark:border-gray-700">
-                      <Image
-                        src={image || "/placeholder.svg"}
-                        alt={`Gig image ${index + 1}`}
-                        fill
-                        className="rounded-md object-cover"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-1 top-1 rounded-full bg-white p-1 shadow-md dark:bg-gray-800"
-                        onClick={() => handleRemoveImage(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {images.length < 5 && (
-                    <button
-                      type="button"
-                      onClick={handleAddImage}
-                      className="flex aspect-video items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
-                    >
-                      <Plus className="h-6 w-6 text-gray-400" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="gig-video" className="text-base font-medium">
-                  Gig Video (Optional)
-                </Label>
-                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                  Upload a video that demonstrates your service (max 75MB, mp4 format)
-                </p>
-                <div className="flex aspect-video flex-col items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
-                  <Upload className="mb-2 h-8 w-8 text-gray-400" />
-                  <p className="mb-1 text-sm font-medium">Drag and drop a video file</p>
-                  <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">or</p>
-                  <Button type="button" variant="outline" size="sm">
-                    Browse Files
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 6: Publish */}
-            <div className="space-y-6">
-              <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-900/20">
-                <div className="flex items-start gap-3">
-                  <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
-                  <div>
-                    <h4 className="font-medium text-blue-700 dark:text-blue-400">Ready to publish!</h4>
-                    <p className="text-sm text-blue-600 dark:text-blue-300">
-                      Review all the information you've provided before publishing your gig. Once published, your gig
-                      will be visible to potential buyers.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Gig Summary</h3>
-                <div className="rounded-lg border p-4 dark:border-gray-700">
-                  <div className="mb-2 flex justify-between">
-                    <span className="font-medium">Title:</span>
-                    <span>I will design a professional logo for your business</span>
-                  </div>
-                  <div className="mb-2 flex justify-between">
-                    <span className="font-medium">Category:</span>
-                    <span>Graphics & Design &gt; Logo Design</span>
-                  </div>
-                  <div className="mb-2 flex justify-between">
-                    <span className="font-medium">Basic Package:</span>
-                    <span>$25</span>
-                  </div>
-                  <div className="mb-2 flex justify-between">
-                    <span className="font-medium">Delivery Time:</span>
-                    <span>2 days</span>
-                  </div>
-                  <div className="mb-2 flex justify-between">
-                    <span className="font-medium">Images:</span>
-                    <span>{images.length} uploaded</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Switch id="terms" />
-                  <Label htmlFor="terms">
-                    I agree to the Terms of Service and understand that my gig must be approved before it appears in
-                    search results.
-                  </Label>
-                </div>
-              </div>
-            </div>
-          </GigCreationWizard>
+          ))}
         </div>
-      </div>
+        <div className="text-center mb-2">
+          <h2 className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{steps[step].title}</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-base">{steps[step].desc}</p>
+        </div>
+        {error && <div className="mb-2 text-center text-red-500 font-semibold animate-shake">{error}</div>}
+        {/* Step 1: Basic Info & Category */}
+        {step === 0 && (
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="title" className="text-base font-semibold">Title <span className="text-red-500">*</span></Label>
+              <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required placeholder="e.g. I will design a professional logo for your business" className="h-12 text-lg px-4 border-2 border-gray-200 focus:border-emerald-500 transition-all" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="description" className="text-base font-semibold">Description</Label>
+              <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe your service in detail..." className="min-h-[120px] text-base px-4 border-2 border-gray-200 focus:border-emerald-500 transition-all" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="category" className="text-base font-semibold">Category <span className="text-red-500">*</span></Label>
+              <Select value={categoryId} onValueChange={setCategoryId} required>
+                <SelectTrigger id="category" className="h-12 text-lg border-2 border-gray-200 focus:border-emerald-500 transition-all">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="jobType" className="text-base font-semibold">Job Type <span className="text-red-500">*</span></Label>
+              <Select value={jobTypeId} onValueChange={setJobTypeId} required>
+                <SelectTrigger id="jobType" className="h-12 text-lg border-2 border-gray-200 focus:border-emerald-500 transition-all">
+                  <SelectValue placeholder="Select a job type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {jobTypes.map(jt => (
+                    <SelectItem key={jt.id} value={String(jt.id)}>{jt.job_type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+        {/* Step 2: Pricing & Delivery */}
+        {step === 1 && (
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="startingPrice" className="text-base font-semibold">Starting Price <span className="text-red-500">*</span></Label>
+              <Input id="startingPrice" type="number" value={startingPrice} onChange={e => setStartingPrice(e.target.value)} required placeholder="$" className="h-12 text-lg px-4 border-2 border-gray-200 focus:border-emerald-500 transition-all" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="deliveryTime" className="text-base font-semibold">Delivery Time (days) <span className="text-red-500">*</span></Label>
+              <Input id="deliveryTime" type="number" value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)} required placeholder="e.g. 3" className="h-12 text-lg px-4 border-2 border-gray-200 focus:border-emerald-500 transition-all" />
+            </div>
+          </div>
+        )}
+        {/* Step 3: Media & Location */}
+        {step === 2 && (
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="gigImage" className="text-base font-semibold">Gig Image <span className="text-red-500">*</span></Label>
+              <Input id="gigImage" type="file" accept="image/*" onChange={handleImageChange} className="rounded border-2 border-gray-200 focus:border-emerald-500 transition-all" />
+              {imageUploading && <div className="text-sm text-gray-500 mt-2 animate-pulse">Uploading...</div>}
+              {gigImage && <img src={gigImage} alt="Gig" className="mt-3 rounded-xl w-full max-w-xs h-40 object-cover border-2 border-emerald-200 shadow-md mx-auto transition-all duration-300" />}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="city" className="text-base font-semibold">City</Label>
+              <Input id="city" value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Hanoi" className="h-12 text-lg px-4 border-2 border-gray-200 focus:border-emerald-500 transition-all" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="country" className="text-base font-semibold">Country</Label>
+              <Input id="country" value={country} onChange={e => setCountry(e.target.value)} placeholder="e.g. Vietnam" className="h-12 text-lg px-4 border-2 border-gray-200 focus:border-emerald-500 transition-all" />
+            </div>
+          </div>
+        )}
+        {/* Step 4: FAQ & Requirements */}
+        {step === 3 && (
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <Label className="text-base font-semibold">FAQs <span className="text-red-500">*</span></Label>
+              {faqs.map((faq, idx) => (
+                <div key={idx} className="flex flex-col md:flex-row gap-2 items-start md:items-center mb-2 border-b pb-3">
+                  <Input
+                    placeholder="Question"
+                    value={faq.question}
+                    onChange={e => handleFaqChange(idx, "question", e.target.value)}
+                    className="flex-1 text-base px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all"
+                  />
+                  <Input
+                    placeholder="Answer"
+                    value={faq.answer}
+                    onChange={e => handleFaqChange(idx, "answer", e.target.value)}
+                    className="flex-1 text-base px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all"
+                  />
+                  <Button type="button" variant="destructive" className="h-10 px-3" onClick={() => removeFaq(idx)} disabled={faqs.length === 1}>Remove</Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" className="w-full mt-2" onClick={addFaq}>Add FAQ</Button>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-base font-semibold">Requirements <span className="text-red-500">*</span></Label>
+              {requirements.map((req, idx) => (
+                <div key={idx} className="flex gap-2 items-center mb-2 border-b pb-3">
+                  <Input
+                    placeholder="Requirement for buyer"
+                    value={req.requirement_text}
+                    onChange={e => handleReqChange(idx, e.target.value)}
+                    className="flex-1 text-base px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all"
+                  />
+                  <Button type="button" variant="destructive" className="h-10 px-3" onClick={() => removeReq(idx)} disabled={requirements.length === 1}>Remove</Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" className="w-full mt-2" onClick={addReq}>Add Requirement</Button>
+            </div>
+          </div>
+        )}
+        {/* Step navigation */}
+        <div className="flex items-center justify-between gap-4 mt-2">
+          {step > 0 ? (
+            <Button type="button" variant="outline" className="rounded-lg px-6 py-2 text-base font-semibold" onClick={handleBack}>Back</Button>
+          ) : <div />}
+          {step < steps.length - 1 ? (
+            <Button type="button" className="rounded-lg px-6 py-2 text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg" onClick={handleNext}>Next</Button>
+          ) : (
+            <Button type="submit" className="rounded-lg px-6 py-2 text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg">Create Gig</Button>
+          )}
+        </div>
+      </form>
     </main>
   )
 }

@@ -22,6 +22,8 @@ import UserSearchHistory from "./userSearchHistory.model.js";
 import Notification from "./notification.model.js";
 import CVFile from "./cvFiles.model.js";
 import GigTranslation from "./gigTranslation.model.js";
+import GigFaq from "./gigFAQ.model.js";
+import GigRequirements from "./gigRequirement.model.js";
 
 
 export default {
@@ -49,6 +51,8 @@ export default {
   Notification,
   CVFile,
   GigTranslation,
+  GigFaq,
+  GigRequirements,
 };
 
 //index.js, init-db.js, mySQL-db.js dành cho việc khởi tạo database và models của MySQL 

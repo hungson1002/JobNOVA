@@ -160,6 +160,14 @@ const defineRelations = (models) => {
   models.Gig.hasMany(models.GigTranslation, { foreignKey: 'gig_id' });
   models.GigTranslation.belongsTo(models.Gig, { foreignKey: 'gig_id' });
 
+  // Gig-GigFaq: 1-to-many (one gig can have multiple FAQs)
+  models.Gig.hasMany(models.GigFaq, { foreignKey: "gig_id" });
+  models.GigFaq.belongsTo(models.Gig, { foreignKey: "gig_id" });
+
+  // Order-GigRequirements: 1-to-many (one order can have multiple requirements)
+  models.Order.hasMany(models.GigRequirements, { foreignKey: "order_id" });
+  models.GigRequirements.belongsTo(models.Order, { foreignKey: "order_id" });
+
 };
 
 defineRelations(initializedModels);

@@ -111,6 +111,20 @@ async function initDb() {
       },
     ]);
 
+    // Tạo FAQ cho gig
+    await models.GigFaq.bulkCreate([
+      {
+        gig_id: gigs[0].id,
+        question: "What technologies do you use?",
+        answer: "I use React, Node.js, and MySQL.",
+      },
+      {
+        gig_id: gigs[1].id,
+        question: "How long does it take?",
+        answer: "Usually 3-5 days depending on requirements.",
+      },
+    ]);
+
     // Tạo orders
     await models.Order.bulkCreate([
       {
@@ -131,6 +145,20 @@ async function initDb() {
         order_date: "2025-01-05",
         requirements: "Logo design for new brand, modern style",
       },
+    ]);
+
+    // Tạo requirements cho order
+    await models.GigRequirements.bulkCreate([
+      {
+        order_id: 1,
+        requirement_text: "Please provide your website content and design preferences.",
+        submitted_at: "2025-01-04"
+      },
+      {
+        order_id: 2,
+        requirement_text: "Please provide your brand guidelines and color preferences for the logo.",
+        submitted_at: "2025-01-05"
+      }
     ]);
 
     // Tạo reviews

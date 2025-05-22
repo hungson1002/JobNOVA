@@ -10,165 +10,181 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CheckCircle, XCircle, Search, Filter, Eye } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
-// Mock data
-const mockPendingGigs = [
-  {
-    id: "gig-p1",
-    title: "I will create a professional mobile app UI design",
-    seller: "uimaster",
-    category: "Graphics & Design",
-    submittedDate: "2025-05-10",
-  },
-  {
-    id: "gig-p2",
-    title: "I will write SEO-optimized blog posts for your website",
-    seller: "contentpro",
-    category: "Writing & Translation",
-    submittedDate: "2025-05-11",
-  },
-  {
-    id: "gig-p3",
-    title: "I will develop a custom WordPress plugin",
-    seller: "wpdev",
-    category: "Programming & Tech",
-    submittedDate: "2025-05-12",
-  },
-  {
-    id: "gig-p4",
-    title: "I will create a professional logo for your business",
-    seller: "logodesigner",
-    category: "Graphics & Design",
-    submittedDate: "2025-05-13",
-  },
-  {
-    id: "gig-p5",
-    title: "I will create engaging social media content",
-    seller: "socialmediapro",
-    category: "Digital Marketing",
-    submittedDate: "2025-05-14",
-  },
-]
-
-const mockApprovedGigs = [
-  {
-    id: "gig-a1",
-    title: "I will design a modern website UI",
-    seller: "webdesigner",
-    category: "Graphics & Design",
-    approvedDate: "2025-05-01",
-    status: "active",
-  },
-  {
-    id: "gig-a2",
-    title: "I will create a professional video intro",
-    seller: "videocreator",
-    category: "Video & Animation",
-    approvedDate: "2025-05-02",
-    status: "active",
-  },
-  {
-    id: "gig-a3",
-    title: "I will translate your content to Spanish",
-    seller: "translator",
-    category: "Writing & Translation",
-    approvedDate: "2025-05-03",
-    status: "paused",
-  },
-  {
-    id: "gig-a4",
-    title: "I will develop a React application",
-    seller: "reactdev",
-    category: "Programming & Tech",
-    approvedDate: "2025-05-04",
-    status: "active",
-  },
-  {
-    id: "gig-a5",
-    title: "I will optimize your website for SEO",
-    seller: "seoexpert",
-    category: "Digital Marketing",
-    approvedDate: "2025-05-05",
-    status: "active",
-  },
-]
-
-const mockRejectedGigs = [
-  {
-    id: "gig-r1",
-    title: "I will create social media content",
-    seller: "socialmedia123",
-    category: "Digital Marketing",
-    rejectedDate: "2025-05-06",
-    reason: "Duplicate content",
-  },
-  {
-    id: "gig-r2",
-    title: "I will translate your document",
-    seller: "translatorpro",
-    category: "Writing & Translation",
-    rejectedDate: "2025-05-07",
-    reason: "Misleading information",
-  },
-  {
-    id: "gig-r3",
-    title: "I will design a logo",
-    seller: "logomaker",
-    category: "Graphics & Design",
-    rejectedDate: "2025-05-08",
-    reason: "Low quality samples",
-  },
-]
+interface Gig {
+  id: number;
+  title: string;
+  description: string;
+  seller_clerk_id: string;
+  category_id: number;
+  job_type_id: number;
+  starting_price: number;
+  delivery_time: number;
+  gig_image: string;
+  city: string;
+  country: string;
+  status: string;
+  created_at: string;
+  category?: {
+    id: number;
+    name: string;
+  };
+  job_type?: {
+    id: number;
+    job_type: string;
+  };
+}
 
 export default function ManageGigsPage() {
   const [isClient, setIsClient] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
+  const [gigs, setGigs] = useState<Gig[]>([])
+  const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState("pending")
+  const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
+  const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
-  // Filtered gigs based on search and category
-  const filteredPendingGigs = mockPendingGigs.filter((gig) => {
-    const matchesSearch =
-      gig.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      gig.seller.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || gig.category === categoryFilter
-    return matchesSearch && matchesCategory
-  })
+  const statusMap: Record<string, string> = {
+    pending: "pending",
+    approved: "active",
+    rejected: "rejected",
+  };
 
-  const filteredApprovedGigs = mockApprovedGigs.filter((gig) => {
-    const matchesSearch =
-      gig.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      gig.seller.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || gig.category === categoryFilter
-    return matchesSearch && matchesCategory
-  })
+  const fetchGigs = async (tabValue = "pending") => {
+    setLoading(true);
+    const status = statusMap[tabValue] || "pending";
+    try {
+      const response = await fetch(`http://localhost:8800/api/gigs?include=category,job_type&status=${status}`);
+      const data = await response.json();
+      if (data.success) {
+        setGigs(data.gigs);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch gigs",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredRejectedGigs = mockRejectedGigs.filter((gig) => {
-    const matchesSearch =
-      gig.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      gig.seller.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || gig.category === categoryFilter
-    return matchesSearch && matchesCategory
-  })
-
-  // Mock approval/rejection handlers
-  const handleApprove = (gigId: string) => {
-    toast({
-      title: "Gig Approved",
-      description: `Gig ID: ${gigId} has been approved successfully.`,
-    })
-  }
-
-  const handleReject = (gigId: string) => {
-    toast({
-      title: "Gig Rejected",
-      description: `Gig ID: ${gigId} has been rejected.`,
-      variant: "destructive",
-    })
-  }
+  // Hàm lấy số lượng gig cho từng trạng thái
+  const fetchCounts = async () => {
+    try {
+      const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
+        fetch("http://localhost:8800/api/gigs?status=pending&limit=1"),
+        fetch("http://localhost:8800/api/gigs?status=active&limit=1"),
+        fetch("http://localhost:8800/api/gigs?status=rejected&limit=1"),
+      ]);
+      const pendingData = await pendingRes.json();
+      const approvedData = await approvedRes.json();
+      const rejectedData = await rejectedRes.json();
+      setCounts({
+        pending: pendingData.total || 0,
+        approved: approvedData.total || 0,
+        rejected: rejectedData.total || 0,
+      });
+    } catch (error) {
+      // Không cần toast lỗi ở đây
+    }
+  };
 
   useEffect(() => {
-    setIsClient(true)
-  }, [])
+    setIsClient(true);
+    fetchGigs(tab);
+    fetchCounts();
+  }, [tab]);
+
+  const handleTabChange = (value: string) => {
+    setTab(value);
+    fetchGigs(value);
+  };
+
+  const handleApprove = async (gigId: number) => {
+    try {
+      const response = await fetch(`http://localhost:8800/api/gigs/${gigId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "active" }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: "Gig has been approved",
+        });
+        setGigs(prev => prev.filter(gig => gig.id !== gigId));
+        fetchCounts();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve gig",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReject = async (gigId: number) => {
+    try {
+      const response = await fetch(`http://localhost:8800/api/gigs/${gigId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: "rejected" }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: "Gig has been rejected",
+        });
+        setGigs(prev => prev.filter(gig => gig.id !== gigId));
+        fetchCounts();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject gig",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Filter gigs based on search and category
+  const filteredGigs = gigs.filter((gig) => {
+    const matchesSearch =
+      gig.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      gig.seller_clerk_id.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = categoryFilter === "all" || gig.category?.name === categoryFilter
+    return matchesSearch && matchesCategory
+  })
+
+  // Group gigs by status
+  // const pendingGigs = filteredGigs.filter(gig => gig.status === "pending")
+  // const approvedGigs = filteredGigs.filter(gig => gig.status === "active")
+  // const rejectedGigs = filteredGigs.filter(gig => gig.status === "rejected")
+
+  // Hiển thị luôn gigs theo tab hiện tại
+  const displayedGigs = filteredGigs
+
+  const handleView = (gig: Gig) => {
+    setSelectedGig(gig);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedGig(null);
+  };
 
   if (!isClient) {
     return null
@@ -215,24 +231,24 @@ export default function ManageGigsPage() {
             </div>
           </div>
 
-          <Tabs defaultValue="pending">
+          <Tabs value={tab} onValueChange={handleTabChange} defaultValue="pending">
             <TabsList className="mb-4">
               <TabsTrigger value="pending">
                 Pending
                 <Badge variant="secondary" className="ml-2">
-                  {filteredPendingGigs.length}
+                  {counts.pending}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="approved">
                 Approved
                 <Badge variant="secondary" className="ml-2">
-                  {filteredApprovedGigs.length}
+                  {counts.approved}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="rejected">
                 Rejected
                 <Badge variant="secondary" className="ml-2">
-                  {filteredRejectedGigs.length}
+                  {counts.rejected}
                 </Badge>
               </TabsTrigger>
             </TabsList>
@@ -244,21 +260,29 @@ export default function ManageGigsPage() {
                     <TableHead>Title</TableHead>
                     <TableHead>Seller</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Job Type</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Delivery</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Submitted Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPendingGigs.length > 0 ? (
-                    filteredPendingGigs.map((gig) => (
+                  {tab === "pending" && displayedGigs.length > 0 ? (
+                    displayedGigs.map((gig) => (
                       <TableRow key={gig.id}>
                         <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{gig.seller}</TableCell>
-                        <TableCell>{gig.category}</TableCell>
-                        <TableCell>{new Date(gig.submittedDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{gig.seller_clerk_id}</TableCell>
+                        <TableCell>{gig.category?.name}</TableCell>
+                        <TableCell>{gig.job_type?.job_type}</TableCell>
+                        <TableCell>${gig.starting_price}</TableCell>
+                        <TableCell>{gig.delivery_time} days</TableCell>
+                        <TableCell>{gig.city}, {gig.country}</TableCell>
+                        <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                            <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleView(gig)}>
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">View</span>
                             </Button>
@@ -286,7 +310,7 @@ export default function ManageGigsPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center">
+                      <TableCell colSpan={9} className="text-center">
                         No pending gigs found
                       </TableCell>
                     </TableRow>
@@ -302,26 +326,32 @@ export default function ManageGigsPage() {
                     <TableHead>Title</TableHead>
                     <TableHead>Seller</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Job Type</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Delivery</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Approved Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredApprovedGigs.length > 0 ? (
-                    filteredApprovedGigs.map((gig) => (
+                  {tab === "approved" && displayedGigs.length > 0 ? (
+                    displayedGigs.map((gig) => (
                       <TableRow key={gig.id}>
                         <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{gig.seller}</TableCell>
-                        <TableCell>{gig.category}</TableCell>
+                        <TableCell>{gig.seller_clerk_id}</TableCell>
+                        <TableCell>{gig.category?.name}</TableCell>
+                        <TableCell>{gig.job_type?.job_type}</TableCell>
+                        <TableCell>${gig.starting_price}</TableCell>
+                        <TableCell>{gig.delivery_time} days</TableCell>
+                        <TableCell>{gig.city}, {gig.country}</TableCell>
                         <TableCell>
-                          <Badge variant={gig.status === "active" ? "success" : "secondary"}>
-                            {gig.status === "active" ? "Active" : "Paused"}
-                          </Badge>
+                          <Badge variant="default">Active</Badge>
                         </TableCell>
-                        <TableCell>{new Date(gig.approvedDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleView(gig)}>
                             <Eye className="h-4 w-4" />
                             <span className="sr-only">View</span>
                           </Button>
@@ -330,7 +360,7 @@ export default function ManageGigsPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">
+                      <TableCell colSpan={10} className="text-center">
                         No approved gigs found
                       </TableCell>
                     </TableRow>
@@ -346,22 +376,28 @@ export default function ManageGigsPage() {
                     <TableHead>Title</TableHead>
                     <TableHead>Seller</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Reason</TableHead>
+                    <TableHead>Job Type</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Delivery</TableHead>
+                    <TableHead>Location</TableHead>
                     <TableHead>Rejected Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRejectedGigs.length > 0 ? (
-                    filteredRejectedGigs.map((gig) => (
+                  {tab === "rejected" && displayedGigs.length > 0 ? (
+                    displayedGigs.map((gig) => (
                       <TableRow key={gig.id}>
                         <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{gig.seller}</TableCell>
-                        <TableCell>{gig.category}</TableCell>
-                        <TableCell>{gig.reason}</TableCell>
-                        <TableCell>{new Date(gig.rejectedDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{gig.seller_clerk_id}</TableCell>
+                        <TableCell>{gig.category?.name}</TableCell>
+                        <TableCell>{gig.job_type?.job_type}</TableCell>
+                        <TableCell>${gig.starting_price}</TableCell>
+                        <TableCell>{gig.delivery_time} days</TableCell>
+                        <TableCell>{gig.city}, {gig.country}</TableCell>
+                        <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleView(gig)}>
                             <Eye className="h-4 w-4" />
                             <span className="sr-only">View</span>
                           </Button>
@@ -370,7 +406,7 @@ export default function ManageGigsPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">
+                      <TableCell colSpan={9} className="text-center">
                         No rejected gigs found
                       </TableCell>
                     </TableRow>
@@ -381,6 +417,41 @@ export default function ManageGigsPage() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Modal xem chi tiết gig */}
+      <Dialog open={showModal} onOpenChange={handleCloseModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Gig Details</DialogTitle>
+            <DialogDescription>
+              Thông tin chi tiết dịch vụ
+            </DialogDescription>
+          </DialogHeader>
+          {selectedGig && (
+            <div className="space-y-2">
+              <div><b>Tiêu đề:</b> {selectedGig.title}</div>
+              <div><b>Mô tả:</b> {selectedGig.description}</div>
+              <div><b>Người bán:</b> {selectedGig.seller_clerk_id}</div>
+              <div><b>Danh mục:</b> {selectedGig.category?.name}</div>
+              <div><b>Loại công việc:</b> {selectedGig.job_type?.job_type}</div>
+              <div><b>Giá:</b> ${selectedGig.starting_price}</div>
+              <div><b>Thời gian giao:</b> {selectedGig.delivery_time} ngày</div>
+              <div><b>Vị trí:</b> {selectedGig.city}, {selectedGig.country}</div>
+              <div><b>Trạng thái:</b> {selectedGig.status}</div>
+              <div><b>Ngày tạo:</b> {new Date(selectedGig.created_at).toLocaleDateString()}</div>
+              {selectedGig.gig_image && (
+                <div>
+                  <b>Ảnh:</b><br />
+                  <img src={selectedGig.gig_image} alt="Gig" className="max-w-full max-h-48 rounded border" />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={handleCloseModal} variant="outline">Đóng</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

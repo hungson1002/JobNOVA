@@ -19,6 +19,7 @@ export const createGig = async (req, res, next) => {
       gig_image,
       city,
       country,
+      status: "pending",
     });
     console.log(`Gig created: id=${gig.id}`);
     return res.status(201).json({ success: true, message: 'Gig created successfully', gig });
@@ -35,7 +36,11 @@ export const getAllGigs = async (req, res, next) => {
     const offset = (page - 1) * limit;
     const where = {};
     if (category_id) where.category_id = category_id;
-    if (status) where.status = status;
+    if (status) {
+      where.status = status;
+    } else {
+      where.status = "active";
+    }
 
     const gigs = await models.Gig.findAndCountAll({
       where,

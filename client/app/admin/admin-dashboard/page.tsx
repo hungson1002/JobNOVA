@@ -118,6 +118,8 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
 export default function AdminDashboardPage() {
   const [isClient, setIsClient] = useState(false)
   const [stats, setStats] = useState({ totalUsers: 0, totalGigs: 0 })
+  const [pendingApprovals, setPendingApprovals] = useState(0)
+  const [totalRevenue, setTotalRevenue] = useState(0)
 
   useEffect(() => {
     setIsClient(true)
@@ -125,6 +127,25 @@ export default function AdminDashboardPage() {
       .then((res) => res.json())
       .then((data) => setStats(data))
       .catch(() => setStats({ totalUsers: 0, totalGigs: 0 }))
+
+    // Lấy số gig pending
+    fetch("http://localhost:8800/api/gigs?status=pending&limit=1")
+      .then(res => res.json())
+      .then(data => setPendingApprovals(data.total || 0))
+      .catch(() => setPendingApprovals(0))
+
+    // Lấy tổng doanh thu order completed
+    fetch("http://localhost:8800/api/orders?order_status=completed&limit=1000")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.orders)) {
+          const sum = data.orders.reduce((acc: number, order: any) => acc + (order.total_price || 0), 0)
+          setTotalRevenue(sum)
+        } else {
+          setTotalRevenue(0)
+        }
+      })
+      .catch(() => setTotalRevenue(0))
   }, [])
 
   if (!isClient) {
@@ -169,7 +190,7 @@ export default function AdminDashboardPage() {
             <AlertTriangle className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockStats.pendingApprovals}</div>
+            <div className="text-2xl font-bold">{pendingApprovals}</div>
             <p className="text-xs text-muted-foreground">Requires your attention</p>
           </CardContent>
         </Card>
@@ -179,9 +200,9 @@ export default function AdminDashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${mockStats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-500">+{mockStats.revenueGrowth}%</span> from last month
+              Tổng doanh thu các đơn đã thanh toán thành công
             </p>
           </CardContent>
         </Card>
