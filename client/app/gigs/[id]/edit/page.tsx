@@ -1,5 +1,8 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, ImageIcon, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, ImageIcon, Plus, Trash2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -7,37 +10,73 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { toast } from "@/components/ui/use-toast"
 
 export default function EditGigPage({ params }: { params: { id: string } }) {
-  // Mock gig data
-  const gig = {
-    id: params.id,
-    title: "I will design a professional logo for your business",
-    category: "Graphics & Design",
-    subcategory: "Logo Design",
-    description:
-      "I will create a modern, professional logo for your business with unlimited revisions until you're satisfied. I specialize in minimalist, memorable designs that help your brand stand out.",
-    price: {
-      basic: 50,
-      standard: 85,
-      premium: 150,
-    },
-    delivery: {
-      basic: 3,
-      standard: 5,
-      premium: 7,
-    },
-    revisions: {
-      basic: 1,
-      standard: 3,
-      premium: "Unlimited",
-    },
-    images: [
-      "/placeholder.svg?height=300&width=500",
-      "/placeholder.svg?height=300&width=500",
-      "/placeholder.svg?height=300&width=500",
-    ],
-    tags: ["logo design", "branding", "business logo", "minimalist logo"],
+  const [gig, setGig] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [files, setFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([])
+
+  useEffect(() => {
+    // Fetch gig data
+    fetch(`http://localhost:8800/api/gigs/${params.id}`)
+      .then(res => res.json())
+      .then(data => {
+        setGig(data.gig)
+        // Convert existing images to new format
+        if (data.gig.images) {
+          setFiles(data.gig.images.map((url: string) => ({
+            url,
+            type: url.match(/\.(mp4|mov|avi|wmv)$/i) ? 'video' : 'image'
+          })))
+        }
+      })
+      .finally(() => setLoading(false))
+  }, [params.id])
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return
+    setUploading(true)
+
+    try {
+      const formData = new FormData()
+      Array.from(e.target.files).forEach(file => {
+        formData.append('files', file)
+      })
+
+      const res = await fetch('http://localhost:8800/api/cloudinary/upload-multiple', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        const newFiles = data.files.map((file: any) => ({
+          url: file.fileUrl,
+          type: file.type
+        }))
+        setFiles(prev => [...prev, ...newFiles])
+        toast({
+          title: "Success",
+          description: "Files uploaded successfully"
+        })
+      } else {
+        throw new Error(data.message || 'Upload failed')
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload files",
+        variant: "destructive"
+      })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   return (
@@ -69,7 +108,7 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                 <label htmlFor="gig-title" className="block font-medium mb-2 dark:text-white">
                   Gig Title
                 </label>
-                <Input id="gig-title" placeholder="I will..." defaultValue={gig.title} className="max-w-2xl h-12" />
+                <Input id="gig-title" placeholder="I will..." defaultValue={gig?.title} className="max-w-2xl h-12" />
                 <p className="text-xs text-gray-500 mt-2 dark:text-gray-400">
                   Clearly describe what you are offering (max 80 characters)
                 </p>
@@ -80,7 +119,7 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                   <label htmlFor="category" className="block font-medium mb-2 dark:text-white">
                     Category
                   </label>
-                  <Select defaultValue={gig.category}>
+                  <Select defaultValue={gig?.category}>
                     <SelectTrigger className="h-12">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -98,7 +137,7 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                   <label htmlFor="subcategory" className="block font-medium mb-2 dark:text-white">
                     Subcategory
                   </label>
-                  <Select defaultValue={gig.subcategory}>
+                  <Select defaultValue={gig?.subcategory}>
                     <SelectTrigger className="h-12">
                       <SelectValue placeholder="Select subcategory" />
                     </SelectTrigger>
@@ -119,7 +158,7 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                 <Input
                   id="tags"
                   placeholder="Add search terms that buyers would use to find your service"
-                  defaultValue={gig.tags.join(", ")}
+                  defaultValue={gig?.tags.join(", ")}
                   className="max-w-2xl h-12"
                 />
                 <p className="text-xs text-gray-500 mt-2 dark:text-gray-400">Enter up to 5 tags separated by commas</p>
@@ -157,7 +196,7 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                         <Input
                           id={`price-${tier}`}
                           type="number"
-                          defaultValue={gig.price[tier as keyof typeof gig.price]}
+                          defaultValue={gig?.price[tier as keyof typeof gig.price]}
                           className="h-12"
                         />
                       </div>
@@ -169,7 +208,7 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                         >
                           Delivery Time (days)
                         </label>
-                        <Select defaultValue={gig.delivery[tier as keyof typeof gig.delivery].toString()}>
+                        <Select defaultValue={gig?.delivery[tier as keyof typeof gig.delivery].toString()}>
                           <SelectTrigger className="h-12">
                             <SelectValue />
                           </SelectTrigger>
@@ -190,7 +229,7 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                         >
                           Revisions
                         </label>
-                        <Select defaultValue={gig.revisions[tier as keyof typeof gig.revisions].toString()}>
+                        <Select defaultValue={gig?.revisions[tier as keyof typeof gig.revisions].toString()}>
                           <SelectTrigger className="h-12">
                             <SelectValue />
                           </SelectTrigger>
@@ -230,7 +269,7 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                 <Textarea
                   id="description"
                   placeholder="Describe your service in detail..."
-                  defaultValue={gig.description}
+                  defaultValue={gig?.description}
                   className="min-h-[200px]"
                 />
                 <p className="text-xs text-gray-500 mt-2 dark:text-gray-400">
@@ -291,40 +330,54 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
               <CardTitle className="text-xl dark:text-white">Gallery</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-                {gig.images.map((image, index) => (
-                  <div key={index} className="relative group rounded-xl overflow-hidden">
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {files.map((file, index) => (
+                    <div key={index} className="relative group">
+                      {file.type === 'image' ? (
                     <img
-                      src={image || "/placeholder.svg"}
-                      alt={`Gig image ${index + 1}`}
-                      className="w-full h-48 object-cover"
+                          src={file.url}
+                          alt={`Gallery item ${index + 1}`}
+                          className="w-full aspect-video object-cover rounded-lg"
                     />
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="text-white hover:bg-black/20">
-                        <Trash2 className="h-5 w-5" />
-                      </Button>
+                      ) : (
+                        <video
+                          src={file.url}
+                          className="w-full aspect-video object-cover rounded-lg"
+                          controls
+                        />
+                      )}
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
+                  ))}
+                  <label className="relative flex flex-col items-center justify-center w-full aspect-video border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-emerald-500 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-2 text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500">
+                        <span className="font-semibold">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">Images or videos (max 500MB each)</p>
                   </div>
-                ))}
-
-                <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl flex flex-col items-center justify-center h-48 p-4 text-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                  <ImageIcon className="h-10 w-10 text-gray-400 mb-3" />
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Add more images</p>
-                  <p className="text-xs text-gray-400 mb-4">PNG, JPG, GIF (max 5MB)</p>
-                  <Button variant="outline" size="sm">
-                    Upload Image
-                  </Button>
+                    <input
+                      type="file"
+                      className="hidden"
+                      multiple
+                      accept="image/*,video/*"
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                    />
+                  </label>
                 </div>
+                {uploading && (
+                  <div className="text-center text-sm text-gray-500">
+                    Uploading files...
               </div>
-
-              <div className="bg-amber-50 dark:bg-amber-900/20 p-5 rounded-xl mb-6 border border-amber-100 dark:border-amber-800">
-                <h4 className="font-medium text-amber-800 dark:text-amber-400 mb-3">Gallery Tips</h4>
-                <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-2 pl-5 list-disc">
-                  <li>Add high-quality images that showcase your work</li>
-                  <li>Include before/after examples if applicable</li>
-                  <li>First image will be your gig thumbnail</li>
-                  <li>Recommended: At least 3 images per gig</li>
-                </ul>
+                )}
               </div>
             </CardContent>
           </Card>

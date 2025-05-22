@@ -31,18 +31,78 @@ export interface Gig {
   city?: string;
   country?: string;
   status: string;
+  gig_images?: string[];
 }
 
 // Component Card hiển thị từng gig
 function GigCard({ gig }: { gig: Gig }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [hovered, setHovered] = useState(false);
+
+  const mediaList = Array.isArray(gig.gig_images) && gig.gig_images.length > 0
+    ? gig.gig_images
+    : gig.gig_image
+    ? [gig.gig_image]
+    : ["/placeholder.svg"];
+
+  const currentMedia = mediaList[currentIndex];
+  const isVideo = currentMedia.endsWith(".mp4") || currentMedia.includes("/video/");
+
+  const goNext = () => setCurrentIndex((prev) => (prev + 1) % mediaList.length);
+  const goPrev = () => setCurrentIndex((prev) => (prev - 1 + mediaList.length) % mediaList.length);
+
   return (
     <Link href={`/gigs/${gig.id}`}>
-      <div className="border rounded-lg p-4 hover:shadow-lg transition">
-        <img src={gig.gig_image || "/placeholder.svg"} alt={gig.title} className="w-full h-40 object-cover rounded" />
-        <h3 className="mt-2 font-bold">{gig.title}</h3>
-        <p className="text-gray-500">{gig.description.slice(0, 60)}...</p>
+      <div
+        className="border rounded-lg p-4 hover:shadow-lg transition relative"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div className="relative w-full h-40 overflow-hidden rounded bg-gray-100">
+          {isVideo ? (
+            <video
+              src={currentMedia}
+              autoPlay
+              muted
+              loop
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img
+              src={currentMedia}
+              alt={gig.title}
+              className="w-full h-full object-cover"
+            />
+          )}
+
+          {hovered && mediaList.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  goPrev();
+                }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 rounded-full px-2 py-1 text-black shadow"
+              >
+                ◀
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  goNext();
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 rounded-full px-2 py-1 text-black shadow"
+              >
+                ▶
+              </button>
+            </>
+          )}
+        </div>
+
+        <h3 className="mt-2 font-bold truncate" title={gig.title}>{gig.title}</h3>
+        <p className="text-gray-500 text-sm line-clamp-2">{gig.description}</p>
         <div className="flex justify-between items-center mt-2">
-          <span className="font-semibold text-emerald-600">${gig.starting_price}</span>
+          <span className="font-semibold text-emerald-600">{gig.starting_price.toLocaleString()} đ</span>
           <span className="text-xs text-gray-400">{gig.delivery_time} days</span>
         </div>
         <div className="mt-1 text-xs text-gray-400">{gig.city}, {gig.country}</div>
@@ -55,6 +115,7 @@ function GigCard({ gig }: { gig: Gig }) {
     </Link>
   );
 }
+
 
 // Sample categories
 const categories = [
@@ -420,11 +481,19 @@ function AnimatedWords({ text, className, onDone }: { text: string, className?: 
 
 // Mapping gig thật sang format ServiceCard
 function mapGigToServiceCard(gig: Gig): any {
+  const mediaList =
+    Array.isArray(gig.gig_images) && gig.gig_images.length > 0
+      ? gig.gig_images
+      : gig.gig_image
+      ? [gig.gig_image]
+      : ["/placeholder.svg"];
+
   return {
     id: gig.id,
     title: gig.title,
     price: gig.starting_price,
-    image: gig.gig_image || "/placeholder.svg",
+    image: mediaList[0],         // ảnh đầu tiên để hiển thị nhanh
+    gig_images: mediaList,       // toàn bộ media (ảnh + video)
     seller: {
       name: gig.seller_clerk_id,
       avatar: "/placeholder.svg",
@@ -436,8 +505,9 @@ function mapGigToServiceCard(gig: Gig): any {
     deliveryTime: gig.delivery_time,
     badges: [],
     isSaved: false,
-  }
+  };
 }
+
 
 export default function Home() {
   const { user, isSignedIn } = useUser();
@@ -472,7 +542,15 @@ export default function Home() {
   useEffect(() => {
     fetch("http://localhost:8800/api/gigs")
       .then(res => res.json())
-      .then(data => setGigs(data.gigs))
+      .then(data => {
+        console.log('Dữ liệu gigs trả về:', data);
+        // Nếu trả về object có gigs
+        if (Array.isArray(data.gigs)) setGigs(data.gigs)
+        // Nếu trả về mảng trực tiếp
+        else if (Array.isArray(data)) setGigs(data)
+        // Nếu không đúng định dạng
+        else setGigs([])
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -489,7 +567,7 @@ export default function Home() {
 
   if (loading) return <div>Loading gigs...</div>;
 
-  const serviceCards = gigs.map(mapGigToServiceCard);
+  const serviceCards = (gigs || []).map(mapGigToServiceCard);
 
   return (
     <main>
@@ -770,11 +848,17 @@ export default function Home() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="mb-8 text-center text-3xl font-bold dark:text-white">Explore Gigs</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {gigs.map(gig => (
-              <GigCard key={gig.id} gig={gig} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="text-center py-8">Loading gigs...</div>
+          ) : gigs && gigs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {gigs.map(gig => (
+                <GigCard key={gig.id} gig={gig} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">No gigs available at the moment.</div>
+          )}
         </div>
       </section>
     </main>

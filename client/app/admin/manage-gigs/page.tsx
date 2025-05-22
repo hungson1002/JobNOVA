@@ -34,6 +34,7 @@ interface Gig {
     id: number;
     job_type: string;
   };
+  gig_images?: string[];
 }
 
 export default function ManageGigsPage() {
@@ -439,7 +440,20 @@ export default function ManageGigsPage() {
               <div><b>Vị trí:</b> {selectedGig.city}, {selectedGig.country}</div>
               <div><b>Trạng thái:</b> {selectedGig.status}</div>
               <div><b>Ngày tạo:</b> {new Date(selectedGig.created_at).toLocaleDateString()}</div>
-              {selectedGig.gig_image && (
+              {/* Hiển thị nhiều ảnh/video nếu có */}
+              {selectedGig.gig_images && Array.isArray(selectedGig.gig_images) && selectedGig.gig_images.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '12px 0' }}>
+                  {selectedGig.gig_images.map((url: string, idx: number) =>
+                    url.match(/\.(mp4|mov|avi|wmv)$/i) ? (
+                      <video key={idx} src={url} controls style={{ width: 120, height: 80, borderRadius: 8, objectFit: 'cover' }} />
+                    ) : (
+                      <img key={idx} src={url} alt={`Gig media ${idx + 1}`} style={{ width: 120, height: 80, borderRadius: 8, objectFit: 'cover' }} />
+                    )
+                  )}
+                </div>
+              )}
+              {/* Fallback: chỉ có 1 ảnh */}
+              {!selectedGig.gig_images && selectedGig.gig_image && (
                 <div>
                   <b>Ảnh:</b><br />
                   <img src={selectedGig.gig_image} alt="Gig" className="max-w-full max-h-48 rounded border" />

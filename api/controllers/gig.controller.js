@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 // Tạo gig
 export const createGig = async (req, res, next) => {
   try {
-    const { seller_clerk_id, category_id, job_type_id, title, description, starting_price, delivery_time, gig_image, city, country } = req.body;
+    const { seller_clerk_id, category_id, job_type_id, title, description, starting_price, delivery_time, gig_image, gig_images, city, country } = req.body;
     if (!seller_clerk_id || !title) {
       return res.status(400).json({ success: false, message: 'Missing required fields: seller_clerk_id or title' });
     }
@@ -17,12 +17,18 @@ export const createGig = async (req, res, next) => {
       starting_price,
       delivery_time,
       gig_image,
+      gig_images: gig_images ? JSON.stringify(gig_images) : null,
       city,
       country,
       status: "pending",
     });
     console.log(`Gig created: id=${gig.id}`);
-    return res.status(201).json({ success: true, message: 'Gig created successfully', gig });
+    // Parse gig_images khi trả về
+    const gigData = gig.toJSON();
+    if (gigData.gig_images) {
+      try { gigData.gig_images = JSON.parse(gigData.gig_images); } catch { gigData.gig_images = []; }
+    }
+    return res.status(201).json({ success: true, message: 'Gig created successfully', gig: gigData });
   } catch (error) {
     console.error('Error creating gig:', error.message);
     return res.status(500).json({ success: false, message: 'Error creating gig', error: error.message });
@@ -47,11 +53,19 @@ export const getAllGigs = async (req, res, next) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
+    // Parse gig_images cho từng gig
+    const gigsRows = gigs.rows.map(gig => {
+      const gigData = gig.toJSON();
+      if (gigData.gig_images) {
+        try { gigData.gig_images = JSON.parse(gigData.gig_images); } catch { gigData.gig_images = []; }
+      }
+      return gigData;
+    });
     return res.status(200).json({
       success: true,
       total: gigs.count,
       pages: Math.ceil(gigs.count / limit),
-      gigs: gigs.rows,
+      gigs: gigsRows,
     });
   } catch (error) {
     console.error('Error fetching gigs:', error.message);
@@ -67,7 +81,11 @@ export const getGigById = async (req, res, next) => {
     if (!gig) {
       return res.status(404).json({ success: false, message: 'Gig not found' });
     }
-    return res.status(200).json({ success: true, gig });
+    const gigData = gig.toJSON();
+    if (gigData.gig_images) {
+      try { gigData.gig_images = JSON.parse(gigData.gig_images); } catch { gigData.gig_images = []; }
+    }
+    return res.status(200).json({ success: true, gig: gigData });
   } catch (error) {
     console.error('Error fetching gig:', error.message);
     return res.status(500).json({ success: false, message: 'Error fetching gig', error: error.message });

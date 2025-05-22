@@ -26,7 +26,7 @@ export default function CreateGigPage() {
   const [deliveryTime, setDeliveryTime] = useState("")
   const [city, setCity] = useState("")
   const [country, setCountry] = useState("")
-  const [gigImage, setGigImage] = useState("")
+  const [gigImages, setGigImages] = useState<string[]>([])
   const [imageUploading, setImageUploading] = useState(false)
   const [error, setError] = useState("")
   const [categories, setCategories] = useState<{id: string, name: string}[]>([])
@@ -51,21 +51,22 @@ export default function CreateGigPage() {
       })
   }, [])
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return
-    const file = e.target.files[0]
     setImageUploading(true)
     setError("")
     try {
       const formData = new FormData()
-      formData.append("image", file)
-      const res = await fetch("http://localhost:8800/api/cloudinary/upload", {
+      Array.from(e.target.files).forEach(file => {
+        formData.append("files", file)
+      })
+      const res = await fetch("http://localhost:8800/api/cloudinary/upload-multiple", {
         method: "POST",
         body: formData,
       })
       const data = await res.json()
       if (data.success) {
-        setGigImage(data.imageUrl)
+        setGigImages(prev => [...prev, ...data.files.map((f: any) => f.fileUrl)])
       } else {
         setError("Upload failed")
       }
@@ -93,7 +94,7 @@ export default function CreateGigPage() {
   const validateStep = () => {
     if (step === 0 && (!title || !categoryId || !jobTypeId)) return "Title, category and job type are required."
     if (step === 1 && (!startingPrice || !deliveryTime)) return "Price and delivery time are required."
-    if (step === 2 && !gigImage) return "Please upload an image."
+    if (step === 2 && gigImages.length === 0) return "Please upload at least one image or video."
     if (step === 3 && (faqs.some(f => !f.question.trim() || !f.answer.trim()) || requirements.some(r => !r.requirement_text.trim()))) return "All FAQ and requirement fields are required."
     return ""
   }
@@ -115,8 +116,8 @@ export default function CreateGigPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    if (!title || !categoryId || !jobTypeId || !startingPrice || !deliveryTime || !gigImage || faqs.some(f => !f.question.trim() || !f.answer.trim()) || requirements.some(r => !r.requirement_text.trim())) {
-      setError("Please fill all required fields, upload an image, and complete FAQ/Requirements.")
+    if (!title || !categoryId || !jobTypeId || !startingPrice || !deliveryTime || gigImages.length === 0 || faqs.some(f => !f.question.trim() || !f.answer.trim()) || requirements.some(r => !r.requirement_text.trim())) {
+      setError("Please fill all required fields, upload at least one image/video, and complete FAQ/Requirements.")
       return
     }
     const payload = {
@@ -127,7 +128,7 @@ export default function CreateGigPage() {
       description,
       starting_price: parseFloat(startingPrice),
       delivery_time: parseInt(deliveryTime),
-      gig_image: gigImage,
+      gig_images: gigImages,
       city,
       country,
       faqs,
@@ -231,10 +232,18 @@ export default function CreateGigPage() {
         {step === 2 && (
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="gigImage" className="text-base font-semibold">Gig Image <span className="text-red-500">*</span></Label>
-              <Input id="gigImage" type="file" accept="image/*" onChange={handleImageChange} className="rounded border-2 border-gray-200 focus:border-emerald-500 transition-all" />
+              <Label htmlFor="gigImages" className="text-base font-semibold">Gig Images/Video <span className="text-red-500">*</span></Label>
+              <Input id="gigImages" type="file" accept="image/*,video/*" multiple onChange={handleImagesChange} className="rounded border-2 border-gray-200 focus:border-emerald-500 transition-all" />
               {imageUploading && <div className="text-sm text-gray-500 mt-2 animate-pulse">Uploading...</div>}
-              {gigImage && <img src={gigImage} alt="Gig" className="mt-3 rounded-xl w-full max-w-xs h-40 object-cover border-2 border-emerald-200 shadow-md mx-auto transition-all duration-300" />}
+              {gigImages.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {gigImages.map((url, idx) => url.match(/\.(mp4|mov|avi|wmv)$/i) ? (
+                    <video key={idx} src={url} className="rounded-xl w-32 h-20 object-cover border-2 border-emerald-200 shadow-md" controls />
+                  ) : (
+                    <img key={idx} src={url} alt="Gig" className="rounded-xl w-32 h-20 object-cover border-2 border-emerald-200 shadow-md" />
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="city" className="text-base font-semibold">City</Label>

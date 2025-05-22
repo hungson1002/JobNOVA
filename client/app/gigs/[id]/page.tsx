@@ -113,25 +113,30 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
 
   // Handle image navigation
   const nextImage = () => {
-    setSelectedImageIndex((prev) => (prev + 1) % gig.images.length)
+    if (!gig?.gig_images?.length) return;
+    setSelectedImageIndex((prev) => (prev + 1) % gig.gig_images.length)
   }
 
   const prevImage = () => {
-    setSelectedImageIndex((prev) => (prev - 1 + gig.images.length) % gig.images.length)
+    if (!gig?.gig_images?.length) return;
+    setSelectedImageIndex((prev) => (prev - 1 + gig.gig_images.length) % gig.gig_images.length)
   }
 
   // Handle lightbox navigation
   const openLightbox = (index: number) => {
+    if (!gig?.gig_images?.length) return;
     setLightboxIndex(index)
     setIsLightboxOpen(true)
   }
 
   const nextLightboxImage = () => {
-    setLightboxIndex((prev) => (prev + 1) % gig.images.length)
+    if (!gig?.gig_images?.length) return;
+    setLightboxIndex((prev) => (prev + 1) % gig.gig_images.length)
   }
 
   const prevLightboxImage = () => {
-    setLightboxIndex((prev) => (prev - 1 + gig.images.length) % gig.images.length)
+    if (!gig?.gig_images?.length) return;
+    setLightboxIndex((prev) => (prev - 1 + gig.gig_images.length) % gig.gig_images.length)
   }
 
   // Handle save/favorite
@@ -267,8 +272,10 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   if (loadingGig) return <div>Loading...</div>
   if (!gig) return <div>Gig not found</div>
 
-  // Fallback cho các trường chưa có trong gig thật
-  const images = gig.images || (gig.gig_image ? [gig.gig_image] : ["/placeholder.svg"])
+  // Gallery logic
+  const images = gig.gig_images && Array.isArray(gig.gig_images) && gig.gig_images.length > 0
+    ? gig.gig_images
+    : (gig.gig_image ? [gig.gig_image] : ["/placeholder.svg"]);
   const seller = gig.seller || {
     name: gig.seller_clerk_id || "AlexDesigns",
     username: gig.seller_clerk_id || "alexdesigns",
@@ -414,40 +421,68 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
 
             {/* Image Gallery */}
             <div className="mb-8">
-              <div className="relative aspect-video overflow-hidden rounded-lg bg-gray-100">
+              <div className="relative aspect-video overflow-hidden rounded-lg bg-gray-100 group">
+                {images[selectedImageIndex].match(/\.(mp4|mov|avi|wmv)$/i) ? (
+                  <video
+                    src={images[selectedImageIndex]}
+                    controls
+                    className="w-full h-full object-cover rounded-lg cursor-pointer"
+                    style={{height: '100%', width: '100%'}}
+                    onClick={() => setIsLightboxOpen(true)}
+                  />
+                ) : (
                 <Image
                   src={images[selectedImageIndex]}
                   alt={gig.title}
                   fill
-                  className="object-cover"
-                  onClick={() => openLightbox(selectedImageIndex)}
+                    className="object-cover cursor-pointer"
+                    onClick={() => setIsLightboxOpen(true)}
                 />
+                )}
+                {images.length > 1 && (
+                  <>
                 <button
                   onClick={prevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 hover:bg-white transition-colors"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 hover:bg-white transition-colors z-10"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
                 <button
                   onClick={nextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 hover:bg-white transition-colors"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 hover:bg-white transition-colors z-10"
                 >
                   <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setIsLightboxOpen(true)}
+                  className="absolute bottom-2 right-2 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 transition-colors z-10"
+                  title="Xem lớn"
+                >
+                  <ZoomIn className="h-5 w-5" />
                 </button>
               </div>
+              {/* Slider thumbnail */}
+              {images.length > 1 && (
               <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
-                {images.map((image: string, index: number) => (
+                  {images.map((media: string, index: number) => (
                   <button
                     key={index}
                     onClick={() => setSelectedImageIndex(index)}
-                    className={`relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
+                      className={`relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
                       selectedImageIndex === index ? "border-emerald-500" : "border-transparent"
                     }`}
                   >
-                    <Image src={image} alt={`${gig.title} - Image ${index + 1}`} fill className="object-cover" />
+                      {media.match(/\.(mp4|mov|avi|wmv)$/i) ? (
+                        <video src={media} className="object-cover w-full h-full" />
+                      ) : (
+                        <Image src={media} alt={`${gig.title} - Image ${index + 1}`} fill className="object-cover" />
+                      )}
                   </button>
                 ))}
               </div>
+              )}
             </div>
 
             {/* Description */}
@@ -716,13 +751,23 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
           >
             <ChevronRight className="h-6 w-6 text-white" />
           </button>
-          <div className="relative h-[80vh] w-[80vw]">
+          <div className="relative h-[80vh] w-[80vw] flex items-center justify-center">
+            {images[lightboxIndex].match(/\.(mp4|mov|avi|wmv)$/i) ? (
+              <video
+                src={images[lightboxIndex]}
+                controls
+                autoPlay
+                className="max-h-[80vh] max-w-[80vw] rounded-lg"
+                style={{background: '#222'}}
+              />
+            ) : (
             <Image
               src={images[lightboxIndex]}
               alt={gig.title}
               fill
               className="object-contain"
             />
+            )}
           </div>
         </div>
       )}

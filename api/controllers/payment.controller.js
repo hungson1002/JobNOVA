@@ -35,12 +35,6 @@ export const createVNPayUrl = async (req, res) => {
     const now = new Date();
     const expire = new Date(now.getTime() + 15 * 60 * 1000);
 
-    console.log("💬 Tổng tiền USD từ FE:", order.total_price);
-console.log("💬 Là USD?", isUSD);
-console.log("💬 Sau quy đổi VND:", amountInVND);
-console.log("💬 Gửi lên VNPay:", amountInVND * 100);
-
-
     const vnpayResponse = await vnpay.buildPaymentUrl({
       vnp_Amount: amountInVND * 100, // nhân 100 theo yêu cầu của VNPay
       vnp_IpAddr: req.ip || '127.0.0.1',
