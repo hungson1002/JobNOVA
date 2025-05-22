@@ -50,6 +50,48 @@ const Review = (sequelize) =>
         allowNull: false,
         defaultValue: DataTypes.NOW,
       },
+      sellerResponse: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      // helpful: {
+      //   type: DataTypes.BOOLEAN,
+      //   allowNull: true,
+      // },
+      helpfulYes: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      helpfulNo: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      sellerCommunication: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        validate: {
+          min: 1,
+          max: 5,
+        },
+      },
+      qualityOfDelivery: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        validate: {
+          min: 1,
+          max: 5,
+        },
+      },
+      valueOfDelivery: {
+        type: DataTypes.TINYINT,
+        allowNull: false,
+        validate: {
+          min: 1,
+          max: 5,
+        },
+      },
     },
     {
       tableName: "reviews",

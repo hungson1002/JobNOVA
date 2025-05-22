@@ -156,14 +156,32 @@ export const getOrders = async (req, res, next) => {
       offset: parseInt(offset),
       include: [
         { model: models.Gig, attributes: ['id', 'title', 'gig_image'] },
+        {
+          model: models.User,
+          as: "buyer",
+          attributes: ["clerk_id", "name", "country"],
+        },
+        {
+          model: models.Review,
+          as: "review",
+          required: false,
+          where: { reviewer_clerk_id: finalClerkId },
+        },
       ],
     });
+
+    const enrichedOrders = orders.rows.map((order) => ({
+      ...order.get({ plain: true }),
+      duration: order.order_date && order.delivery_deadline
+        ? Math.ceil((new Date(order.delivery_deadline) - new Date(order.order_date)) / (1000 * 60 * 60 * 24))
+        : 0,
+    }));
 
     return res.status(200).json({
       success: true,
       total: orders.count,
       pages: Math.ceil(orders.count / limit),
-      orders: orders.rows,
+      orders: enrichedOrders,
     });
 
   } catch (error) {
@@ -171,8 +189,6 @@ export const getOrders = async (req, res, next) => {
     return next(error);
   }
 };
-
-
 
 
 // Xác nhận đơn hàng (bỏ qua thanh toán)

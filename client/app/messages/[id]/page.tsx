@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react"
 import Link from "next/link"
 import { ArrowLeft, Paperclip, Send } from "lucide-react"
 import io from "socket.io-client"
-
+import { useAuth } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -43,10 +43,11 @@ export default function MessageDetailPage({ params }: { params: { id: string } }
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
   const [receiverId, setReceiverId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const [isNewMessage, setIsNewMessage] = useState(false)
-  const { user } = useUser()
-  const senderId = user?.id || ""
+  const { userId, isLoaded, getToken } = useAuth()
+  const senderId = userId || ""
   const socket = io("http://localhost:8800", {
     reconnection: true,
     reconnectionAttempts: 5,
@@ -97,6 +98,64 @@ export default function MessageDetailPage({ params }: { params: { id: string } }
       socket.off("connect_error")
     }
   }, [params.id, senderId])
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const token = await getToken();
+        // Fetch messages
+        const msgResponse = await fetch(`http://localhost:8800/api/messages?order_id=${params.id}`, {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!msgResponse.ok) throw new Error(`HTTP error! status: ${msgResponse.status}`);
+        const msgData: MessagesApiResponse = await msgResponse.json();
+        if (msgData.success) {
+          setMessages(msgData.messages?.map((msg) => ({ ...msg, is_read: msg.is_read || false })) || []);
+        } else {
+          setError(msgData.message || "Không thể tải tin nhắn");
+        }
+
+        // Fetch ticket
+        const ticketResponse = await fetch(`http://localhost:8800/api/messages/tickets?order_id=${params.id}`, {
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!ticketResponse.ok) throw new Error(`HTTP error! status: ${ticketResponse.status}`);
+        const ticketData = await ticketResponse.json();
+        if (ticketData.success && ticketData.tickets?.length > 0) {
+          const ticket: Ticket = ticketData.tickets[0];
+          const receiver = senderId === ticket.buyer_clerk_id ? ticket.seller_clerk_id : ticket.buyer_clerk_id;
+          setReceiverId(receiver);
+        } else {
+          setError("Không thể lấy thông tin ticket");
+        }
+      } catch (err) {
+        setError(`Lỗi kết nối: ${err instanceof Error ? err.message : " Unknown error"}`);
+        console.error("Fetch data error:", err);
+      } finally {
+        // Set loading to false after fetching data
+        setLoading(false);
+
+      }
+    };
+
+    if (senderId) {
+      fetchData();
+      socket.emit("joinOrder", { orderId: params.id });
+      socket.emit("viewChat", { orderId: params.id, userId: senderId });
+    }
+
+    return () => {
+      socket.off("newMessage");
+      socket.off("messagesRead");
+      socket.off("connect_error");
+    };
+  }, [params.id, senderId, isLoaded]);
 
   useEffect(() => {
     if (isNewMessage && contentRef.current) {
@@ -237,10 +296,20 @@ export default function MessageDetailPage({ params }: { params: { id: string } }
         )}
       </div>
 
+      {loading && (
+        <div className="flex items-center gap-2 text-gray-500 text-sm mb-4">
+          <svg className="animate-spin h-5 w-5 text-gray-400" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+          </svg>
+          Loading...
+        </div>
+      )}
+
       <Card className="flex-grow flex flex-col overflow-hidden">
         <CardContent ref={contentRef} className="flex-grow overflow-y-auto p-4 space-y-4">
-          {Object.keys(groupedMessages).length === 0 && !error && (
-            <div className="text-center text-gray-500">Không có tin nhắn nào để hiển thị.</div>
+          {Object.keys(groupedMessages).length === 0 && !error && !loading && (
+            <div className="text-center text-gray-500">No messages to display.</div>
           )}
           {Object.keys(groupedMessages).map((date) => (
             <div key={date}>
@@ -292,8 +361,9 @@ export default function MessageDetailPage({ params }: { params: { id: string } }
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               className="mx-2"
+              disabled={loading}
             />
-            <Button onClick={handleSend} size="icon" className="bg-emerald-600 hover:bg-emerald-700">
+            <Button onClick={handleSend} size="icon" className="bg-emerald-600 hover:bg-emerald-700" disabled={loading}>
               <Send className="h-4 w-4" />
             </Button>
           </div>
@@ -305,5 +375,11 @@ export default function MessageDetailPage({ params }: { params: { id: string } }
 }
 
 function useUser() {
-  return { user: { id: "user123" } }
+  //mock user_clerk_id
+  const user = {
+    id: "user_clerk_id",
+    name: "User Name",
+    avatar: "/placeholder.svg",
+  }
+  return { user }
 }

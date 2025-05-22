@@ -61,10 +61,6 @@ const Order = (sequelize) =>
         type: DataTypes.TEXT,
         allowNull: true,
       },
-      // payment_intent: {
-      //   type: DataTypes.STRING(255),
-      //   allowNull: true,
-      // },
     },
     {
       tableName: "orders",
@@ -76,5 +72,6 @@ const Order = (sequelize) =>
       ],
     }
   );
+
 
 export default Order;
