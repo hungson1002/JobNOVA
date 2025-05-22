@@ -481,19 +481,17 @@ function AnimatedWords({ text, className, onDone }: { text: string, className?: 
 
 // Mapping gig thật sang format ServiceCard
 function mapGigToServiceCard(gig: Gig): any {
-  const mediaList =
-    Array.isArray(gig.gig_images) && gig.gig_images.length > 0
-      ? gig.gig_images
-      : gig.gig_image
-      ? [gig.gig_image]
-      : ["/placeholder.svg"];
-
+  const mediaList = Array.isArray(gig.gig_images) && gig.gig_images.length > 0
+    ? gig.gig_images
+    : gig.gig_image
+    ? [gig.gig_image]
+    : ["/placeholder.svg"];
   return {
     id: gig.id,
     title: gig.title,
     price: gig.starting_price,
-    image: mediaList[0],         // ảnh đầu tiên để hiển thị nhanh
-    gig_images: mediaList,       // toàn bộ media (ảnh + video)
+    image: mediaList[0], // Ảnh đầu tiên để hiển thị nhanh
+    gig_images: mediaList, // Truyền cả mảng media cho gallery
     seller: {
       name: gig.seller_clerk_id,
       avatar: "/placeholder.svg",
@@ -505,7 +503,7 @@ function mapGigToServiceCard(gig: Gig): any {
     deliveryTime: gig.delivery_time,
     badges: [],
     isSaved: false,
-  };
+  }
 }
 
 
@@ -705,9 +703,16 @@ export default function Home() {
           {/* Recommended for You Section */}
           <section className="bg-gray-50 py-12 dark:bg-gray-900">
             <div className="container mx-auto px-4">
-              <h2 className="mb-8 text-center text-3xl font-bold dark:text-white">Recommended for You</h2>
+              <div className="mb-8 flex items-center justify-between">
+                <h2 className="text-2xl font-bold dark:text-white">Recommended for You</h2>
+                <Button variant="ghost" asChild>
+                  <Link href="/search" className="flex items-center gap-1">
+                    View All <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {serviceCards.map((service) => (
+                {serviceCards.slice(0, 4).map((service) => (
                   <ServiceCard key={service.id} service={service} />
                 ))}
               </div>
@@ -717,9 +722,16 @@ export default function Home() {
           {/* Trending Now Section */}
           <section className="py-12">
             <div className="container mx-auto px-4">
-              <h2 className="mb-8 text-center text-3xl font-bold dark:text-white">Trending Now</h2>
+              <div className="mb-8 flex items-center justify-between">
+                <h2 className="text-2xl font-bold dark:text-white">Trending Now</h2>
+                <Button variant="ghost" asChild>
+                  <Link href="/search" className="flex items-center gap-1">
+                    View All <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {serviceCards.map((service) => (
+                {serviceCards.slice(0, 4).map((service) => (
                   <ServiceCard key={service.id} service={service} />
                 ))}
               </div>
@@ -729,10 +741,17 @@ export default function Home() {
           {/* Saved Services Section */}
           <section className="bg-gray-50 py-12 dark:bg-gray-900">
             <div className="container mx-auto px-4">
-              <h2 className="mb-8 text-center text-3xl font-bold dark:text-white">Saved Services</h2>
+              <div className="mb-8 flex items-center justify-between">
+                <h2 className="text-2xl font-bold dark:text-white">Saved Services</h2>
+                <Button variant="ghost" asChild>
+                  <Link href="/saved" className="flex items-center gap-1">
+                    View All <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
               {savedGigs.length > 0 ? (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                  {savedGigs.map((gig) => (
+                  {savedGigs.slice(0, 4).map((gig) => (
                     <ServiceCard key={gig.id} service={mapGigToServiceCard(gig)} />
                   ))}
                 </div>
@@ -768,9 +787,16 @@ export default function Home() {
       {/* Popular Services Section */}
       <section className="bg-gray-50 py-16 dark:bg-gray-900">
         <div className="container mx-auto px-4">
-          <h2 className="mb-8 text-center text-3xl font-bold dark:text-white">Popular Services</h2>
+          <div className="mb-8 flex items-center justify-between">
+            <h2 className="text-2xl font-bold dark:text-white">Popular Services</h2>
+            <Button variant="ghost" asChild>
+              <Link href="/search" className="flex items-center gap-1">
+                View All <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {serviceCards.map((service) => (
+            {serviceCards.slice(0, 4).map((service) => (
               <ServiceCard
                 key={service.id}
                 service={service}

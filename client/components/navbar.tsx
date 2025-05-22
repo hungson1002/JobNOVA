@@ -42,6 +42,20 @@ export function Navbar() {
   const isSeller = user?.publicMetadata?.isSeller
   const isBuyer = user?.publicMetadata?.isBuyer
 
+  // Mapping tên category sang icon
+  const categoryIcons: Record<string, React.ReactNode> = {
+    "Design": <Palette className="h-4 w-4" />,
+    "Music": <Music className="h-4 w-4" />,
+    "Video": <Video className="h-4 w-4" />,
+    "Writing": <PenTool className="h-4 w-4" />,
+    "Programming": <Code className="h-4 w-4" />,
+    "Business": <BarChart className="h-4 w-4" />,
+    "Marketing": <Briefcase className="h-4 w-4" />,
+    "Photography": <Camera className="h-4 w-4" />,
+    "Database": <Database className="h-4 w-4" />,
+    "UI/UX": <Smile className="h-4 w-4" />,
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
@@ -353,7 +367,7 @@ export function Navbar() {
                     href={`/search?category=${category.id}`}
                     className="flex items-center space-x-1 text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors whitespace-nowrap"
                   >
-                    <Palette className="h-4 w-4" />
+                    {categoryIcons[category.name] || <Palette className="h-4 w-4" />}
                     <span>{category.name}</span>
                   </Link>
                 ))}

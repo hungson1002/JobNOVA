@@ -111,7 +111,15 @@ export const getSavedGigs = async (req, res, next) => {
       include: [
         {
           model: models.Gig,
-          attributes: ['id', 'title', 'starting_price', 'delivery_time', 'gig_image', 'seller_clerk_id'],
+          attributes: [
+            'id',
+            'title',
+            'starting_price',
+            'delivery_time',
+            'gig_image',
+            'seller_clerk_id',
+            'gig_images'
+          ],
         }
       ],
       limit: parseInt(limit, 10),
@@ -124,7 +132,13 @@ export const getSavedGigs = async (req, res, next) => {
       totalItems: savedGigsData.count,
       totalPages: Math.ceil(savedGigsData.count / parseInt(limit, 10)),
       currentPage: parseInt(page, 10),
-      savedGigs: savedGigsData.rows.map(sg => sg.Gig)
+      savedGigs: savedGigsData.rows.map(sg => {
+        const gig = sg.Gig?.toJSON ? sg.Gig.toJSON() : sg.Gig;
+        if (gig && gig.gig_images) {
+          try { gig.gig_images = JSON.parse(gig.gig_images); } catch { gig.gig_images = []; }
+        }
+        return gig;
+      })
     });
 
   } catch (error) {

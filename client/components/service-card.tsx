@@ -73,46 +73,43 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
               muted
               loop
               playsInline
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover pointer-events-none"
             />
           ) : (
             <Image
               src={currentMedia || "/placeholder.svg"}
               alt={service.title}
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-cover transition-transform duration-300 group-hover:scale-105 pointer-events-none"
             />
           )}
 
           {/* Navigation buttons */}
           {mediaList.length > 1 && (
-          <>
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                goPrev()
-              }}
-              className={`absolute left-2 top-1/2 -translate-y-1/2 rounded-full p-2 shadow transition-all duration-300
-                ${hovered ? "opacity-100 scale-100 bg-white text-black" : "opacity-0 scale-90"}
-              `}
-            >
-              ◀
-            </button>
-            <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                goNext()
-              }}
-              className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 shadow transition-all duration-300
-                ${hovered ? "opacity-100 scale-100 bg-white text-black" : "opacity-0 scale-90"}
-              `}
-            >
-              ▶
-            </button>
-          </>
-        )}
+            <>
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  goPrev()
+                }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full p-2 bg-white text-black shadow opacity-0 group-hover:opacity-100 transition duration-300"
+              >
+                ◀
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  goNext()
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 bg-white text-black shadow opacity-0 group-hover:opacity-100 transition duration-300"
+              >
+                ▶
+              </button>
+            </>
+          )}
+
 
 
           {/* Save button */}
