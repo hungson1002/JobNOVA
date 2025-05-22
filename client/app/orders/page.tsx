@@ -1,4 +1,4 @@
-// "use client"
+"use client"
 
 import Link from "next/link"
 import Image from "next/image"
@@ -84,7 +84,7 @@ export default function OrdersPage() {
             </div>
           ) : (
             orders.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard key={order.id} order={order} onCancelClick={() => {}} />
             ))
           )}
         </TabsContent>
@@ -95,7 +95,7 @@ export default function OrdersPage() {
             </div>
           ) : (
             activeOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard key={order.id} order={order} onCancelClick={() => {}} />
             ))
           )}
         </TabsContent>
@@ -106,7 +106,7 @@ export default function OrdersPage() {
             </div>
           ) : (
             completedOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard key={order.id} order={order} onCancelClick={() => {}} />
             ))
           )}
         </TabsContent>
@@ -117,59 +117,11 @@ export default function OrdersPage() {
             </div>
           ) : (
             cancelledOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard key={order.id} order={order} onCancelClick={() => {}} />
             ))
           )}
         </TabsContent>
       </Tabs>
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancel Order</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to cancel this order? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCancelDialogOpen(false)}
-            >
-              No, keep order
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!orderToCancel) return;
-                const token = await getToken();
-                const res = await fetch(
-                  `http://localhost:8800/api/orders/${orderToCancel.id}/cancel`,
-                  {
-                    method: "PUT",
-                    headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${token}`,
-                    },
-                  }
-                );
-                if (res.ok) {
-                  setOrders((prev) =>
-                    prev.map((o) =>
-                      o.id === orderToCancel.id
-                        ? { ...o, order_status: "cancelled" }
-                        : o
-                    )
-                  );
-                  setCancelDialogOpen(false);
-                  setOrderToCancel(null);
-                }
-              }}
-            >
-              Yes, cancel order
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </main>
   );
 }
@@ -192,6 +144,24 @@ function OrderCard({
   const { getToken } = useAuth()
   const [loadingCancel, setLoadingCancel] = useState(false)
 
+  const getGigImage = () => {
+    let images: string[] = [];
+    if (Array.isArray(gig.gig_images)) {
+      images = gig.gig_images;
+    } else if (typeof gig.gig_images === "string") {
+      try {
+        const arr = JSON.parse(gig.gig_images);
+        if (Array.isArray(arr)) images = arr;
+      } catch {}
+    }
+    if (images.length > 0) {
+      const firstImg = images.find((url) => !url.match(/\.(mp4|mov|avi|wmv)$/i));
+      if (firstImg) return firstImg;
+    }
+    if (gig.gig_image && typeof gig.gig_image === "string" && gig.gig_image.startsWith("http")) return gig.gig_image;
+    return "/placeholder.svg";
+  };
+
   const handleCancelOrder = async () => {
     if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) return
     try {
@@ -209,14 +179,10 @@ function OrderCard({
       )
       const data = await res.json()
       if (res.ok) {
-        toast.success("Đơn hàng đã được hủy")
         onCancelClick(order)
-      } else {
-        toast.error(data.message || "Hủy đơn thất bại")
       }
     } catch (err) {
       console.error(err)
-      toast.error("Lỗi kết nối máy chủ")
     } finally {
       setLoadingCancel(false)
     }

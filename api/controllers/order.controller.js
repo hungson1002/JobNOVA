@@ -153,7 +153,7 @@ export const getOrders = async (req, res, next) => {
       limit: parseInt(limit),
       offset: parseInt(offset),
       include: [
-        { model: models.Gig, attributes: ['id', 'title', 'gig_image'] },
+        { model: models.Gig, attributes: ['id', 'title', 'gig_image', 'gig_images'] },
       ],
       order: [["order_date", "DESC"]],
     });
