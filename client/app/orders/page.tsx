@@ -3,46 +3,87 @@
 import Link from "next/link"
 import Image from "next/image"
 import { format } from "date-fns"
-import { Clock, CheckCircle, AlertCircle, XCircle, RefreshCw, MessageSquare, ArrowLeft } from "lucide-react"
+import {
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  RefreshCw,
+  MessageSquare,
+  ArrowLeft,
+} from "lucide-react"
 import { useUser, useAuth } from "@clerk/nextjs"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardFooter } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 
 export default function OrdersPage() {
-  const { user, isLoaded, isSignedIn } = useUser();
-  const { getToken } = useAuth();
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const { user, isLoaded, isSignedIn } = useUser()
+  const { getToken } = useAuth()
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [orderToCancel, setOrderToCancel] = useState<any>(null)
+
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
+    if (!isLoaded || !isSignedIn) return
+
     const fetchOrders = async () => {
-      setLoading(true);
-      const token = await getToken();
+      setLoading(true)
+      const token = await getToken()
       const res = await fetch(`http://localhost:8800/api/orders/${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      });
-      const data = await res.json();
-      setOrders(data.orders || []);
-      setLoading(false);
-    };
-    fetchOrders();
-  }, [isLoaded, isSignedIn, user, getToken]);
+      })
+      const data = await res.json()
+      setOrders(data.orders || [])
+      setLoading(false)
+    }
 
-  if (!isLoaded) return <div className="container mx-auto py-8">Loading...</div>;
-  if (!isSignedIn) return <div className="container mx-auto py-8">Please sign in to view your orders</div>;
+    fetchOrders()
+  }, [isLoaded, isSignedIn, user, getToken])
 
-  // Mapping orders by status
-  const activeOrders = orders.filter(o => ["pending", "in_progress", "delivered"].includes(o.order_status));
-  const completedOrders = orders.filter(o => o.order_status === "completed");
-  const cancelledOrders = orders.filter(o => o.order_status === "cancelled");
+  const handleCancelUI = (orderId: number) => {
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === orderId ? { ...o, order_status: "cancelled" } : o
+      )
+    )
+  }
+
+  if (!isLoaded)
+    return <div className="container mx-auto py-8">Loading...</div>
+  if (!isSignedIn)
+    return (
+      <div className="container mx-auto py-8">
+        Please sign in to view your orders
+      </div>
+    )
+
+  const activeOrders = orders.filter((o) =>
+    ["pending", "in_progress", "delivered"].includes(o.order_status)
+  )
+  const completedOrders = orders.filter(
+    (o) => o.order_status === "completed"
+  )
+  const cancelledOrders = orders.filter(
+    (o) => o.order_status === "cancelled"
+  )
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -59,6 +100,7 @@ export default function OrdersPage() {
           <p className="text-gray-600">Track and manage your orders</p>
         </div>
       </div>
+
       <Tabs defaultValue="all" className="w-full">
         <TabsList className="mb-6 grid w-full grid-cols-4 md:w-auto">
           <TabsTrigger value="all">All Orders</TabsTrigger>
@@ -66,104 +108,176 @@ export default function OrdersPage() {
           <TabsTrigger value="completed">Completed</TabsTrigger>
           <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
         </TabsList>
-        <TabsContent value="all" className="space-y-6">
-          {orders.length === 0 ? (
-            <div className="text-center py-16 text-gray-500 text-lg font-medium">
-              You have no orders yet.
-            </div>
-          ) : (
-            orders.map((order) => (
-              <OrderCard key={order.id} order={order} />
-            ))
-          )}
-        </TabsContent>
-        <TabsContent value="active" className="space-y-6">
-          {activeOrders.length === 0 ? (
-            <div className="text-center py-16 text-gray-500 text-lg font-medium">
-              You have no orders yet.
-            </div>
-          ) : (
-            activeOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
-            ))
-          )}
-        </TabsContent>
-        <TabsContent value="completed" className="space-y-6">
-          {completedOrders.length === 0 ? (
-            <div className="text-center py-16 text-gray-500 text-lg font-medium">
-              You have no orders yet.
-            </div>
-          ) : (
-            completedOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
-            ))
-          )}
-        </TabsContent>
-        <TabsContent value="cancelled" className="space-y-6">
-          {cancelledOrders.length === 0 ? (
-            <div className="text-center py-16 text-gray-500 text-lg font-medium">
-              You have no orders yet.
-            </div>
-          ) : (
-            cancelledOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
-            ))
-          )}
-        </TabsContent>
+
+        {[
+          { value: "all", list: orders },
+          { value: "active", list: activeOrders },
+          { value: "completed", list: completedOrders },
+          { value: "cancelled", list: cancelledOrders },
+        ].map(({ value, list }) => (
+          <TabsContent key={value} value={value} className="space-y-6">
+            {list.length === 0 ? (
+              <div className="text-center py-16 text-gray-500 text-lg font-medium">
+                You have no orders yet.
+              </div>
+            ) : (
+              list.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  onCancelClick={(order) => {
+                    setOrderToCancel(order)
+                    setCancelDialogOpen(true)
+                  }}
+                />
+              ))
+            )}
+          </TabsContent>
+        ))}
       </Tabs>
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Order</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this order? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCancelDialogOpen(false)}
+            >
+              No, keep order
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (!orderToCancel) return;
+                const token = await getToken();
+                const res = await fetch(
+                  `http://localhost:8800/api/orders/${orderToCancel.id}/cancel`,
+                  {
+                    method: "PUT",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                  }
+                );
+                if (res.ok) {
+                  setOrders((prev) =>
+                    prev.map((o) =>
+                      o.id === orderToCancel.id
+                        ? { ...o, order_status: "cancelled" }
+                        : o
+                    )
+                  );
+                  setCancelDialogOpen(false);
+                  setOrderToCancel(null);
+                }
+              }}
+            >
+              Yes, cancel order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }
 
-function OrderCard({ order }: { order: any }) {
-  const gig = order.Gig || {};
+function OrderCard({
+  order,
+  onCancelClick,
+}: {
+  order: any
+  onCancelClick: (order: any) => void
+}) {
+  const gig = order.Gig || {}
   const seller = {
     name: order.seller_clerk_id,
     avatar: "/placeholder.svg",
     level: "Seller",
-  };
-  const router = useRouter();
+  }
+
+  const router = useRouter()
+  const { getToken } = useAuth()
+  const [loadingCancel, setLoadingCancel] = useState(false)
+
+  const handleCancelOrder = async () => {
+    if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) return
+    try {
+      setLoadingCancel(true)
+      const token = await getToken()
+      const res = await fetch(
+        `http://localhost:8800/api/orders/${order.id}/cancel`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      const data = await res.json()
+      if (res.ok) {
+        toast.success("Đơn hàng đã được hủy")
+        onCancelClick(order)
+      } else {
+        toast.error(data.message || "Hủy đơn thất bại")
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error("Lỗi kết nối máy chủ")
+    } finally {
+      setLoadingCancel(false)
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
         return (
-          <Badge variant="outline" className="flex items-center gap-1 border-amber-500 text-amber-500">
+          <Badge variant="outline" className="border-amber-500 text-amber-500">
             <Clock className="h-3 w-3" />
             Pending
           </Badge>
         )
       case "in_progress":
         return (
-          <Badge variant="outline" className="flex items-center gap-1 border-blue-500 text-blue-500">
+          <Badge variant="outline" className="border-blue-500 text-blue-500">
             <RefreshCw className="h-3 w-3" />
             In Progress
           </Badge>
         )
       case "delivered":
         return (
-          <Badge variant="outline" className="flex items-center gap-1 border-emerald-500 text-emerald-500">
+          <Badge
+            variant="outline"
+            className="border-emerald-500 text-emerald-500"
+          >
             <CheckCircle className="h-3 w-3" />
             Delivered
           </Badge>
         )
       case "completed":
         return (
-          <Badge className="flex items-center gap-1 bg-emerald-500">
+          <Badge className="bg-emerald-500 text-white">
             <CheckCircle className="h-3 w-3" />
             Completed
           </Badge>
         )
       case "revision":
         return (
-          <Badge variant="outline" className="flex items-center gap-1 border-purple-500 text-purple-500">
+          <Badge variant="outline" className="border-purple-500 text-purple-500">
             <AlertCircle className="h-3 w-3" />
             Revision Requested
           </Badge>
         )
       case "cancelled":
         return (
-          <Badge variant="outline" className="flex items-center gap-1 border-red-500 text-red-500">
+          <Badge variant="outline" className="border-red-500 text-red-500">
             <XCircle className="h-3 w-3" />
             Cancelled
           </Badge>
@@ -178,24 +292,21 @@ function OrderCard({ order }: { order: any }) {
       case "delivered":
         return (
           <>
-            <Button className="bg-emerald-500 hover:bg-emerald-600">Mark as Complete</Button>
+            <Button className="bg-emerald-500 hover:bg-emerald-600">
+              Mark as Complete
+            </Button>
             <Button variant="outline">Request Revision</Button>
           </>
         )
       case "in_progress":
-        return (
-          <>
-            <Button variant="outline">Contact Seller</Button>
-            <Button variant="outline" className="text-red-500 hover:bg-red-50">
-              Cancel Order
-            </Button>
-          </>
-        )
       case "pending":
         return (
           <>
-            <Button variant="outline">Contact Seller</Button>
-            <Button variant="outline" className="text-red-500 hover:bg-red-50">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onCancelClick(order)}
+            >
               Cancel Order
             </Button>
           </>
@@ -203,26 +314,50 @@ function OrderCard({ order }: { order: any }) {
       case "revision":
         return <Button variant="outline">View Revision Request</Button>
       case "completed":
-        return <Button variant="outline" onClick={() => gig.id && router.push(`/gigs/${gig.id}`)}>Leave a Review</Button>
+        return (
+          <Button
+            variant="outline"
+            onClick={() => gig.id && router.push(`/gigs/${gig.id}`)}
+          >
+            Leave a Review
+          </Button>
+        )
       case "cancelled":
-        return <Button variant="outline">View Details</Button>
+        return null;
       default:
         return null
     }
   }
 
+  const getGigImage = () => {
+    let images: string[] = [];
+    if (Array.isArray(gig.gig_images)) {
+      images = gig.gig_images;
+    } else if (typeof gig.gig_images === "string") {
+      try {
+        const arr = JSON.parse(gig.gig_images);
+        if (Array.isArray(arr)) images = arr;
+      } catch {}
+    }
+    if (images.length > 0) {
+      const firstImg = images.find((url) => !url.match(/\.(mp4|mov|avi|wmv)$/i));
+      if (firstImg) return firstImg;
+    }
+    if (gig.gig_image && typeof gig.gig_image === "string" && gig.gig_image.startsWith("http")) return gig.gig_image;
+    return "/placeholder.svg";
+  };
+
   return (
     <Card className="p-6 md:p-8 mb-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        {/* Left: Gig + Seller */}
         <div className="flex flex-col md:flex-row gap-6 flex-1">
           <div className="flex-shrink-0 flex flex-col items-center gap-2">
-            <Image
-              src={gig.gig_image || "/placeholder.svg"}
+            <img
+              src={getGigImage()}
               alt={gig.title || "Gig"}
               width={96}
               height={96}
-              className="rounded-lg object-cover border w-24 h-24"
+              style={{ objectFit: 'cover', borderRadius: '0.5rem', border: '1px solid #e5e7eb', width: 96, height: 96 }}
             />
             <span className="text-xs text-gray-400">Order #{order.id}</span>
           </div>
@@ -242,17 +377,24 @@ function OrderCard({ order }: { order: any }) {
             </div>
           </div>
         </div>
-        {/* Right: Order info */}
         <div className="flex flex-col gap-2 min-w-[220px] md:items-end">
           <div className="mb-2">{getStatusBadge(order.order_status)}</div>
           <div className="flex flex-col gap-1 text-sm text-gray-600">
             <div className="flex justify-between gap-2">
               <span>Order Date:</span>
-              <span className="font-medium text-gray-900">{order.order_date ? format(new Date(order.order_date), "MMM d, yyyy") : "-"}</span>
+              <span className="font-medium text-gray-900">
+                {order.order_date
+                  ? format(new Date(order.order_date), "MMM d, yyyy")
+                  : "-"}
+              </span>
             </div>
             <div className="flex justify-between gap-2">
               <span>Delivery Date:</span>
-              <span className="font-medium text-gray-900">{order.delivery_deadline ? format(new Date(order.delivery_deadline), "MMM d, yyyy") : "-"}</span>
+              <span className="font-medium text-gray-900">
+                {order.delivery_deadline
+                  ? format(new Date(order.delivery_deadline), "MMM d, yyyy")
+                  : "-"}
+              </span>
             </div>
           </div>
           <div className="mt-2 text-lg font-bold text-emerald-700 flex items-center gap-2">
@@ -270,7 +412,7 @@ function OrderCard({ order }: { order: any }) {
             <MessageSquare className="h-4 w-4" />
             Message Seller
           </Button>
-          {getActionButtons(order.order_status)}
+          {order.order_status !== "cancelled" && getActionButtons(order.order_status)}
         </div>
       </CardFooter>
     </Card>

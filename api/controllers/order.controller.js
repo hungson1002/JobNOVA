@@ -7,7 +7,7 @@ import createError from '../utils/createError.js';
 // Tạo payment intent cho đơn hàng (bỏ qua Stripe)
 export const createPaymentIntent = async (req, res, next) => {
   try {
-    const { gig_id, total_price, order_date, delivery_deadline, buyer_clerk_id, seller_clerk_id } = req.body;
+    const { gig_id, total_price, order_date, delivery_deadline, buyer_clerk_id, seller_clerk_id, requirements } = req.body;
     const { test } = req.query; // Kiểm tra query test=true để cho phép bỏ qua auth
 
     // Kiểm tra dữ liệu đầu vào
@@ -65,6 +65,7 @@ export const createPaymentIntent = async (req, res, next) => {
       order_status: 'pending',
       order_date: orderDate,
       delivery_deadline: deliveryDeadline,
+      requirements,
     });
 
     console.log(`Order created: orderId=${newOrder.id}`);
@@ -94,7 +95,7 @@ export const getOrders = async (req, res, next) => {
     const offset = (page - 1) * limit;
     const where = {};
 
-    // Xác định clerk_id theo chế độ
+    // ✅ Xác định finalClerkId theo chế độ
     let finalClerkId;
     if (test === 'true') {
       if (!clerk_id) {
@@ -112,13 +113,13 @@ export const getOrders = async (req, res, next) => {
       return next(createError(400, 'clerk_id is required to fetch orders'));
     }
 
-    // Truy vấn user
+    // ✅ Tìm user
     const user = await models.User.findOne({ where: { clerk_id: finalClerkId } });
     if (!user) {
       return next(createError(404, 'User not found!'));
     }
 
-    // Xử lý user_role linh hoạt
+    // ✅ Xử lý user_roles
     let roles = user.user_roles;
     if (!roles) roles = [];
     else if (typeof roles === 'string') {
@@ -130,33 +131,35 @@ export const getOrders = async (req, res, next) => {
       }
     }
 
-    // Debug log nếu cần
-    console.log("📌 Roles sau khi xử lý:", roles);
-
-    // Cho phép nếu là admin, seeker hoặc employer
+    // ✅ Xác thực quyền truy cập
     if (roles.includes("admin")) {
-      // admin được xem tất cả
+      // admin: xem tất cả
     } else if (roles.includes("seeker") || roles.includes("employer")) {
       where[Op.or] = [
         { buyer_clerk_id: finalClerkId },
-        { seller_clerk_id: finalClerkId }
+        { seller_clerk_id: finalClerkId },
       ];
     } else {
       return next(createError(403, "Invalid user role"));
     }
 
-
-    // Thêm điều kiện lọc thêm nếu có
+    // ✅ Thêm điều kiện nếu có
     if (order_status) where.order_status = order_status;
     if (gig_id) where.gig_id = gig_id;
 
+    // ✅ Truy vấn Order và include Gig
     const orders = await models.Order.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
       include: [
-        { model: models.Gig, attributes: ['id', 'title', 'gig_image'] },
+        {
+          model: models.Gig,
+          as: "Gig",
+          attributes: ["id", "title", "gig_image", "gig_images"],
+        },
       ],
+      order: [["order_date", "DESC"]],
     });
 
     return res.status(200).json({
@@ -165,9 +168,8 @@ export const getOrders = async (req, res, next) => {
       pages: Math.ceil(orders.count / limit),
       orders: orders.rows,
     });
-
   } catch (error) {
-    console.error('❌ Error fetching orders:', error.message);
+    console.error("❌ Error fetching orders:", error);
     return next(error);
   }
 };

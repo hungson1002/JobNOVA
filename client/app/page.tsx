@@ -877,11 +877,11 @@ export default function Home() {
           {loading ? (
             <div className="text-center py-8">Loading gigs...</div>
           ) : gigs && gigs.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {gigs.map(gig => (
-                <GigCard key={gig.id} gig={gig} />
-              ))}
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {gigs.map(gig => (
+              <GigCard key={gig.id} gig={gig} />
+            ))}
+          </div>
           ) : (
             <div className="text-center py-8 text-gray-500">No gigs available at the moment.</div>
           )}

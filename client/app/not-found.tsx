@@ -13,8 +13,8 @@ export default function NotFoundPage() {
           <Image
             src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
             alt="404 Illustration"
-            width={300}
-            height={300}
+            width={400}
+            height={400}
             className="mx-auto"
           />
         </div>

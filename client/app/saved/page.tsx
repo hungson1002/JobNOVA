@@ -60,11 +60,11 @@ export default function SavedGigsPage() {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {gigsToShow.map((gig) => (
-              <ServiceCard
-                key={gig.id}
-                service={mapGigToServiceCard(gig)}
-              />
-            ))}
+            <ServiceCard
+              key={gig.id}
+              service={mapGigToServiceCard(gig)}
+            />
+          ))}
             {/* Thêm placeholder để đủ 12 ô */}
             {Array.from({ length: PAGE_SIZE - gigsToShow.length }).map((_, idx) => (
               <div key={`empty-${idx}`} className="invisible" />
@@ -132,7 +132,7 @@ export default function SavedGigsPage() {
             >
               <ArrowRightCircle className="h-5 w-5" />
             </Button>
-          </div>
+        </div>
         </>
       ) : (
         <div className="text-center py-8">
