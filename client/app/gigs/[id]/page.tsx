@@ -112,17 +112,18 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
       if (data.success) {
         // Nếu backend đã trả về đủ trường (user, seller, sellerResponse, helpful, ...) thì dùng trực tiếp, nếu chưa thì mapping lại.
         const mappedReviews = await Promise.all(data.reviews.map(async (review: any) => {
-          if (review.user) return review;
+            if (review.user) return { ...review, id: review.id };
           // Nếu chưa có user, gọi API lấy thông tin user (fallback)
-          const userRes = await fetch(`http://localhost:8800/api/users/${review.reviewer_clerk_id}`);
-          const userData = await userRes.json();
-          return {
-            ...review,
-            user: {
-              name: userData.name || userData.username || "User",
-              avatar: userData.avatar || "/placeholder.svg",
-              country: userData.country || "Unknown",
-            },
+            const userRes = await fetch(`http://localhost:8800/api/users/${review.reviewer_clerk_id}`);
+            const userData = await userRes.json();
+            return {
+              ...review,
+              id: review.id, // Đảm bảo id là số nguyên
+              user: {
+                name: userData.name || userData.username || "User",
+                avatar: userData.avatar || "/placeholder.svg",
+                country: userData.country || "Unknown",
+              },
             seller: {
               name: review.seller?.name || "Seller",
               avatar: review.seller?.avatar || "/placeholder.svg",
@@ -130,7 +131,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             sellerResponse: review.sellerResponse || null,
             helpful: review.helpful || { yes: 0, no: 0 },
             date: review.date || formatTimeAgo(review.created_at),
-          };
+            };
         }));
         setReviews(mappedReviews);
         setRatingSummary(data.ratingSummary);

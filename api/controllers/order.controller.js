@@ -189,7 +189,7 @@ export const getOrders = async (req, res, next) => {
         ...plainOrder,
         duration: plainOrder.order_date && plainOrder.delivery_deadline
           ? Math.ceil((new Date(plainOrder.delivery_deadline) - new Date(plainOrder.order_date)) / (1000 * 60 * 60 * 24))
-          : 0,
+        : 0,
       };
     });
 

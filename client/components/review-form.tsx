@@ -33,16 +33,19 @@ export function ReviewForm({ onSubmitAction, initialReview, buyerInfo }: ReviewF
   const [rating, setRating] = useState(initialReview?.rating || 0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState(initialReview?.comment || "");
-  const [sellerCommunication, setSellerCommunication] = useState(initialReview?.sellerCommunication || 0);
-  const [qualityOfDelivery, setQualityOfDelivery] = useState(initialReview?.qualityOfDelivery || 0);
-  const [valueOfDelivery, setValueOfDelivery] = useState(initialReview?.valueOfDelivery || 0);
+  const [sellerCommunication, setSellerCommunication] = useState(initialReview?.sellerCommunication || 1);
+  const [qualityOfDelivery, setQualityOfDelivery] = useState(initialReview?.qualityOfDelivery || 1);
+  const [valueOfDelivery, setValueOfDelivery] = useState(initialReview?.valueOfDelivery || 1);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) return;
-    onSubmitAction({ rating, comment, sellerCommunication: 0, qualityOfDelivery: 0, valueOfDelivery: 0 });
+    onSubmitAction({ rating, comment, sellerCommunication, qualityOfDelivery, valueOfDelivery });
     setRating(0);
     setComment("");
+    setSellerCommunication(1);
+    setQualityOfDelivery(1);
+    setValueOfDelivery(1);
   };
 
   const renderStars = (currentRating: number, setRating: (rating: number) => void, label?: string) => (

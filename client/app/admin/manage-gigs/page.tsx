@@ -500,9 +500,9 @@ export default function ManageGigsPage() {
                 ) : (
                   selectedGig.gig_image && (
                     <img src={selectedGig.gig_image} alt="Gig" className="rounded-2xl border border-emerald-100 shadow-md w-48 h-32 object-cover" />
-                  )
-                )}
-              </div>
+                    )
+                  )}
+                </div>
             </div>
           )}
           <DialogFooter className="bg-gray-50 dark:bg-gray-800 px-10 py-4 flex justify-end">

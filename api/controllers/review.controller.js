@@ -94,7 +94,7 @@ export const getAllReviews = async (req, res, next) => {
       where.comment = { [Op.like]: `%${search}%` };
     }
 
-    const reviews = await models.Review.findAndCountAll({
+  const reviews = await models.Review.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -154,24 +154,24 @@ export const getAllReviews = async (req, res, next) => {
 
       return {
         ...plain,
-        user: {
+      user: {
           name: fullName || plain.reviewer?.username || plain.reviewer_clerk_id || 'User',
           avatar: plain.reviewer?.avatar || '/placeholder.svg',
           country: plain.reviewer?.country || 'Unknown',
-        },
+      },
         price: plain.order?.total_price || 50,
         duration: plain.order?.delivery_deadline && plain.created_at
           ? Math.ceil((new Date(plain.order.delivery_deadline) - new Date(plain.created_at)) / (1000 * 60 * 60 * 24))
-          : 13,
+        : 13,
         sellerResponse: plain.sellerResponse || null,
-        helpful: {
+      helpful: {
           yes: plain.helpfulYes || 0,
           no: plain.helpfulNo || 0,
-        },
-        seller: {
+      },
+      seller: {
           name: [plain.gig?.seller?.firstname, plain.gig?.seller?.lastname].filter(Boolean).join(' ').trim() || 'Seller',
           avatar: plain.gig?.seller?.avatar || '/placeholder.svg',
-        },
+      },
       };
     });
 
@@ -365,9 +365,12 @@ export const updateHelpfulVote = async (req, res, next) => {
         await existingVote.destroy();
         await review.decrement(vote === "yes" ? "helpfulYes" : "helpfulNo");
         return res.status(200).json({ success: true, message: "Vote removed", action: "removed" });
-      } else {
-        // Nếu đã vote khác → có thể update hoặc báo lỗi
-        return res.status(400).json({ success: false, message: "You already voted with a different option" });
+    } else {
+        // Nếu đã vote khác → update sang vote mới
+        await review.decrement(existingVote.vote === "yes" ? "helpfulYes" : "helpfulNo");
+        await review.increment(vote === "yes" ? "helpfulYes" : "helpfulNo");
+        await existingVote.update({ vote });
+        return res.status(200).json({ success: true, message: "Vote updated", action: "updated", vote });
       }
     }
 
