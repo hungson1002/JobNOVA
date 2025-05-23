@@ -57,11 +57,11 @@ const defineRelations = (models) => {
 
   // Category-Gig: 1-to-many (one category can have multiple gigs)
   models.Category.hasMany(models.Gig, { foreignKey: 'category_id' });
-  models.Gig.belongsTo(models.Category, { foreignKey: 'category_id' });
+  models.Gig.belongsTo(models.Category, { foreignKey: 'category_id', as: 'category' });
 
   // JobType-Gig: 1-to-many (one job type can have multiple gigs)
   models.JobType.hasMany(models.Gig, { foreignKey: 'job_type_id' });
-  models.Gig.belongsTo(models.JobType, { foreignKey: 'job_type_id' });
+  models.Gig.belongsTo(models.JobType, { foreignKey: 'job_type_id', as: 'job_type' });
 
   // Gig-Order: 1-to-many (one gig can have multiple orders)
   models.Gig.hasMany(models.Order, { foreignKey: 'gig_id' });

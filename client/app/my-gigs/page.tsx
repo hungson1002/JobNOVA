@@ -35,6 +35,11 @@ interface Gig {
     job_type: string;
   };
   gig_images?: string[];
+  seller?: {
+    firstname?: string;
+    lastname?: string;
+    username?: string;
+  };
 }
 
 export default function MyGigsPage() {

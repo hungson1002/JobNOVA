@@ -36,6 +36,11 @@ interface Gig {
     job_type: string;
   };
   gig_images?: string[];
+  seller?: {
+    firstname?: string;
+    lastname?: string;
+    username?: string;
+  };
 }
 
 export default function ManageGigsPage() {
@@ -280,7 +285,15 @@ export default function ManageGigsPage() {
                     displayedGigs.map((gig) => (
                       <TableRow key={gig.id}>
                         <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{gig.seller_clerk_id}</TableCell>
+                        <TableCell>{
+                          gig.seller?.firstname && gig.seller?.lastname
+                            ? gig.seller.firstname + ' ' + gig.seller.lastname
+                            : gig.seller?.firstname
+                            ? gig.seller.firstname
+                            : gig.seller?.username
+                            ? gig.seller.username
+                            : ''
+                        }</TableCell>
                         <TableCell>{gig.category?.name}</TableCell>
                         <TableCell>{gig.job_type?.job_type}</TableCell>
                         <TableCell>${gig.starting_price}</TableCell>
@@ -347,7 +360,15 @@ export default function ManageGigsPage() {
                     displayedGigs.map((gig) => (
                       <TableRow key={gig.id}>
                         <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{gig.seller_clerk_id}</TableCell>
+                        <TableCell>{
+                          gig.seller?.firstname && gig.seller?.lastname
+                            ? gig.seller.firstname + ' ' + gig.seller.lastname
+                            : gig.seller?.firstname
+                            ? gig.seller.firstname
+                            : gig.seller?.username
+                            ? gig.seller.username
+                            : ''
+                        }</TableCell>
                         <TableCell>{gig.category?.name}</TableCell>
                         <TableCell>{gig.job_type?.job_type}</TableCell>
                         <TableCell>${gig.starting_price}</TableCell>
@@ -396,7 +417,15 @@ export default function ManageGigsPage() {
                     displayedGigs.map((gig) => (
                       <TableRow key={gig.id}>
                         <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{gig.seller_clerk_id}</TableCell>
+                        <TableCell>{
+                          gig.seller?.firstname && gig.seller?.lastname
+                            ? gig.seller.firstname + ' ' + gig.seller.lastname
+                            : gig.seller?.firstname
+                            ? gig.seller.firstname
+                            : gig.seller?.username
+                            ? gig.seller.username
+                            : ''
+                        }</TableCell>
                         <TableCell>{gig.category?.name}</TableCell>
                         <TableCell>{gig.job_type?.job_type}</TableCell>
                         <TableCell>${gig.starting_price}</TableCell>
@@ -438,7 +467,15 @@ export default function ManageGigsPage() {
             <div className="space-y-2">
               <div><b>Tiêu đề:</b> {selectedGig.title}</div>
               <div><b>Mô tả:</b> {selectedGig.description}</div>
-              <div><b>Người bán:</b> {selectedGig.seller_clerk_id}</div>
+              <div><b>Người bán:</b> {
+                selectedGig.seller?.firstname && selectedGig.seller?.lastname
+                  ? selectedGig.seller.firstname + ' ' + selectedGig.seller.lastname
+                  : selectedGig.seller?.firstname
+                  ? selectedGig.seller.firstname
+                  : selectedGig.seller?.username
+                  ? selectedGig.seller.username
+                  : ''
+              }</div>
               <div><b>Danh mục:</b> {selectedGig.category?.name}</div>
               <div><b>Loại công việc:</b> {selectedGig.job_type?.job_type}</div>
               <div><b>Giá:</b> ${selectedGig.starting_price}</div>

@@ -77,6 +77,23 @@ export const getAllGigs = async (req, res, next) => {
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
+      include: [
+        {
+          model: models.User,
+          as: 'seller',
+          attributes: ['firstname', 'lastname', 'username', 'clerk_id'],
+        },
+        {
+          model: models.Category,
+          as: 'category',
+          attributes: ['id', 'name'],
+        },
+        {
+          model: models.JobType,
+          as: 'job_type',
+          attributes: ['id', 'job_type'],
+        },
+      ],
     });
     // Parse gig_images cho từng gig
     const gigsRows = gigs.rows.map(gig => {
