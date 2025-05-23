@@ -44,6 +44,10 @@ export const handleClerkWebhook = async (req, res) => {
         created_at,
         birthday,
         gender: clerkGender,
+        username,
+        first_name,
+        last_name,
+        image_url,
       } = evt.data;
 
       let dbUserRoles = [];
@@ -55,6 +59,11 @@ export const handleClerkWebhook = async (req, res) => {
         clerk_id: id,
         user_roles: dbUserRoles,
         country: public_metadata?.country || "Việt Nam",
+        name: username || null,
+        username: username || null,
+        firstname: first_name || null,
+        lastname: last_name || null,
+        avatar: image_url || null,
         description: public_metadata?.description || null,
         registration_date: new Date(created_at).toISOString().slice(0, 10),
         date_of_birth: birthday

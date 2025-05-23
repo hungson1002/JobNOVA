@@ -16,7 +16,7 @@ export const createReview = async (req, res, next) => {
 
     // ✅ Kiểm tra người gọi API có phải là người mua thật sự của order
     const order = await models.Order.findByPk(order_id);
-    if (!order || order.customer_clerk_id !== reviewer_clerk_id) {
+    if (!order || order.buyer_clerk_id !== reviewer_clerk_id) {
       return res.status(403).json({
         success: false,
         message: "You are not authorized to review this order",

@@ -50,17 +50,17 @@ const Review = (sequelize) => {
       },
       sellerCommunication: {
         type: DataTypes.TINYINT,
-        allowNull: false,
+        allowNull: true,
         validate: { min: 1, max: 5 },
       },
       qualityOfDelivery: {
         type: DataTypes.TINYINT,
-        allowNull: false,
+        allowNull: true,
         validate: { min: 1, max: 5 },
       },
       valueOfDelivery: {
         type: DataTypes.TINYINT,
-        allowNull: false,
+        allowNull: true,
         validate: { min: 1, max: 5 },
       },
     },

@@ -21,7 +21,15 @@ const User = (sequelize) =>
         type: DataTypes.STRING(50),
         allowNull: false,
       },
-      name: {
+      username: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      firstname: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      lastname: {
         type: DataTypes.STRING,
         allowNull: true,
       },
@@ -34,10 +42,10 @@ const User = (sequelize) =>
         allowNull: true,
       },
       user_roles: {
-  type: DataTypes.JSON,
-  allowNull: false,
-  defaultValue: ["seeker"]
-},
+        type: DataTypes.JSON,
+        allowNull: false,
+        defaultValue: ["seeker"]
+      },
       date_of_birth: {
         type: DataTypes.DATEONLY,
         allowNull: true,

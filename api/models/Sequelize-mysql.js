@@ -174,6 +174,10 @@ const defineRelations = (models) => {
   models.Order.hasMany(models.GigRequirements, { foreignKey: "order_id" });
   models.GigRequirements.belongsTo(models.Order, { foreignKey: "order_id" });
 
+  // Gig-gigrequirementTemplate: 1-to-many (one gig can have multiple requirement templates)
+  models.Gig.hasMany(models.GigRequirementTemplate, { foreignKey: "gig_id" });
+  models.GigRequirementTemplate.belongsTo(models.Gig, { foreignKey: "gig_id" });
+
 };
 
 defineRelations(initializedModels);

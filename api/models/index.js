@@ -24,6 +24,7 @@ import CVFile from "./cvFiles.model.js";
 import GigTranslation from "./gigTranslation.model.js";
 import GigFaq from "./gigFAQ.model.js";
 import GigRequirements from "./gigRequirement.model.js";
+import GigRequirementTemplate from "./gigReqTemplate.model.js";
 
 
 export default {
@@ -53,6 +54,7 @@ export default {
   GigTranslation,
   GigFaq,
   GigRequirements,
+  GigRequirementTemplate,
 };
 
 //index.js, init-db.js, mySQL-db.js dành cho việc khởi tạo database và models của MySQL 
