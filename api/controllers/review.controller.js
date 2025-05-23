@@ -345,6 +345,7 @@ export const updateHelpfulVote = async (req, res, next) => {
     const { id } = req.params;
     const { vote } = req.body; // "yes" hoặc "no"
     const clerk_id = req.user.clerk_id;
+
     if (!["yes", "no"].includes(vote)) {
       return res.status(400).json({ success: false, message: "Invalid vote value" });
     }
@@ -354,29 +355,33 @@ export const updateHelpfulVote = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "Review not found" });
     }
 
-    // Kiểm tra đã vote chưa
     const existingVote = await models.ReviewHelpfulVote.findOne({
       where: { review_id: id, clerk_id },
     });
+
     if (existingVote) {
-      return res.status(400).json({ success: false, message: "You have already voted for this review" });
+      if (existingVote.vote === vote) {
+        // Nếu đã vote giống → xóa vote (gỡ)
+        await existingVote.destroy();
+        await review.decrement(vote === "yes" ? "helpfulYes" : "helpfulNo");
+        return res.status(200).json({ success: true, message: "Vote removed", action: "removed" });
+      } else {
+        // Nếu đã vote khác → có thể update hoặc báo lỗi
+        return res.status(400).json({ success: false, message: "You already voted with a different option" });
+      }
     }
 
-    // Lưu vote
+    // Nếu chưa vote
     await models.ReviewHelpfulVote.create({ review_id: id, clerk_id, vote });
-    if (vote === "yes") {
-      await review.increment("helpfulYes");
-    } else {
-      await review.increment("helpfulNo");
-    }
+    await review.increment(vote === "yes" ? "helpfulYes" : "helpfulNo");
 
-    console.log(`Helpful vote updated: reviewId=${id}, vote=${vote}, by=${clerk_id}`);
-    return res.status(200).json({ success: true, message: "Helpful vote updated successfully", review });
+    return res.status(200).json({ success: true, message: "Vote added", action: "added" });
   } catch (error) {
     console.error("Error updating helpful vote:", error.message);
     return res.status(500).json({ success: false, message: "Error updating helpful vote", error: error.message });
   }
 };
+
 
 // Mã bình luận (giữ nguyên để tham khảo)
 // export const createReview = async (req, res, next) => {

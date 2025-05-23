@@ -30,11 +30,12 @@ interface ReviewListProps {
 
 export function ReviewList({ reviews, className }: ReviewListProps) {
   const [localReviews, setLocalReviews] = useState<Review[]>(reviews)
+  const [userVotes, setUserVotes] = useState<Record<string, "yes" | "no" | null>>({});
+  const { getToken, userId } = useAuth();
 
   const [expandedResponses, setExpandedResponses] = useState<string[]>([]);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { getToken } = useAuth();
 
   const toggleResponse = (reviewId: string) => {
     setExpandedResponses((prev) =>
@@ -56,30 +57,48 @@ export function ReviewList({ reviews, className }: ReviewListProps) {
         body: JSON.stringify({ vote }),
         credentials: "include",
       });
-  
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update helpful vote");
-  
-      // ✅ Cập nhật local state để UI tự thay đổi ngay
       setLocalReviews((prev) =>
         prev.map((r) =>
           r.id === reviewId
             ? {
                 ...r,
                 helpful: {
-                  yes: r.helpful.yes + (vote === "yes" ? 1 : 0),
-                  no: r.helpful.no + (vote === "no" ? 1 : 0),
+                  yes:
+                    vote === "yes"
+                      ? data.action === "removed"
+                        ? r.helpful.yes - 1
+                        : r.helpful.yes + 1
+                      : r.helpful.yes,
+                  no:
+                    vote === "no"
+                      ? data.action === "removed"
+                        ? r.helpful.no - 1
+                        : r.helpful.no + 1
+                      : r.helpful.no,
                 },
               }
             : r
         )
       );
+      setUserVotes((prev) => ({
+        ...prev,
+        [reviewId]: data.action === "removed" ? null : vote,
+      }));
     } catch (error) {
       console.error("❌ Error voting helpful:", error);
-      alert(error.message);
+      alert(String(error));
     }
   };
-  
+
+  // Khi mount, fetch trạng thái vote của user cho từng review (nếu backend trả về, hoặc có thể fetch riêng)
+  useEffect(() => {
+    // Nếu backend trả về trạng thái vote của user, hãy set vào userVotes ở đây
+    // Nếu chưa có, mặc định là null
+    const votes: Record<string, "yes" | "no" | null> = {};
+    setUserVotes(votes);
+  }, [reviews, userId]);
 
   // Đóng menu khi click ngoài
   useEffect(() => {
@@ -103,82 +122,87 @@ export function ReviewList({ reviews, className }: ReviewListProps) {
         </div>
       ) : (
         <div className="space-y-8">
-          {localReviews.map((review) => (
-            <div
-              key={review.id}
-              className="group relative flex gap-4 pb-8 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex-shrink-0">
-                <Image
-                  src={review.user.avatar || "/placeholder.svg"}
-                  alt={review.user.name}
-                  width={48}
-                  height={48}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-base text-gray-900 truncate">{review.user.name}</span>
-                  <span className="text-xs text-gray-400">{review.date}</span>
-                  <span className="ml-2 flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-4 h-4 ${i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+          {localReviews.map((review) => {
+            const userVote = userVotes[review.id] || null;
+            return (
+              <div
+                key={review.id}
+                className="group relative flex gap-4 pb-8 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex-shrink-0">
+                  <Image
+                    src={review.user.avatar || "/placeholder.svg"}
+                    alt={review.user.name}
+                    width={48}
+                    height={48}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-base text-gray-900 truncate">{review.user.name}</span>
+                    <span className="text-xs text-gray-400">{review.date}</span>
+                    <span className="ml-2 flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-4 h-4 ${i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                        />
+                      ))}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-gray-800 text-sm break-words">{review.comment}</div>
+                  {review.sellerResponse && (
+                    <div className="mt-4 ml-8 flex gap-2 items-start bg-gray-50 border-l-4 border-emerald-300 rounded-md p-3">
+                      <Image
+                        src={review.seller.avatar}
+                        alt={review.seller.name}
+                        width={28}
+                        height={28}
+                        className="rounded-full border border-emerald-200 mt-1"
                       />
-                    ))}
-                  </span>
-                </div>
-                <div className="mt-2 text-gray-800 text-sm break-words">{review.comment}</div>
-                {review.sellerResponse && (
-                  <div className="mt-4 ml-8 flex gap-2 items-start bg-gray-50 border-l-4 border-emerald-300 rounded-md p-3">
-                    <Image
-                      src={review.seller.avatar}
-                      alt={review.seller.name}
-                      width={28}
-                      height={28}
-                      className="rounded-full border border-emerald-200 mt-1"
-                    />
-                    <div>
-                      <span className="font-semibold text-emerald-700 text-sm">{review.seller.name}</span>
-                      <div className="text-gray-700 text-sm mt-1">{review.sellerResponse}</div>
+                      <div>
+                        <span className="font-semibold text-emerald-700 text-sm">{review.seller.name}</span>
+                        <div className="text-gray-700 text-sm mt-1">{review.sellerResponse}</div>
+                      </div>
                     </div>
+                  )}
+                  <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+                    <span>Helpful?</span>
+                    <button
+                      onClick={() => handleHelpfulVote(review.id, "yes")}
+                      className={`px-2 py-1 rounded-full border border-emerald-200 transition-colors ${userVote === "yes" ? "bg-emerald-100 text-emerald-700 font-bold" : "hover:bg-emerald-50 hover:text-emerald-600"}`}
+                      disabled={userVote === "no"}
+                    >
+                      👍 {review.helpful?.yes ?? 0}
+                    </button>
+                    <button
+                      onClick={() => handleHelpfulVote(review.id, "no")}
+                      className={`px-2 py-1 rounded-full border border-red-200 transition-colors ${userVote === "no" ? "bg-red-100 text-red-700 font-bold" : "hover:bg-red-50 hover:text-red-600"}`}
+                      disabled={userVote === "yes"}
+                    >
+                      👎 {review.helpful?.no ?? 0}
+                    </button>
                   </div>
-                )}
-                <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
-                  <span>Helpful?</span>
+                </div>
+                <div className="absolute top-2 right-3 z-10">
                   <button
-                    onClick={() => handleHelpfulVote(review.id, "yes")}
-                    className="px-2 py-1 rounded-full border border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-gray-100"
+                    onClick={() => setMenuOpenId(menuOpenId === review.id ? null : review.id)}
+                    aria-label="More options"
                   >
-                    👍 {review.helpful?.yes ?? 0}
+                    <MoreVertical className="w-5 h-5 text-gray-500" />
                   </button>
-                  <button
-                    onClick={() => handleHelpfulVote(review.id, "no")}
-                    className="px-2 py-1 rounded-full border border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors"
-                  >
-                    👎 {review.helpful?.no ?? 0}
-                  </button>
+                  {menuOpenId === review.id && (
+                    <div ref={menuRef} className="absolute right-0 mt-2 w-28 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+                      <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Edit</button>
+                      <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600">Delete</button>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="absolute top-2 right-3 z-10">
-                <button
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-gray-100"
-                  onClick={() => setMenuOpenId(menuOpenId === review.id ? null : review.id)}
-                  aria-label="More options"
-                >
-                  <MoreVertical className="w-5 h-5 text-gray-500" />
-                </button>
-                {menuOpenId === review.id && (
-                  <div ref={menuRef} className="absolute right-0 mt-2 w-28 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
-                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">Edit</button>
-                    <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600">Delete</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
