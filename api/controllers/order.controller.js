@@ -1,4 +1,3 @@
-
 import { Op } from "sequelize";
 import { models } from '../models/Sequelize-mysql.js';
 import createError from '../utils/createError.js';
@@ -147,23 +146,52 @@ export const getOrders = async (req, res, next) => {
     if (order_status) where.order_status = order_status;
     if (gig_id) where.gig_id = gig_id;
 
-    // ✅ Truy vấn Order và include Gig
+    // ✅ Truy vấn Order và include Gig (include seller qua as: 'seller')
     const orders = await models.Order.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
       include: [
-        { model: models.Gig, attributes: ['id', 'title', 'gig_image', 'gig_images'] },
+        {
+          model: models.Gig,
+          attributes: ['id', 'title', 'gig_image', 'gig_images'],
+          include: [
+            {
+              model: models.User,
+              as: 'seller',
+              attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar'],
+            },
+          ],
+        },
       ],
       order: [["order_date", "DESC"]],
     });
 
-    const enrichedOrders = orders.rows.map((order) => ({
-      ...order.get({ plain: true }),
-      duration: order.order_date && order.delivery_deadline
-        ? Math.ceil((new Date(order.delivery_deadline) - new Date(order.order_date)) / (1000 * 60 * 60 * 24))
-        : 0,
-    }));
+    const enrichedOrders = orders.rows.map((order) => {
+      const plainOrder = order.get({ plain: true });
+      // Map seller cho FE từ order.Gig.seller
+      let seller = { name: 'Người dùng', avatar: '/placeholder.svg' };
+      if (plainOrder.Gig && plainOrder.Gig.seller) {
+        const s = plainOrder.Gig.seller;
+        seller = {
+          name: s.firstname && s.lastname
+            ? s.firstname + ' ' + s.lastname
+            : s.firstname
+            ? s.firstname
+            : s.username
+            ? s.username
+            : 'Người dùng',
+          avatar: s.avatar || '/placeholder.svg',
+        };
+      }
+      plainOrder.seller = seller;
+      return {
+        ...plainOrder,
+        duration: plainOrder.order_date && plainOrder.delivery_deadline
+          ? Math.ceil((new Date(plainOrder.delivery_deadline) - new Date(plainOrder.order_date)) / (1000 * 60 * 60 * 24))
+          : 0,
+      };
+    });
 
     return res.status(200).json({
       success: true,

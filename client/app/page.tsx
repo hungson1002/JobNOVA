@@ -31,6 +31,11 @@ export interface Gig {
   country?: string;
   status: string;
   gig_images?: string[];
+  seller?: {
+    name: string;
+    avatar: string;
+    level: string;
+  };
 }
 
 // Component Card hiển thị từng gig
@@ -492,8 +497,8 @@ function mapGigToServiceCard(gig: Gig): any {
     image: mediaList[0], // Ảnh đầu tiên để hiển thị nhanh
     gig_images: mediaList, // Truyền cả mảng media cho gallery
     seller: {
-      name: gig.seller_clerk_id,
-      avatar: "/placeholder.svg",
+      name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
+      avatar: gig.seller?.avatar || "/placeholder.svg",
       level: "Level 1 Seller",
     },
     rating: 5,

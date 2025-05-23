@@ -81,7 +81,7 @@ export const getAllGigs = async (req, res, next) => {
         {
           model: models.User,
           as: 'seller',
-          attributes: ['firstname', 'lastname', 'username', 'clerk_id'],
+          attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar'],
         },
         {
           model: models.Category,
@@ -95,11 +95,29 @@ export const getAllGigs = async (req, res, next) => {
         },
       ],
     });
-    // Parse gig_images cho từng gig
+    // Parse gig_images cho từng gig và map seller cho FE
     const gigsRows = gigs.rows.map(gig => {
       const gigData = gig.toJSON();
       if (gigData.gig_images) {
         try { gigData.gig_images = JSON.parse(gigData.gig_images); } catch { gigData.gig_images = []; }
+      }
+      // Map seller cho FE
+      if (gigData.seller) {
+        gigData.seller = {
+          name: gigData.seller.firstname && gigData.seller.lastname
+            ? gigData.seller.firstname + ' ' + gigData.seller.lastname
+            : gigData.seller.firstname
+            ? gigData.seller.firstname
+            : gigData.seller.username
+            ? gigData.seller.username
+            : 'Người dùng',
+          avatar: gigData.seller.avatar || '/placeholder.svg',
+        };
+      } else {
+        gigData.seller = {
+          name: 'Người dùng',
+          avatar: '/placeholder.svg',
+        };
       }
       return gigData;
     });

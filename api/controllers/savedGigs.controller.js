@@ -118,7 +118,29 @@ export const getSavedGigs = async (req, res, next) => {
             'delivery_time',
             'gig_image',
             'seller_clerk_id',
-            'gig_images'
+            'gig_images',
+            'category_id',
+            'job_type_id',
+            'status',
+            'city',
+            'country',
+          ],
+          include: [
+            {
+              model: models.User,
+              as: 'seller',
+              attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar'],
+            },
+            {
+              model: models.Category,
+              as: 'category',
+              attributes: ['id', 'name'],
+            },
+            {
+              model: models.JobType,
+              as: 'job_type',
+              attributes: ['id', 'job_type'],
+            },
           ],
         }
       ],
@@ -136,6 +158,23 @@ export const getSavedGigs = async (req, res, next) => {
         const gig = sg.Gig?.toJSON ? sg.Gig.toJSON() : sg.Gig;
         if (gig && gig.gig_images) {
           try { gig.gig_images = JSON.parse(gig.gig_images); } catch { gig.gig_images = []; }
+        }
+        if (gig && gig.seller) {
+          gig.seller = {
+            name: gig.seller.firstname && gig.seller.lastname
+              ? gig.seller.firstname + ' ' + gig.seller.lastname
+              : gig.seller.firstname
+              ? gig.seller.firstname
+              : gig.seller.username
+              ? gig.seller.username
+              : 'Người dùng',
+            avatar: gig.seller.avatar || '/placeholder.svg',
+          };
+        } else if (gig) {
+          gig.seller = {
+            name: 'Người dùng',
+            avatar: '/placeholder.svg',
+          };
         }
         return gig;
       })

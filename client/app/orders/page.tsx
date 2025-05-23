@@ -135,7 +135,7 @@ function OrderCard({
   onCancelClick: (order: any) => void
 }) {
   const gig = order.Gig || {}
-  const seller = {
+  const seller = order.seller || {
     name: order.seller_clerk_id,
     avatar: "/placeholder.svg",
     level: "Seller",

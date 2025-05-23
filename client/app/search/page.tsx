@@ -33,6 +33,11 @@ interface Gig {
   country?: string;
   status: string;
   gig_images?: string[];
+  seller?: {
+    name: string;
+    avatar: string;
+    level: string;
+  };
 }
 
 function mapGigToServiceCard(gig: Gig): any {
@@ -48,8 +53,8 @@ function mapGigToServiceCard(gig: Gig): any {
     image: mediaList[0],
     gig_images: mediaList,
     seller: {
-      name: gig.seller_clerk_id,
-      avatar: "/placeholder.svg",
+      name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
+      avatar: gig.seller?.avatar || "/placeholder.svg",
       level: "Level 1 Seller",
     },
     rating: 5,
