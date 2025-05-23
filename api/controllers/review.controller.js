@@ -340,11 +340,11 @@ export const updateSellerResponse = async (req, res, next) => {
 };
 
 // Cập nhật helpful votes
-// Cập nhật helpful votes
 export const updateHelpfulVote = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { vote } = req.body; // "yes" hoặc "no"
+    const clerk_id = req.user.clerk_id;
     if (!["yes", "no"].includes(vote)) {
       return res.status(400).json({ success: false, message: "Invalid vote value" });
     }
@@ -354,20 +354,29 @@ export const updateHelpfulVote = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "Review not found" });
     }
 
+    // Kiểm tra đã vote chưa
+    const existingVote = await models.ReviewHelpfulVote.findOne({
+      where: { review_id: id, clerk_id },
+    });
+    if (existingVote) {
+      return res.status(400).json({ success: false, message: "You have already voted for this review" });
+    }
+
+    // Lưu vote
+    await models.ReviewHelpfulVote.create({ review_id: id, clerk_id, vote });
     if (vote === "yes") {
       await review.increment("helpfulYes");
     } else {
       await review.increment("helpfulNo");
     }
 
-    console.log(`Helpful vote updated: reviewId=${id}, vote=${vote}`);
+    console.log(`Helpful vote updated: reviewId=${id}, vote=${vote}, by=${clerk_id}`);
     return res.status(200).json({ success: true, message: "Helpful vote updated successfully", review });
   } catch (error) {
     console.error("Error updating helpful vote:", error.message);
     return res.status(500).json({ success: false, message: "Error updating helpful vote", error: error.message });
   }
 };
-
 
 // Mã bình luận (giữ nguyên để tham khảo)
 // export const createReview = async (req, res, next) => {

@@ -25,6 +25,7 @@ import GigTranslation from "./gigTranslation.model.js";
 import GigFaq from "./gigFAQ.model.js";
 import GigRequirements from "./gigRequirement.model.js";
 import GigRequirementTemplate from "./gigReqTemplate.model.js";
+import ReviewHelpfulVote from "./reviewHelpfulVote.model.js";
 
 
 export default {
@@ -55,6 +56,7 @@ export default {
   GigFaq,
   GigRequirements,
   GigRequirementTemplate,
+  ReviewHelpfulVote,
 };
 
 //index.js, init-db.js, mySQL-db.js dành cho việc khởi tạo database và models của MySQL 
