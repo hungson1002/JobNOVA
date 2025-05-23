@@ -1,8 +1,7 @@
-"use client"
+"use client";
+
 import { useAuth } from "@clerk/nextjs";
-import io from "socket.io-client";
-import { useState, useRef, useEffect } from "react";
-import { use } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -19,8 +18,6 @@ import {
   ChevronLeft,
   ZoomIn,
   X,
-  MessageCircle,
-  ThumbsUp,
   Search,
 } from "lucide-react";
 
@@ -41,11 +38,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useSavedGigs } from "@/hooks/use-saved-gigs";
 import { useUser } from "@clerk/nextjs";
+import { ChatBubble } from "@/components/message/chatBubble";
+import{ChatAvatar} from "@/components/message/chatAvatar";
+import {ContactMeButton} from "@/components/message/contactMeButton";
+import { useMessages } from "@/hooks/useMessages";
+import { fetchUser } from "@/lib/api";
 
 interface PageParams {
   id: string;
@@ -55,13 +56,10 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   const resolvedParams = use(params);
   const router = useRouter();
   const gigId = resolvedParams.id;
-  const { isSaved, isLoading, error, toggleSave } = useSavedGigs(gigId);
+  const { isSaved, isLoading: isSaving, error: saveError, toggleSave } = useSavedGigs(gigId);
   const { user, isSignedIn } = useUser();
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [ratingSummary, setRatingSummary] = useState<any>(null);
-  const [ratingBreakdown, setRatingBreakdown] = useState<any>(null);
-
-  // State for gig thật
+  const { userId, isLoaded, getToken } = useAuth();
+  const { chatWindows, setChatWindows, sendMessage, markMessagesAsRead } = useMessages({ isDirect: true });
   const [gig, setGig] = useState<any>(null);
   const [loadingGig, setLoadingGig] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -69,71 +67,50 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [reviewSort, setReviewSort] = useState("relevant");
   const [reviewsToShow, setReviewsToShow] = useState(3);
-  const [filteredReviews, setFilteredReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [ratingSummary, setRatingSummary] = useState<any>(null);
+  const [ratingBreakdown, setRatingBreakdown] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedFAQs, setExpandedFAQs] = useState<number[]>([]);
   const [selectedPackage, setSelectedPackage] = useState("basic");
   const reviewsRef = useRef<HTMLDivElement>(null);
-  const [isSending, setIsSending] = useState(false);
+  const [minimizedWindows, setMinimizedWindows] = useState<string[]>([]);
+  const socketRef = useRef<any>(null);
 
-  //state for socket messages
-  const { userId, isLoaded, getToken } = useAuth();
-  const senderId = user?.id || "";
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [chatError, setChatError] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
-  const chatRef = useRef<HTMLDivElement>(null);
-  const [isSellerValid, setIsSellerValid] = useState(false);
-  const socket = io("http://localhost:8800", {
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
-    auth: { credentials: "include" },
-  });
-
-  // Thêm state kiểm tra đã order chưa
-  const [userOrder, setUserOrder] = useState<any>(null);
-
+  // Fetch gig data
   useEffect(() => {
     setLoadingGig(true);
     fetch(`http://localhost:8800/api/gigs/${gigId}`)
-      .then(res => res.json())
-      .then(data => setGig(data.gig))
+      .then((res) => res.json())
+      .then((data) => setGig(data.gig))
+      .catch((err) => console.error("Fetch gig error:", err))
       .finally(() => setLoadingGig(false));
   }, [gigId]);
 
+  // Fetch reviews
   useEffect(() => {
-    // Fetch reviews from backend
     const fetchReviews = async () => {
       const query = `gig_id=${gigId}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${reviewSort ? `&sort=${reviewSort}` : ""}`;
       const res = await fetch(`http://localhost:8800/api/reviews?${query}`);
       const data = await res.json();
       if (data.success) {
-        // Nếu backend đã trả về đủ trường (user, seller, sellerResponse, helpful, ...) thì dùng trực tiếp, nếu chưa thì mapping lại.
-        const mappedReviews = await Promise.all(data.reviews.map(async (review: any) => {
-            if (review.user) return { ...review, id: review.id };
-          // Nếu chưa có user, gọi API lấy thông tin user (fallback)
+        const reviewsWithUser = await Promise.all(
+          data.reviews.map(async (review: any) => {
+            if (review.user) return review;
             const userRes = await fetch(`http://localhost:8800/api/users/${review.reviewer_clerk_id}`);
             const userData = await userRes.json();
             return {
               ...review,
-              id: review.id, // Đảm bảo id là số nguyên
               user: {
                 name: userData.name || userData.username || "User",
                 avatar: userData.avatar || "/placeholder.svg",
                 country: userData.country || "Unknown",
               },
-            seller: {
-              name: review.seller?.name || "Seller",
-              avatar: review.seller?.avatar || "/placeholder.svg",
-            },
-            sellerResponse: review.sellerResponse || null,
-            helpful: review.helpful || { yes: 0, no: 0 },
-            date: review.date || formatTimeAgo(review.created_at),
+              date: formatTimeAgo(review.created_at),
             };
-        }));
-        setReviews(mappedReviews);
+          })
+        );
+        setReviews(reviewsWithUser);
         setRatingSummary(data.ratingSummary);
         setRatingBreakdown(data.ratingBreakdown);
       }
@@ -141,127 +118,82 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     fetchReviews();
   }, [gigId, searchQuery, reviewSort]);
 
-  // Fetch seller info để lấy receiver_clerk_id
-  useEffect(() => {
-    if (!gig || !isLoaded) return;
-
-    const fetchSellerInfo = async () => {
-      try {
-        const token = await getToken();
-        const response = await fetch(`http://localhost:8800/api/users/${gig.seller_clerk_id}`, {
-          credentials: "include",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error("Cannot fetch seller info");
-        // Giả sử API trả về { clerk_id, name, ... }
-        const sellerData = await response.json();
-        setIsSellerValid(true); // Seller hợp lệ
-        socket.emit("joinChat", { userId: senderId, sellerId: gig.seller_clerk_id });
-      } catch (err) {
-        console.error("Fetch seller info error:", err);
-      }
-    };
-    fetchSellerInfo();
-  }, [gig, isLoaded, senderId]);
-
-  // Kiểm tra user đã order gig này chưa và lấy order
-  useEffect(() => {
-    if (!user || !gigId) return;
-    const checkOrder = async () => {
-      const token = await getToken?.();
-      const res = await fetch(`http://localhost:8800/api/orders/${user.id}?gig_id=${gigId}&order_status=completed`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (data.success && Array.isArray(data.orders)) {
-        // Tìm order của user hiện tại
-        const found = data.orders.find((o: any) => o.buyer_clerk_id === user.id);
-        setUserOrder(found || null);
-      } else {
-        setUserOrder(null);
-      }
-    };
-    checkOrder();
-  }, [user, gigId, getToken]);
-
-  
-  // Gửi tin nhắn
-  const handleSendMessage = async () => {
-    if (!message.trim()) {
-      setChatError("Vui lòng nhập tin nhắn");
+  // Handle contact seller
+  const handleContactSeller = async () => {
+    if (!isSignedIn || !gig?.seller_clerk_id || !userId) {
+      router.push("/sign-in");
       return;
     }
-    if (!senderId || !gig?.seller_clerk_id) {
-      setChatError("Không thể gửi tin nhắn: Thiếu thông tin người gửi hoặc người nhận");
-      return;
-    }
-    if (!isSellerValid) {
-    setChatError("Không thể gửi tin nhắn: Seller không hợp lệ");
-    return;
-  }
-  setIsSending(true); // Bắt đầu loading
-  setChatError(null);
-
     try {
       const token = await getToken();
-      const response = await fetch("http://localhost:8800/api/messages", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          order_id: null, // Tin nhắn trực tiếp không cần order_id
-          sender_clerk_id: senderId,
-          receiver_clerk_id: gig.seller_clerk_id,
-          message_content: message,
-          sent_at: new Date().toISOString(),
-        }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setMessage("");
-        setChatError(null);
-        // Cập nhật giao diện ngay lập tức
-        const newMessage = {
-          sender_clerk_id: senderId,
-          receiver_clerk_id: gig.seller_clerk_id,
-          message_content: message,
-          sent_at: new Date().toISOString(),
-        };
-        setChatMessages((prev) => [...prev, newMessage]);
-        // Phát tin nhắn qua socket
-        socket.emit("sendMessage", newMessage);
-      } else {
-        setChatError(data.message || "Could not send message");
+      if (!token) {
+        console.error("Token is missing");
+        return;
+      }
+      const userData = await fetchUser(gig.seller_clerk_id, token);
+      
+      // Kiểm tra xem chat window đã tồn tại chưa
+      const existingWindow = chatWindows.find(w => w.userId === gig.seller_clerk_id);
+      if (!existingWindow) {
+        setChatWindows((prev) => [
+          ...prev,
+          {
+            userId: gig.seller_clerk_id,
+            messages: [],
+            unreadCount: 0,
+            avatar: userData.avatar || "/placeholder.svg",
+            name: userData.name || userData.username || "Seller",
+          },
+        ]);
+      }
+      
+      // Đảm bảo chat window không bị minimize
+      setMinimizedWindows((prev) => prev.filter(id => id !== gig.seller_clerk_id));
+      
+      // Join chat room
+      if (socketRef.current) {
+        socketRef.current.emit("joinChat", { 
+          userId: userId, 
+          sellerId: gig.seller_clerk_id 
+        });
       }
     } catch (err) {
-      setChatError(`Lỗi: ${err instanceof Error ? err.message : String(err)}`);
-      console.error("Send message error:", err);
-    }finally {
-      setIsSending(false); 
+      console.error("Fetch seller info error:", err);
     }
   };
 
-  // Xử lý tin nhắn realtime
-  useEffect(() => {
-    socket.on("newMessage", (newMessage: any) => {
-      setChatMessages((prev) => [...prev, newMessage]);
-    });
-    return () => {
-      socket.off("newMessage");
-    };
-  }, [socket]);
-
-    //khung chat tự động cuộn xuống
-    useEffect(() => {
-    if (chatRef.current) {
-      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+  // Send message
+  const handleSendMessage = async (content: string, receiverId: string) => {
+    if (!userId) return;
+    const response = await sendMessage(content, userId, receiverId, null) as { success: boolean; message?: string; error?: string };
+    if (response.success) {
+      // Tin nhắn đã được gửi thành công và cập nhật trong state
+      console.log("Message sent successfully");
+    } else {
+      console.error("Failed to send message:", response.error || response.message);
     }
-  }, [chatMessages]);
+  };
 
+  // Toggle minimize/maximize chat window
+  const toggleMinimize = (userId: string) => {
+    setMinimizedWindows((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
 
+  // Close chat window
+  const closeChat = (userId: string) => {
+    setChatWindows((prev) => prev.filter((w) => w.userId !== userId));
+    setMinimizedWindows((prev) => prev.filter((id) => id !== userId));
+  };
 
-  // Handle image navigation
+  // Mark messages as read when opening a chat
+  const handleOpenChat = (userId: string) => {
+    markMessagesAsRead(undefined, userId);
+    toggleMinimize(userId);
+  };
+
+  // Image navigation
   const nextImage = () => {
     if (!gig?.gig_images?.length) return;
     setSelectedImageIndex((prev) => (prev + 1) % gig.gig_images.length);
@@ -272,7 +204,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     setSelectedImageIndex((prev) => (prev - 1 + gig.gig_images.length) % gig.gig_images.length);
   };
 
-  // Handle lightbox navigation
   const openLightbox = (index: number) => {
     if (!gig?.gig_images?.length) return;
     setLightboxIndex(index);
@@ -289,14 +220,14 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     setLightboxIndex((prev) => (prev - 1 + gig.gig_images.length) % gig.gig_images.length);
   };
 
-  // Handle save/favorite
+  // Save/favorite gig
   const handleSave = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     toggleSave();
   };
 
-  // Handle share
+  // Share gig
   const handleShare = () => {
     if (navigator.share) {
       navigator
@@ -312,7 +243,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     }
   };
 
-  // Handle FAQ toggle
+  // Toggle FAQ
   const toggleFAQ = (index: number) => {
     setExpandedFAQs((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
   };
@@ -330,92 +261,57 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     return `${Math.floor(diff / 2592000)} months ago`;
   }
 
-  // Handle scroll to reviews
+  // Scroll to reviews
   const scrollToReviews = () => {
     reviewsRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Handle continue to checkout
+  // Continue to checkout
   const handleContinue = () => {
     router.push(`/checkout?gig=${resolvedParams.id}&package=${selectedPackage}`);
   };
 
-  // Handle contact seller
-  const handleContactSeller = () => {
-    router.push(`/messages/${gig.seller.username}`);
-  };
-
-  // Thêm hàm handleReviewSubmit nếu chưa có
-  const handleReviewSubmit = async (data: { rating: number; comment: string; sellerCommunication: number; qualityOfDelivery: number; valueOfDelivery: number }) => {
-    if (!isSignedIn || !user || !userOrder) {
-      alert("Bạn cần đặt hàng để bình luận.");
-      return;
-    }
-    // Validate các trường số phải từ 1-5
-    if (
-      !gigId ||
-      !userOrder.id ||
-      !user.id ||
-      !data.rating ||
-      !data.sellerCommunication ||
-      !data.qualityOfDelivery ||
-      !data.valueOfDelivery
-    ) {
-      alert("Bạn cần điền đầy đủ các trường đánh giá (tất cả phải từ 1-5).");
-      return;
-    }
-    const token = await getToken?.();
-
-    // Gửi review lên backend, luôn truyền Authorization
-    const res = await fetch("http://localhost:8800/api/reviews", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        gig_id: gigId,
-        order_id: userOrder.id, // truyền đúng order_id
-        rating: data.rating,
-        comment: data.comment,
-        sellerCommunication: data.sellerCommunication,
-        qualityOfDelivery: data.qualityOfDelivery,
-        valueOfDelivery: data.valueOfDelivery,
-      }),
-      credentials: "include",
-    });
-    const result = await res.json();
-    if (result.success) {
-      setReviews([
-        {
-          ...result.review,
-          user: {
-            name: user.firstName + (user.lastName ? " " + user.lastName : "") || user.username || "User",
-            avatar: user.imageUrl || "/placeholder.svg",
-          },
-          date: formatTimeAgo(result.review.created_at),
-          helpful: result.review.helpful ?? { yes: 0, no: 0 },
-        },
-        ...reviews,
-      ]);
-    } else {
-      alert("Có lỗi xảy ra khi gửi review!");
-    }
-  };
+  useEffect(() => {
+    // Nếu là seller, tự động khởi tạo chat window với các buyer đã từng nhắn tin
+    if (!userId || !gig?.seller_clerk_id || userId !== gig.seller_clerk_id) return;
+    // Lấy tất cả messages đã nhận (direct message)
+    fetch(`http://localhost:8800/api/messages/direct?sellerId=${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.messages)) {
+          // Lấy danh sách buyer đã từng nhắn tin
+          const buyers = Array.from(new Set(data.messages.map((msg: any) => msg.sender_clerk_id)));
+          buyers.forEach(buyerId => {
+            if (!chatWindows.find(w => w.userId === buyerId)) {
+              setChatWindows(prev => [
+                ...prev,
+                {
+                  userId: String(buyerId),
+                  messages: data.messages.filter((msg: any) => msg.sender_clerk_id === buyerId || msg.receiver_clerk_id === buyerId),
+                  unreadCount: 0,
+                  avatar: "/placeholder.svg",
+                  name: "User",
+                } as any,
+              ]);
+            }
+          });
+        }
+      });
+  }, [userId, gig, setChatWindows, chatWindows]);
 
   if (loadingGig) return <div>Loading...</div>;
   if (!gig) return <div>Gig not found</div>;
 
-  // Gallery logic
   const images = gig.gig_images && Array.isArray(gig.gig_images) && gig.gig_images.length > 0
     ? gig.gig_images
     : (gig.gig_image ? [gig.gig_image] : ["/placeholder.svg"]);
   const seller = gig.seller || {
-    name: gig.seller_clerk_id || "AlexDesigns",
-    username: gig.seller_clerk_id || "alexdesigns",
-    avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    clerk_id: gig.seller_clerk_id || "default_id",
+    name: gig.seller_name || "AlexDesigns",
+    username: gig.seller_username || "alexdesigns",
+    avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
     level: "Level 2 Seller",
-    bio: "I'm a professional graphic designer with over 5 years of experience specializing in logo design and brand identity. I've worked with clients from various industries, from startups to established businesses, helping them create memorable visual identities.",
+    bio: "I'm a professional graphic designer with over 5 years of experience specializing in logo design and brand identity.",
   };
   const faqs = gig.faqs || [
     {
@@ -424,7 +320,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     },
     {
       question: "What file formats will I receive?",
-      answer: "You'll receive your logo in multiple formats including PNG, JPG, SVG, and AI (for Standard and Premium packages). All packages include high-resolution files suitable for both print and digital use.",
+      answer: "You'll receive your logo in multiple formats including PNG, JPG, SVG, and AI.",
     },
   ];
   const packages = gig.packages || {
@@ -508,13 +404,22 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
           <div className="lg:col-span-2">
             <h1 className="mb-6 text-2xl font-bold md:text-3xl">{gig.title}</h1>
 
-            {/* Seller Brief - Thay đổi button Contact Me */}
+            {/* Seller Brief */}
             <div className="mb-8 flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
               <div className="h-12 w-12 overflow-hidden rounded-full border border-gray-200">
-                <Image src={seller.avatar} alt={seller.name} width={48} height={48} className="h-full w-full object-cover" />
+                <Image
+                  src={seller.avatar}
+                  alt={seller.name}
+                  width={48}
+                  height={48}
+                  className="h-full w-full object-cover"
+                />
               </div>
               <div className="flex-1">
-                <Link href={`/users/${seller.username}`} className="font-medium hover:text-emerald-600 transition-colors">
+                <Link
+                  href={`/users/${seller.username}`}
+                  className="font-medium hover:text-emerald-600 transition-colors"
+                >
                   {seller.name}
                 </Link>
                 <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -523,7 +428,10 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                   <div className="flex items-center">
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                     <span className="ml-1 font-medium">{ratingSummary?.average || "4.9"}</span>
-                    <button onClick={scrollToReviews} className="ml-1 text-gray-600 hover:text-emerald-600 transition-colors">
+                    <button
+                      onClick={scrollToReviews}
+                      className="ml-1 text-gray-600 hover:text-emerald-600 transition-colors"
+                    >
                       ({ratingSummary?.total || 156})
                     </button>
                   </div>
@@ -531,49 +439,38 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                   <span className="text-gray-600">3 orders</span>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsChatOpen(true)}
-                className="hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
-              >
-                Contact Me
-              </Button>
+              <ContactMeButton onClick={handleContactSeller} />
             </div>
 
-            {/* Khung chat nhỏ */}
-            {isChatOpen && (
-              <div className="fixed bottom-4 left-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg flex flex-col z-50">
-                <div className="p-2 border-b flex justify-between items-center">
-                  <span className="font-semibold">Chat with {seller.name}</span>
-                  <Button variant="ghost" size="sm" onClick={() => setIsChatOpen(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div ref={chatRef} className="flex-1 p-2 overflow-y-auto max-h-60">
-                  {chatMessages.map((msg, index) => (
-                    <div key={index} className={`mb-2 ${msg.sender_clerk_id === senderId ? "text-right" : "text-left"}`}>
-                      <span className={`p-2 rounded-lg ${msg.sender_clerk_id === senderId ? "bg-emerald-100" : "bg-gray-100"}`}>
-                        {msg.message_content}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="p-2 border-t flex">
-                  <Input
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                    placeholder="Type a message..."
-                    className="flex-1 mr-2"
-                  />
-                  <Button onClick={handleSendMessage} size="sm">
-                    Send
-                  </Button>
-                </div>
-                {chatError && <div className="text-red-500 text-xs p-2">{chatError}</div>}
-              </div>
-            )}
+            {/* Chat Bubbles */}
+            <div className="fixed bottom-4 left-4 flex flex-col gap-2">
+              {chatWindows.map((win) => (
+                <ChatBubble
+                  key={win.userId}
+                  userId={userId || ""}
+                  messages={win.messages}
+                  avatar={win.avatar}
+                  name={win.name}
+                  onSendMessage={(content) => handleSendMessage(content, win.userId)}
+                  onClose={() => closeChat(win.userId)}
+                  isMinimized={minimizedWindows.includes(win.userId)}
+                  onToggleMinimize={() => handleOpenChat(win.userId)}
+                />
+              ))}
+            </div>
+
+            {/* Chat Avatars */}
+            <div className="fixed bottom-4 right-4 flex flex-col gap-2">
+              {chatWindows.map((win) => (
+                <ChatAvatar
+                  key={win.userId}
+                  avatar={win.avatar}
+                  name={win.name}
+                  unreadCount={win.unreadCount}
+                  onClick={() => handleOpenChat(win.userId)}
+                />
+              ))}
+            </div>
 
             {/* Image Gallery */}
             <div className="mb-8">
@@ -583,62 +480,65 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     src={images[selectedImageIndex]}
                     controls
                     className="w-full h-full object-cover rounded-lg cursor-pointer"
-                    style={{height: '100%', width: '100%'}}
-                    onClick={() => setIsLightboxOpen(true)}
+                    onClick={() => openLightbox(selectedImageIndex)}
                   />
                 ) : (
-                <Image
-                  src={images[selectedImageIndex]}
-                  alt={gig.title}
-                  fill
+                  <Image
+                    src={images[selectedImageIndex]}
+                    alt={gig.title}
+                    fill
                     className="object-cover cursor-pointer"
-                    onClick={() => setIsLightboxOpen(true)}
-                />
+                    onClick={() => openLightbox(selectedImageIndex)}
+                  />
                 )}
                 {images.length > 1 && (
                   <>
-                <button
-                  onClick={prevImage}
+                    <button
+                      onClick={prevImage}
                       className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 hover:bg-white transition-colors z-10"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={nextImage}
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={nextImage}
                       className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 hover:bg-white transition-colors z-10"
-                >
-                  <ChevronRight className="h-5 w-5" />
+                    >
+                      <ChevronRight className="h-5 w-5" />
                     </button>
                   </>
                 )}
                 <button
-                  onClick={() => setIsLightboxOpen(true)}
+                  onClick={() => openLightbox(selectedImageIndex)}
                   className="absolute bottom-2 right-2 bg-black/60 text-white p-2 rounded-full hover:bg-black/80 transition-colors z-10"
                   title="Xem lớn"
                 >
                   <ZoomIn className="h-5 w-5" />
                 </button>
               </div>
-              {/* Slider thumbnail */}
               {images.length > 1 && (
-              <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+                <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
                   {images.map((media: string, index: number) => (
-                   <button
-                     key={index}
-                     onClick={() => setSelectedImageIndex(index)}
-                       className={`relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
-                       selectedImageIndex === index ? "border-emerald-500" : "border-transparent"
-                     }`}
-                   >
-                       {media.match(/\.(mp4|mov|avi|wmv)$/i) ? (
-                         <video src={media} className="object-cover w-full h-full" />
-                       ) : (
-                         <Image src={media} alt={`${gig.title} - Image ${index + 1}`} fill className="object-cover" />
-                       )}
-                   </button>
-                 ))}
-               </div>
-               )}
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImageIndex(index)}
+                      className={`relative h-20 w-28 flex-shrink-0 overflow-hidden rounded-lg border-2 ${
+                        selectedImageIndex === index ? "border-emerald-500" : "border-transparent"
+                      }`}
+                    >
+                      {media.match(/\.(mp4|mov|avi|wmv)$/i) ? (
+                        <video src={media} className="object-cover w-full h-full" />
+                      ) : (
+                        <Image
+                          src={media}
+                          alt={`${gig.title} - Image ${index + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Description */}
@@ -681,15 +581,14 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                 ))}
               </div>
             </div>
+
             {/* Requirements */}
             {gig.requirements && Array.isArray(gig.requirements) && gig.requirements.length > 0 && (
               <div className="mb-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-4 text-xl font-semibold">Requirements</h2>
                 <ul className="list-disc pl-6 space-y-2">
                   {gig.requirements.map((req: any, idx: number) => (
-                    <li key={idx} className="text-gray-700">
-                      {req.requirement_text}
-                    </li>
+                    <li key={idx} className="text-gray-700">{req.requirement_text}</li>
                   ))}
                 </ul>
               </div>
@@ -703,7 +602,9 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                   <div className="flex items-center gap-4">
                     <div className="flex items-center">
                       <span className="text-2xl font-bold">{ratingSummary.average}</span>
-                      <span className="ml-2 text-sm text-gray-500">({ratingSummary.total} reviews for this Gig)</span>
+                      <span className="ml-2 text-sm text-gray-500">
+                        ({ratingSummary.total} reviews for this Gig)
+                      </span>
                     </div>
                     <div className="flex items-center">
                       {[1, 2, 3, 4, 5].map((star) => (
@@ -732,7 +633,9 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                                 }}
                               ></div>
                             </div>
-                            <span className="w-12 text-sm text-gray-500">({ratingSummary.breakdown[star]})</span>
+                            <span className="w-12 text-sm text-gray-500">
+                              ({ratingSummary.breakdown[star]})
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -805,25 +708,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                   Show More Reviews
                 </Button>
               )}
-              <div className="mt-6">
-                {isSignedIn ? (
-                  userOrder ? (
-                    <ReviewForm
-                      onSubmitAction={handleReviewSubmit}
-                      buyerInfo={{
-                        name: user?.firstName + (user?.lastName ? ' ' + user.lastName : '') || user?.username || 'User',
-                        country: typeof user?.publicMetadata?.country === 'string' ? user.publicMetadata.country : 'Unknown',
-                        price: gig?.starting_price || 0,
-                        duration: gig?.delivery_time || 0,
-                      }}
-                    />
-                  ) : (
-                    <div className="text-center text-gray-500">Bạn cần đặt hàng để bình luận.</div>
-                  )
-                ) : (
-                  <div className="text-center text-gray-500">Vui lòng đăng nhập để bình luận.</div>
-                )}
-              </div>
             </div>
           </div>
 
@@ -844,7 +728,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     </h3>
                     <span className="text-sm text-gray-500">{packages.basic.deliveryTime} days delivery</span>
                   </div>
-
                   <ul className="space-y-3">
                     {packages.basic.features.map((feature: string, index: number) => (
                       <li key={index} className="flex items-start gap-2">
@@ -853,7 +736,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                       </li>
                     ))}
                   </ul>
-
                   <Button
                     onClick={handleContinue}
                     className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
@@ -869,7 +751,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     </h3>
                     <span className="text-sm text-gray-500">{packages.standard.deliveryTime} days delivery</span>
                   </div>
-
                   <ul className="space-y-3">
                     {packages.standard.features.map((feature: string, index: number) => (
                       <li key={index} className="flex items-start gap-2">
@@ -878,7 +759,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                       </li>
                     ))}
                   </ul>
-
                   <Button
                     onClick={handleContinue}
                     className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
@@ -894,7 +774,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     </h3>
                     <span className="text-sm text-gray-500">{packages.premium.deliveryTime} days delivery</span>
                   </div>
-
                   <ul className="space-y-3">
                     {packages.premium.features.map((feature: string, index: number) => (
                       <li key={index} className="flex items-start gap-2">
@@ -903,7 +782,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                       </li>
                     ))}
                   </ul>
-
                   <Button
                     onClick={handleContinue}
                     className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
@@ -919,7 +797,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                   size="sm"
                   onClick={handleSave}
                   className="hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
-                  disabled={isLoading}
+                  disabled={isSaving}
                 >
                   <Heart className={`mr-2 h-4 w-4 ${isSaved ? "fill-red-500 text-red-500" : ""}`} />
                   {isSaved ? "Saved" : "Save"}
@@ -952,11 +830,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                         appropriate action.
                       </DialogDescription>
                     </DialogHeader>
-                    <ReportModal
-                      type="service"
-                      id={resolvedParams.id}
-                      name={gig.title}
-                    />
+                    <ReportModal type="service" id={resolvedParams.id} name={gig.title} />
                   </DialogContent>
                 </Dialog>
               </div>
@@ -993,7 +867,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                 controls
                 autoPlay
                 className="max-h-[80vh] max-w-[80vw] rounded-lg"
-                style={{background: '#222'}}
+                style={{ background: "#222" }}
               />
             ) : (
               <Image

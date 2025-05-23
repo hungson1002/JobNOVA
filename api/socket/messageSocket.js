@@ -15,12 +15,16 @@ const messageSocketHandler = (io) => {
 
     socket.on("sendMessage", async (messageData, callback) => {
       try {
-        if (!messageData.order_id || !messageData.sender_clerk_id || !messageData.receiver_clerk_id || !messageData.message_content) {
+        if ((!(messageData.order_id || messageData.is_direct_message)) ||
+            !messageData.sender_clerk_id ||
+            !messageData.receiver_clerk_id ||
+            !messageData.message_content) {
           throw new Error("Missing required fields");
         }
         const newMessage = await sendMessage(messageData);
         if (!newMessage.success) throw new Error(newMessage.message);
-        io.to(`order_${messageData.order_id}`).emit("newMessage", newMessage);
+        const room = messageData.order_id ? `order_${messageData.order_id}` : `direct_${[messageData.sender_clerk_id, messageData.receiver_clerk_id].sort().join("_")}`;
+        io.to(room).emit("newMessage", newMessage);
         callback({ success: true, message: newMessage });
       } catch (error) {
         console.error("Error sending message:", error.message);

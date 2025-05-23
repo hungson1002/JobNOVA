@@ -17,6 +17,7 @@ export const createGig = async (req, res, next) => {
       gig_images,
       city,
       country,
+      faqs, // Thêm faqs từ request body
     } = req.body;
 
     if (!seller_clerk_id || !title) {
@@ -38,6 +39,17 @@ export const createGig = async (req, res, next) => {
       status: "pending",
     });
 
+    // Tạo các FAQ nếu có
+    if (faqs && Array.isArray(faqs)) {
+      await Promise.all(faqs.map(faq => 
+        models.GigFaq.create({
+          gig_id: gig.id,
+          question: faq.question,
+          answer: faq.answer
+        })
+      ));
+    }
+
     const gigData = gig.toJSON();
     if (gigData.gig_images) {
       try {
@@ -46,6 +58,10 @@ export const createGig = async (req, res, next) => {
         gigData.gig_images = [];
       }
     }
+
+    // Lấy FAQ đã tạo
+    const createdFaqs = await models.GigFaq.findAll({ where: { gig_id: gig.id } });
+    gigData.faqs = createdFaqs.map(f => ({ question: f.question, answer: f.answer }));
 
     return res.status(201).json({ success: true, message: "Gig created successfully", gig: gigData });
   } catch (error) {

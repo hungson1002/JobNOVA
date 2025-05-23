@@ -49,10 +49,6 @@ const Gig = (sequelize) =>
         type: DataTypes.INTEGER,
         allowNull: false,
       },
-      gig_image: {
-        type: DataTypes.STRING(500),
-        allowNull: true,
-      },
       gig_images: {
         type: DataTypes.TEXT,
         allowNull: true,

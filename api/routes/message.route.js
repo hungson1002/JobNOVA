@@ -1,5 +1,5 @@
 import express from "express";
-import { getMessages, sendMessage, markMessageAsRead, getTickets, updateTicketStatus } from "../controllers/message.controller.js";
+import { getMessages, sendMessage, markMessageAsRead, getTickets, updateTicketStatus, getDirectMessages } from "../controllers/message.controller.js";
 
 const router = express.Router();
 
@@ -17,5 +17,8 @@ router.get("/tickets", getTickets);
 
 // Cập nhật trạng thái ticket
 router.patch("/tickets", updateTicketStatus);
+
+// Lấy direct messages giữa 2 user hoặc tất cả direct messages của user
+router.get("/direct", getDirectMessages);
 
 export default router;

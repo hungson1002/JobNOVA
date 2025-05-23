@@ -1,35 +1,9 @@
-
 import { models } from "../models/Sequelize-mysql.js";
 import { Op } from "sequelize";
 
 let io;
 
 export const initSocket = (socketIo) => {
-  // io = socketIo;
-  // io.on("connection", (socket) => {
-  //   socket.on("viewChat", async ({ orderId, userId }) => {
-  //     try {
-  //       const messages = await models.Message.findAll({
-  //         where: {
-  //           order_id: orderId,
-  //           is_read: false,
-  //           sender_clerk_id: { [Op.ne]: userId },
-  //         },
-  //       });
-
-  //       if (messages.length === 0) return;
-
-  //       const messageIds = messages.map((msg) => msg.id);
-  //       await models.Message.update(
-  //         { is_read: true },
-  //         { where: { id: messageIds } }
-  //       );
-
-  //       io.to(`order_${orderId}`).emit("messagesRead", { orderId, messageIds });
-  //     } catch (err) {
-  //       console.error("Error marking messages as read:", err.message);
-  //       socket.emit("error", { message: "Failed to mark messages as read" });
-  //     }
   io = socketIo;
   io.on("connection", (socket) => {
     // Xử lý khi người dùng tham gia chat
@@ -39,25 +13,46 @@ export const initSocket = (socketIo) => {
       socket.join(directRoom);
     });
 
-    socket.on("viewChat", async ({ orderId, userId }) => {
+    socket.on("viewChat", async ({ orderId, userId, receiverId }) => {
       try {
-        const messages = await models.Message.findAll({
-          where: {
-            order_id: orderId,
-            is_read: false,
-            sender_clerk_id: { [Op.ne]: userId },
-          },
-        });
-
-        if (messages.length === 0) return;
-
-        const messageIds = messages.map((msg) => msg.id);
-        await models.Message.update(
-          { is_read: true },
-          { where: { id: messageIds } }
-        );
-
-        io.to(`order_${orderId}`).emit("messagesRead", { orderId, messageIds });
+        if (orderId) {
+          // Order message: đánh dấu đã đọc theo orderId
+          const messages = await models.Message.findAll({
+            where: {
+              order_id: orderId,
+              is_read: false,
+              sender_clerk_id: { [Op.ne]: userId },
+            },
+          });
+          if (messages.length === 0) return;
+          const messageIds = messages.map((msg) => msg.id);
+          await models.Message.update(
+            { is_read: true },
+            { where: { id: messageIds } }
+          );
+          io.to(`order_${orderId}`).emit("messagesRead", { orderId, messageIds });
+        } else if (receiverId) {
+          // Direct message: đánh dấu đã đọc theo sender/receiver
+          const messages = await models.Message.findAll({
+            where: {
+              is_direct_message: true,
+              is_read: false,
+              [Op.or]: [
+                { sender_clerk_id: receiverId, receiver_clerk_id: userId },
+                { sender_clerk_id: userId, receiver_clerk_id: receiverId },
+              ],
+              sender_clerk_id: { [Op.ne]: userId },
+            },
+          });
+          if (messages.length === 0) return;
+          const messageIds = messages.map((msg) => msg.id);
+          await models.Message.update(
+            { is_read: true },
+            { where: { id: messageIds } }
+          );
+          const directRoom = `direct_${[userId, receiverId].sort().join("_")}`;
+          io.to(directRoom).emit("messagesRead", { receiverId, messageIds });
+        }
       } catch (err) {
         console.error("Error marking messages as read:", err.message);
         socket.emit("error", { message: "Failed to mark messages as read" });
@@ -103,7 +98,7 @@ export const getMessages = async (req, res, next) => {
 
 export const sendMessage = async (req, res, next) => {
   try {
-    const { order_id, sender_clerk_id, receiver_clerk_id, message_content } = req.body || req;
+    const { order_id, sender_clerk_id, receiver_clerk_id, message_content, sent_at } = req.body || req;
 
     // Kiểm tra sender_clerk_id và receiver_clerk_id có tồn tại trong bảng user_account không
     const sender = await models.User.findOne({ where: { clerk_id: sender_clerk_id } });
@@ -249,6 +244,42 @@ export const updateTicketStatus = async (req, res, next) => {
     res.status(200).json({ success: true, message: "Ticket status updated" });
   } catch (err) {
     console.error("Error updating ticket status:", err.message);
+    next(err);
+  }
+};
+
+export const getDirectMessages = async (req, res, next) => {
+  try {
+    const { clerk_id, receiver_clerk_id } = req.query;
+    if (!clerk_id) return res.status(400).json({ success: false, message: "Missing clerk_id" });
+
+    let where = {
+      is_direct_message: true,
+    };
+    if (receiver_clerk_id) {
+      where = {
+        ...where,
+        [Op.or]: [
+          { sender_clerk_id: clerk_id, receiver_clerk_id: receiver_clerk_id },
+          { sender_clerk_id: receiver_clerk_id, receiver_clerk_id: clerk_id },
+        ],
+      };
+    } else {
+      where = {
+        ...where,
+        [Op.or]: [
+          { sender_clerk_id: clerk_id },
+          { receiver_clerk_id: clerk_id },
+        ],
+      };
+    }
+    const messages = await models.Message.findAll({
+      where,
+      order: [["sent_at", "ASC"]],
+    });
+    res.status(200).json({ success: true, messages });
+  } catch (err) {
+    console.error("Error fetching direct messages:", err.message);
     next(err);
   }
 };
