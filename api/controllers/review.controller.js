@@ -14,7 +14,6 @@ export const createReview = async (req, res, next) => {
       });
     }
 
-    // ✅ Kiểm tra người gọi API có phải là người mua thật sự của order
     const order = await models.Order.findByPk(order_id);
     if (!order || order.buyer_clerk_id !== reviewer_clerk_id) {
       return res.status(403).json({
@@ -23,7 +22,6 @@ export const createReview = async (req, res, next) => {
       });
     }
 
-    // ✅ Kiểm tra đã đánh giá order này chưa
     const existing = await models.Review.findOne({
       where: { order_id, reviewer_clerk_id },
     });
@@ -34,7 +32,6 @@ export const createReview = async (req, res, next) => {
       });
     }
 
-    // ✅ Tạo review
     const review = await models.Review.create({
       order_id,
       gig_id,
@@ -48,11 +45,27 @@ export const createReview = async (req, res, next) => {
       helpfulNo: 0,
     });
 
-    console.log(`Review created: id=${review.id}`);
+    // Populate user để trả về đầy đủ cho FE không phải fetch lại
+    const reviewer = await models.User.findOne({
+      where: { clerk_id: reviewer_clerk_id },
+      attributes: ['clerk_id', 'username', 'avatar', 'country', 'firstname', 'lastname'],
+    });
+
+    const fullName = [reviewer?.firstname, reviewer?.lastname].filter(Boolean).join(' ').trim();
+
     return res.status(201).json({
       success: true,
       message: 'Review created successfully',
-      review,
+      review: {
+        ...review.get({ plain: true }),
+        user: {
+          name: fullName || reviewer?.username || reviewer_clerk_id,
+          avatar: reviewer?.avatar || '/placeholder.svg',
+          country: reviewer?.country || 'Unknown',
+        },
+        helpful: { yes: 0, no: 0 },
+        sellerResponse: null,
+      },
     });
   } catch (error) {
     console.error('Error creating review:', error.message);
@@ -72,31 +85,16 @@ export const getAllReviews = async (req, res, next) => {
     const where = {};
 
     if (gig_id && gig_id !== "undefined" && gig_id !== "") {
-      where.gig_id = Number(gig_id); // ép sang số cho chắc
+      where.gig_id = Number(gig_id);
     }
     if (typeof order_id !== "undefined" && order_id !== "undefined" && order_id !== "") {
       where.order_id = order_id;
     }
     if (search && search !== "undefined") {
       where.comment = { [Op.like]: `%${search}%` };
-} // Tìm kiếm theo comment
+    }
 
-  //   const reviews = await models.Review.findAndCountAll({
-  //     where,
-  //     limit: parseInt(limit),
-  //     offset: parseInt(offset),
-  //   });
-  //   return res.status(200).json({
-  //     success: true,
-  //     total: reviews.count,
-  //     pages: Math.ceil(reviews.count / limit),
-  //     reviews: reviews.rows,
-  //   });
-  // } catch (error) {
-  //   console.error('Error fetching reviews:', error.message);
-  //   return res.status(500).json({ success: false, message: 'Error fetching reviews', error: error.message });
-  // }
-  const reviews = await models.Review.findAndCountAll({
+    const reviews = await models.Review.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -104,7 +102,7 @@ export const getAllReviews = async (req, res, next) => {
         {
           model: models.User,
           as: 'reviewer',
-          attributes: ['clerk_id', 'country'],
+          attributes: ['clerk_id', 'country', 'username', 'firstname', 'lastname', 'avatar'],
         },
         {
           model: models.Order,
@@ -119,14 +117,13 @@ export const getAllReviews = async (req, res, next) => {
             {
               model: models.User,
               as: "seller",
-              attributes: ["clerk_id", "name", "avatar"],
+              attributes: ["clerk_id", "firstname", "lastname", "avatar", "username"],
             },
           ],
         },
       ],
     });
 
-    // Tính toán tổng quan rating
     const ratingSummary = await models.Review.findAll({
       where: { gig_id },
       attributes: [
@@ -141,7 +138,6 @@ export const getAllReviews = async (req, res, next) => {
       raw: true,
     });
 
-    // Tính toán rating breakdown
     const ratingBreakdown = await models.Review.findAll({
       where: { gig_id },
       attributes: [
@@ -152,34 +148,36 @@ export const getAllReviews = async (req, res, next) => {
       raw: true,
     });
 
-    // Map reviews để thêm thông tin country, price, duration, sellerResponse, helpful
-    const enrichedReviews = reviews.rows.map((review) => ({
-      ...review.get({ plain: true }),
-      user: {
-        name: review.reviewer?.name || "User",
-        avatar: review.reviewer?.avatar || "/placeholder.svg",
-        country: review.reviewer?.country || "Unknown",
-      },
-      price: review.order?.total_price || 50,
-      duration: review.order?.delivery_deadline
-        ? Math.ceil((new Date(review.order.delivery_deadline) - new Date(review.created_at)) / (1000 * 60 * 60 * 24))
-        : 13,
-      sellerResponse: review.sellerResponse || null,
-      helpful: {
-        yes: review.helpfulYes || 0,
-        no: review.helpfulNo || 0,
-      },
-      seller: {
-        name: review.gig?.seller?.name || "Seller",
-        avatar: review.gig?.seller?.avatar || "/placeholder.svg",
-      },
-    }));
+    const enrichedReviews = reviews.rows.map((review) => {
+      const plain = review.get({ plain: true });
+      const fullName = [plain.reviewer?.firstname, plain.reviewer?.lastname].filter(Boolean).join(' ').trim();
 
-    // Sort reviews
+      return {
+        ...plain,
+        user: {
+          name: fullName || plain.reviewer?.username || plain.reviewer_clerk_id || 'User',
+          avatar: plain.reviewer?.avatar || '/placeholder.svg',
+          country: plain.reviewer?.country || 'Unknown',
+        },
+        price: plain.order?.total_price || 50,
+        duration: plain.order?.delivery_deadline && plain.created_at
+          ? Math.ceil((new Date(plain.order.delivery_deadline) - new Date(plain.created_at)) / (1000 * 60 * 60 * 24))
+          : 13,
+        sellerResponse: plain.sellerResponse || null,
+        helpful: {
+          yes: plain.helpfulYes || 0,
+          no: plain.helpfulNo || 0,
+        },
+        seller: {
+          name: [plain.gig?.seller?.firstname, plain.gig?.seller?.lastname].filter(Boolean).join(' ').trim() || 'Seller',
+          avatar: plain.gig?.seller?.avatar || '/placeholder.svg',
+        },
+      };
+    });
+
     let sortedReviews = enrichedReviews;
     if (sort === 'relevant') {
       sortedReviews.sort((a, b) => {
-        // Giả lập "most relevant": rating cao và mới nhất
         const scoreA = a.rating * 1000 + (new Date(a.created_at).getTime() / 1000000);
         const scoreB = b.rating * 1000 + (new Date(b.created_at).getTime() / 1000000);
         return scoreB - scoreA;
@@ -202,11 +200,11 @@ export const getAllReviews = async (req, res, next) => {
           1: ratingSummary[0]?.['1'] || 0,
         },
       },
-      ratingBreakdown:{
+      ratingBreakdown: {
         sellerCommunication: parseFloat(ratingBreakdown[0]?.sellerCommunication || 0).toFixed(1),
         qualityOfDelivery: parseFloat(ratingBreakdown[0]?.qualityOfDelivery || 0).toFixed(1),
         valueOfDelivery: parseFloat(ratingBreakdown[0]?.valueOfDelivery || 0).toFixed(1),
-      }
+      },
     });
   } catch (error) {
     console.error('Error fetching reviews:', error.message);
@@ -238,7 +236,7 @@ export const getReviewById = async (req, res, next) => {
             {
               model: models.User,
               as: "seller",
-              attributes: ["clerk_id", "name", "avatar"],
+              attributes: ["clerk_id", "firstname", "lastname", "avatar", "username"],
             },
           ],
         },

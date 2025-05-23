@@ -1,82 +1,3 @@
-// "use client"
-
-// import type React from "react"
-
-// import { useState } from "react"
-// import { Star } from "lucide-react"
-
-// import { Button } from "@/components/ui/button"
-// import { Textarea } from "@/components/ui/textarea"
-
-// interface ReviewFormProps {
-//   onSubmit?: (data: { rating: number; comment: string }) => void
-//   className?: string
-// }
-
-// export function ReviewForm({ onSubmit, className }: ReviewFormProps) {
-//   const [rating, setRating] = useState(0)
-//   const [hoveredRating, setHoveredRating] = useState(0)
-//   const [comment, setComment] = useState("")
-
-//   const handleSubmit = (e: React.FormEvent) => {
-//     e.preventDefault()
-//     if (rating === 0) return
-
-//     onSubmit?.({ rating, comment })
-//     // Reset form
-//     setRating(0)
-//     setComment("")
-//   }
-
-//   return (
-//     <form onSubmit={handleSubmit} className={className}>
-//       <h3 className="mb-4 text-lg font-semibold">Leave a Review</h3>
-
-//       <div className="mb-4">
-//         <p className="mb-2 text-sm font-medium">Rating</p>
-//         <div className="flex items-center gap-1">
-//           {[1, 2, 3, 4, 5].map((star) => (
-//             <button
-//               key={star}
-//               type="button"
-//               onClick={() => setRating(star)}
-//               onMouseEnter={() => setHoveredRating(star)}
-//               onMouseLeave={() => setHoveredRating(0)}
-//               className="rounded-md p-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-//             >
-//               <Star
-//                 className={`h-6 w-6 ${
-//                   star <= (hoveredRating || rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
-//                 } transition-colors`}
-//               />
-//             </button>
-//           ))}
-//           <span className="ml-2 text-sm text-gray-500">
-//             {rating > 0 ? `${rating} out of 5 stars` : "Select a rating"}
-//           </span>
-//         </div>
-//       </div>
-
-//       <div className="mb-4">
-//         <label htmlFor="review-comment" className="mb-2 block text-sm font-medium">
-//           Your Review
-//         </label>
-//         <Textarea
-//           id="review-comment"
-//           value={comment}
-//           onChange={(e) => setComment(e.target.value)}
-//           placeholder="Share your experience with this service..."
-//           className="min-h-[120px] resize-y"
-//         />
-//       </div>
-
-//       <Button type="submit" disabled={rating === 0} className="bg-emerald-500 hover:bg-emerald-600">
-//         Submit Review
-//       </Button>
-//     </form>
-//   )
-// }
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -127,8 +48,8 @@ export function ReviewForm({ onSubmit, initialReview, buyerInfo }: ReviewFormPro
     setValueOfDelivery(0);
   };
 
-  const renderStars = (currentRating: number, setRating: (rating: number) => void) => (
-    <div className="flex gap-1">
+  const renderStars = (currentRating: number, setRating: (rating: number) => void, label?: string) => (
+    <div className="flex items-center gap-2 mt-1">
       {[1, 2, 3, 4, 5].map((star) => (
         <button
           key={star}
@@ -136,70 +57,71 @@ export function ReviewForm({ onSubmit, initialReview, buyerInfo }: ReviewFormPro
           onClick={() => setRating(star)}
           onMouseEnter={() => setHoveredRating(star)}
           onMouseLeave={() => setHoveredRating(0)}
+          className="rounded-full p-1 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
+          aria-label={label ? `${label} ${star} stars` : `${star} stars`}
         >
           <Star
-            className={`h-6 w-6 ${
-              star <= (hoveredRating || currentRating)
-                ? "fill-yellow-400 text-yellow-400"
-                : "text-gray-300 dark:text-gray-600"
-            }`}
+            className={`h-7 w-7 ${star <= (hoveredRating || currentRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} transition-colors`}
           />
         </button>
       ))}
+      {currentRating > 0 && (
+        <span className="ml-2 text-xs text-emerald-600 font-medium">{currentRating} / 5</span>
+      )}
     </div>
   );
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="max-w-xl mx-auto bg-white rounded-2xl border border-gray-200 shadow-lg p-8 space-y-7">
       <div>
-        <h3 className="text-lg font-semibold">Review Gig</h3>
-        <div className="mt-2 text-sm text-gray-600">
-          <p>
-            <span className="font-medium">{buyerInfo.name}</span> ({buyerInfo.country})
-          </p>
-          <p>
-            Up to ${buyerInfo.price} • Duration {buyerInfo.duration} days
-          </p>
+        <h3 className="text-xl font-bold text-gray-800 mb-1">Review Gig</h3>
+        <div className="text-sm text-gray-500 mb-2">
+          <span className="font-medium text-gray-700">{buyerInfo.name}</span> ({buyerInfo.country})
         </div>
+        <div className="text-xs text-gray-400 mb-2">Up to ${buyerInfo.price} • Duration {buyerInfo.duration} days</div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Overall Rating</label>
-        {renderStars(rating, setRating)}
+        <label className="block text-sm font-semibold text-gray-700 mb-1">Overall Rating <span className="text-gray-400 font-normal">(Chất lượng tổng thể)</span></label>
+        {renderStars(rating, setRating, "Overall Rating")}
+        <div className="text-xs text-gray-400 mt-1">Đánh giá tổng thể về dịch vụ này.</div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Seller Communication</label>
-        {renderStars(sellerCommunication, setSellerCommunication)}
+        <label className="block text-sm font-semibold text-gray-700 mb-1">Seller Communication <span className="text-gray-400 font-normal">(Giao tiếp)</span></label>
+        {renderStars(sellerCommunication, setSellerCommunication, "Seller Communication")}
+        <div className="text-xs text-gray-400 mt-1">Người bán phản hồi nhanh, lịch sự, hỗ trợ tốt?</div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Quality of Delivery</label>
-        {renderStars(qualityOfDelivery, setQualityOfDelivery)}
+        <label className="block text-sm font-semibold text-gray-700 mb-1">Quality of Delivery <span className="text-gray-400 font-normal">(Chất lượng giao hàng)</span></label>
+        {renderStars(qualityOfDelivery, setQualityOfDelivery, "Quality of Delivery")}
+        <div className="text-xs text-gray-400 mt-1">Sản phẩm giao đúng cam kết, chất lượng tốt?</div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Value of Delivery</label>
-        {renderStars(valueOfDelivery, setValueOfDelivery)}
+        <label className="block text-sm font-semibold text-gray-700 mb-1">Value of Delivery <span className="text-gray-400 font-normal">(Giá trị nhận được)</span></label>
+        {renderStars(valueOfDelivery, setValueOfDelivery, "Value of Delivery")}
+        <div className="text-xs text-gray-400 mt-1">Bạn cảm thấy số tiền bỏ ra có xứng đáng?</div>
       </div>
 
       <div>
-        <label htmlFor="comment" className="block text-sm font-medium text-gray-700">
-          Comment
+        <label htmlFor="comment" className="block text-sm font-semibold text-gray-700 mb-1">
+          Comment <span className="text-gray-400 font-normal">(Chia sẻ trải nghiệm của bạn)</span>
         </label>
         <Textarea
           id="comment"
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Share your experience..."
-          className="mt-1"
+          placeholder="Hãy chia sẻ trải nghiệm thực tế của bạn về dịch vụ này..."
+          className="mt-1 min-h-[100px] rounded-lg border border-gray-200 focus:ring-emerald-400 focus:border-emerald-400"
         />
       </div>
 
       <Button
         type="submit"
         disabled={rating === 0 || sellerCommunication === 0 || qualityOfDelivery === 0 || valueOfDelivery === 0}
-        className="w-full bg-emerald-500 hover:bg-emerald-600"
+        className="w-full bg-emerald-500 hover:bg-emerald-600 text-base font-semibold py-3 rounded-lg shadow-md transition-all"
       >
         {initialReview ? "Update Review" : "Submit Review"}
       </Button>
