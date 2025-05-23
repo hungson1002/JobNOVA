@@ -61,14 +61,16 @@ export const getAllGigs = async (req, res, next) => {
     const offset = (page - 1) * limit;
     const where = {};
     if (category_id) where.category_id = category_id;
-    if (status) {
-      where.status = status;
-    } else {
-      where.status = "active";
-    }
     // Thêm lọc theo seller_clerk_id nếu có
     if (req.query.seller_clerk_id) {
       where.seller_clerk_id = req.query.seller_clerk_id;
+    } else {
+      // Nếu không lọc theo seller_clerk_id thì chỉ lấy gig active (hoặc theo status nếu có)
+      if (status) {
+        where.status = status;
+      } else {
+        where.status = "active";
+      }
     }
 
     const gigs = await models.Gig.findAndCountAll({

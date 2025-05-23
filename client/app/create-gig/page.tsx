@@ -33,7 +33,7 @@ export default function CreateGigPage() {
   const [categories, setCategories] = useState<{id: string, name: string}[]>([])
   const [jobTypes, setJobTypes] = useState<{id: string, job_type: string}[]>([])
   const [faqs, setFaqs] = useState([{ question: "", answer: "" }])
-  const [requirements, setRequirements] = useState([{ requirement_text: "" }])
+  const [gigReqTemplates, setGigReqTemplates] = useState([{ requirement_text: "", is_required: true }])
   const router = useRouter()
 
   // TODO: Lấy seller_clerk_id từ user context/auth
@@ -86,17 +86,17 @@ export default function CreateGigPage() {
   const removeFaq = (idx: number) => setFaqs(faqs => faqs.length > 1 ? faqs.filter((_, i) => i !== idx) : faqs)
 
   // Requirement handlers
-  const handleReqChange = (idx: number, value: string) => {
-    setRequirements(reqs => reqs.map((r, i) => i === idx ? { requirement_text: value } : r))
+  const handleReqTemplateChange = (idx: number, field: string, value: any) => {
+    setGigReqTemplates(reqs => reqs.map((r, i) => i === idx ? { ...r, [field]: value } : r))
   }
-  const addReq = () => setRequirements(reqs => [...reqs, { requirement_text: "" }])
-  const removeReq = (idx: number) => setRequirements(reqs => reqs.length > 1 ? reqs.filter((_, i) => i !== idx) : reqs)
+  const addReqTemplate = () => setGigReqTemplates(reqs => [...reqs, { requirement_text: "", is_required: true }])
+  const removeReqTemplate = (idx: number) => setGigReqTemplates(reqs => reqs.length > 1 ? reqs.filter((_, i) => i !== idx) : reqs)
 
   const validateStep = () => {
     if (step === 0 && (!title || !categoryId || !jobTypeId)) return "Title, category and job type are required."
     if (step === 1 && (!startingPrice || !deliveryTime)) return "Price and delivery time are required."
     if (step === 2 && gigImages.length === 0) return "Please upload at least one image or video."
-    if (step === 3 && (faqs.some(f => !f.question.trim() || !f.answer.trim()) || requirements.some(r => !r.requirement_text.trim()))) return "All FAQ and requirement fields are required."
+    if (step === 3 && (faqs.some(f => !f.question.trim() || !f.answer.trim()) || gigReqTemplates.some(r => !r.requirement_text.trim()))) return "All FAQ and requirement template fields are required."
     return ""
   }
 
@@ -118,8 +118,8 @@ export default function CreateGigPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    if (!title || !categoryId || !jobTypeId || !startingPrice || !deliveryTime || gigImages.length === 0 || faqs.some(f => !f.question.trim() || !f.answer.trim()) || requirements.some(r => !r.requirement_text.trim())) {
-      setError("Please fill all required fields, upload at least one image/video, and complete FAQ/Requirements.")
+    if (!title || !categoryId || !jobTypeId || !startingPrice || !deliveryTime || gigImages.length === 0 || faqs.some(f => !f.question.trim() || !f.answer.trim()) || gigReqTemplates.some(r => !r.requirement_text.trim())) {
+      setError("Please fill all required fields, upload at least one image/video, and complete FAQ/Requirement Templates.")
       return
     }
     const payload = {
@@ -133,7 +133,7 @@ export default function CreateGigPage() {
       city,
       country,
       faqs,
-      requirements,
+      gig_requirement_templates: gigReqTemplates,
     }
     const token = await getToken()
     try {
@@ -148,10 +148,12 @@ export default function CreateGigPage() {
       const data = await res.json()
       if (data.success) {
         toast({
-          title: "Success",
-          description: "Your gig has been submitted for review. We'll notify you once it's approved.",
+          title: "Tạo gig thành công",
+          description: "Gig của bạn đã được gửi lên và đang đợi phê duyệt. Bạn sẽ nhận được thông báo khi gig được duyệt!",
         });
-        router.push("/dashboard/user");
+        setTimeout(() => {
+          router.push("/my-gigs");
+        }, 1800);
       } else {
         setError(data.message || "Create failed");
       }
@@ -242,10 +244,37 @@ export default function CreateGigPage() {
               {imageUploading && <div className="text-sm text-gray-500 mt-2 animate-pulse">Uploading...</div>}
               {gigImages.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {gigImages.map((url, idx) => url.match(/\.(mp4|mov|avi|wmv)$/i) ? (
-                    <video key={idx} src={url} className="rounded-xl w-32 h-20 object-cover border-2 border-emerald-200 shadow-md" controls />
-                  ) : (
-                    <img key={idx} src={url} alt="Gig" className="rounded-xl w-32 h-20 object-cover border-2 border-emerald-200 shadow-md" />
+                  {gigImages.map((url: string, idx: number) => (
+                    <div
+                      key={idx}
+                      className="relative group rounded-xl w-32 h-20 border-2 border-emerald-200 shadow-md overflow-hidden"
+                    >
+                      {url.match(/\.(mp4|mov|avi|wmv)$/i) ? (
+                        <video
+                          src={url}
+                          className="w-full h-full object-cover"
+                          controls
+                        />
+                      ) : (
+                        <img
+                          src={url}
+                          alt="Gig"
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                      {/* Nút xóa chỉ hiện khi hover */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGigImages(gigImages => gigImages.filter((_, i) => i !== idx));
+                        }}
+                        className="absolute top-1 right-1 bg-white bg-opacity-80 rounded-full p-1 text-red-500 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                        style={{ zIndex: 10 }}
+                        title="Xóa ảnh/video"
+                      >
+                        &#10005;
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -285,19 +314,22 @@ export default function CreateGigPage() {
               <Button type="button" variant="outline" className="w-full mt-2" onClick={addFaq}>Add FAQ</Button>
             </div>
             <div className="flex flex-col gap-2">
-              <Label className="text-base font-semibold">Requirements <span className="text-red-500">*</span></Label>
-              {requirements.map((req, idx) => (
+              <Label className="text-base font-semibold">Requirement Templates <span className="text-red-500">*</span></Label>
+              {gigReqTemplates.map((req, idx) => (
                 <div key={idx} className="flex gap-2 items-center mb-2 border-b pb-3">
                   <Input
                     placeholder="Requirement for buyer"
                     value={req.requirement_text}
-                    onChange={e => handleReqChange(idx, e.target.value)}
+                    onChange={e => handleReqTemplateChange(idx, "requirement_text", e.target.value)}
                     className="flex-1 text-base px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all"
                   />
-                  <Button type="button" variant="destructive" className="h-10 px-3" onClick={() => removeReq(idx)} disabled={requirements.length === 1}>Remove</Button>
+                  <label className="flex items-center gap-1">
+                    <input type="checkbox" checked={req.is_required} onChange={e => handleReqTemplateChange(idx, "is_required", e.target.checked)} /> Required
+                  </label>
+                  <Button type="button" variant="destructive" className="h-10 px-3" onClick={() => removeReqTemplate(idx)} disabled={gigReqTemplates.length === 1}>Remove</Button>
                 </div>
               ))}
-              <Button type="button" variant="outline" className="w-full mt-2" onClick={addReq}>Add Requirement</Button>
+              <Button type="button" variant="outline" className="w-full mt-2" onClick={addReqTemplate}>Add Requirement Template</Button>
             </div>
           </div>
         )}

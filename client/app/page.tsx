@@ -2,20 +2,19 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
+import { ArrowRight, Search } from "lucide-react"
 import Image from "next/image"
-import { ArrowRight, TrendingUp, Clock, Heart, Search } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useUser } from "@clerk/nextjs"
-import { PriceDisplay } from "@/components/price-display"
+import { BannedOverlay } from "@/components/BannedOverlay"
 import { SearchAutocomplete } from "@/components/search-autocomplete"
 import { ServiceCard } from "@/components/service-card"
-import { BannedOverlay } from "@/components/BannedOverlay"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { useAllSavedGigs } from "@/hooks/use-saved-gigs"
+import { useUser } from "@clerk/nextjs"
 
 // Định nghĩa type cho gig
 export interface Gig {
@@ -579,7 +578,7 @@ export default function Home() {
           playsInline
           className="absolute top-0 left-0 w-full h-full object-cover z-0"
         >
-          <source src="https://res.cloudinary.com/kaleidoscop3/video/upload/v1747545962/video-banner_zjqq2d.mp4" type="video/mp4" />
+          <source src="https://res.cloudinary.com/kaleidoscop3/video/upload/v1747545962/video-banner_zjqq2d.mp4.xoacainaylacovideo" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
 
