@@ -27,6 +27,12 @@ const initializedModels = Object.keys(models).reduce((acc, key) => {
   return acc;
 }, {});
 
+Object.values(initializedModels).forEach((model) => {
+  if (typeof model.associate === 'function') {
+    model.associate(initializedModels);
+  }
+});
+
 // Định nghĩa quan hệ
 const defineRelations = (models) => {
   // User-Company: 1-to-1 (one user can have one company)
@@ -47,7 +53,7 @@ const defineRelations = (models) => {
 
   // User-Gig: 1-to-many (one user can create multiple gigs as a seller)
   models.User.hasMany(models.Gig, { foreignKey: 'seller_clerk_id', sourceKey: 'clerk_id' });
-  models.Gig.belongsTo(models.User, { foreignKey: 'seller_clerk_id', targetKey: 'clerk_id' });
+  models.Gig.belongsTo(models.User, { foreignKey: 'seller_clerk_id', targetKey: 'clerk_id', as: 'seller' });
 
   // Category-Gig: 1-to-many (one category can have multiple gigs)
   models.Category.hasMany(models.Gig, { foreignKey: 'category_id' });
@@ -71,11 +77,11 @@ const defineRelations = (models) => {
 
   // Order-Review: 1-to-1 (one order can have one review)
   models.Order.hasOne(models.Review, { foreignKey: 'order_id' });
-  models.Review.belongsTo(models.Order, { foreignKey: 'order_id' });
+  models.Review.belongsTo(models.Order, { foreignKey: 'order_id', as: 'order' });
 
   // Gig-Review: 1-to-many (one gig can have multiple reviews)
-  models.Gig.hasMany(models.Review, { foreignKey: 'gig_id' });
-  models.Review.belongsTo(models.Gig, { foreignKey: 'gig_id' });
+  models.Gig.hasMany(models.Review, { foreignKey: 'gig_id', as: 'reviews' });
+  models.Review.belongsTo(models.Gig, { foreignKey: 'gig_id', as: 'gig' });
 
   // User-Review: 1-to-many (one user can write multiple reviews)
   models.User.hasMany(models.Review, { foreignKey: 'reviewer_clerk_id', sourceKey: 'clerk_id' });

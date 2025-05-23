@@ -1,13 +1,40 @@
+import { Op } from 'sequelize';
 import { models, sequelize } from '../models/Sequelize-mysql.js';
-import createError from '../utils/createError.js';
 
 // Tạo đánh giá
 export const createReview = async (req, res, next) => {
   try {
-    const { order_id, gig_id, reviewer_clerk_id, rating, comment, sellerCommunication, qualityOfDelivery, valueOfDelivery } = req.body;
-    if (!order_id || !gig_id || !reviewer_clerk_id || !rating || !sellerCommunication || !qualityOfDelivery || !valueOfDelivery) {
-      return res.status(400).json({ success: false, message: "Missing required fields: order_id, gig_id, reviewer_clerk_id, rating, sellerCommunication, qualityOfDelivery, or valueOfDelivery" });
+    const { order_id, gig_id, rating, comment, sellerCommunication, qualityOfDelivery, valueOfDelivery } = req.body;
+    const reviewer_clerk_id = req.user.clerk_id;
+
+    if (!order_id || !gig_id || !rating || !sellerCommunication || !qualityOfDelivery || !valueOfDelivery) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
     }
+
+    // ✅ Kiểm tra người gọi API có phải là người mua thật sự của order
+    const order = await models.Order.findByPk(order_id);
+    if (!order || order.customer_clerk_id !== reviewer_clerk_id) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to review this order",
+      });
+    }
+
+    // ✅ Kiểm tra đã đánh giá order này chưa
+    const existing = await models.Review.findOne({
+      where: { order_id, reviewer_clerk_id },
+    });
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already reviewed this order",
+      });
+    }
+
+    // ✅ Tạo review
     const review = await models.Review.create({
       order_id,
       gig_id,
@@ -20,23 +47,39 @@ export const createReview = async (req, res, next) => {
       helpfulYes: 0,
       helpfulNo: 0,
     });
+
     console.log(`Review created: id=${review.id}`);
-    return res.status(201).json({ success: true, message: 'Review created successfully', review });
+    return res.status(201).json({
+      success: true,
+      message: 'Review created successfully',
+      review,
+    });
   } catch (error) {
     console.error('Error creating review:', error.message);
-    return res.status(500).json({ success: false, message: 'Error creating review', error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Error creating review',
+      error: error.message,
+    });
   }
 };
 
 // Lấy tất cả đánh giá (phân trang)
 export const getAllReviews = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, gig_id, order_id } = req.query;
+    const { page = 1, limit = 10, gig_id, order_id, search, sort } = req.query;
     const offset = (page - 1) * limit;
     const where = {};
-    if (gig_id) where.gig_id = gig_id;
-    if (order_id) where.order_id = order_id;
-    if (search) where.comment = { [Op.like]: `%${search}%` }; // Tìm kiếm theo comment
+
+    if (gig_id && gig_id !== "undefined" && gig_id !== "") {
+      where.gig_id = Number(gig_id); // ép sang số cho chắc
+    }
+    if (typeof order_id !== "undefined" && order_id !== "undefined" && order_id !== "") {
+      where.order_id = order_id;
+    }
+    if (search && search !== "undefined") {
+      where.comment = { [Op.like]: `%${search}%` };
+} // Tìm kiếm theo comment
 
   //   const reviews = await models.Review.findAndCountAll({
   //     where,
@@ -299,6 +342,7 @@ export const updateSellerResponse = async (req, res, next) => {
 };
 
 // Cập nhật helpful votes
+// Cập nhật helpful votes
 export const updateHelpfulVote = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -306,15 +350,23 @@ export const updateHelpfulVote = async (req, res, next) => {
     if (!["yes", "no"].includes(vote)) {
       return res.status(400).json({ success: false, message: "Invalid vote value" });
     }
+
     const review = await models.Review.findByPk(id);
     if (!review) {
       return res.status(404).json({ success: false, message: "Review not found" });
     }
+
+    // 👇 Thêm điều kiện này vào
+    if (review.reviewer_clerk_id === req.user.clerk_id) {
+      return res.status(403).json({ success: false, message: "You cannot vote on your own review" });
+    }
+
     if (vote === "yes") {
       await review.increment("helpfulYes");
     } else {
       await review.increment("helpfulNo");
     }
+
     console.log(`Helpful vote updated: reviewId=${id}, vote=${vote}`);
     return res.status(200).json({ success: true, message: "Helpful vote updated successfully", review });
   } catch (error) {
@@ -322,6 +374,7 @@ export const updateHelpfulVote = async (req, res, next) => {
     return res.status(500).json({ success: false, message: "Error updating helpful vote", error: error.message });
   }
 };
+
 
 // Mã bình luận (giữ nguyên để tham khảo)
 // export const createReview = async (req, res, next) => {

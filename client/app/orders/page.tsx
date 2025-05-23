@@ -7,6 +7,7 @@ import { Clock, CheckCircle, AlertCircle, XCircle, RefreshCw, MessageSquare, Arr
 import { useUser, useAuth } from "@clerk/nextjs"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from 'sonner'
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -84,7 +85,7 @@ export default function OrdersPage() {
             </div>
           ) : (
             orders.map((order) => (
-              <OrderCard key={order.id} order={order} onCancelClick={() => {}} />
+              <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
             ))
           )}
         </TabsContent>
@@ -95,7 +96,7 @@ export default function OrdersPage() {
             </div>
           ) : (
             activeOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onCancelClick={() => {}} />
+              <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
             ))
           )}
         </TabsContent>
@@ -106,7 +107,7 @@ export default function OrdersPage() {
             </div>
           ) : (
             completedOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onCancelClick={() => {}} />
+              <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
             ))
           )}
         </TabsContent>
@@ -117,7 +118,7 @@ export default function OrdersPage() {
             </div>
           ) : (
             cancelledOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onCancelClick={() => {}} />
+              <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
             ))
           )}
         </TabsContent>
@@ -163,29 +164,42 @@ function OrderCard({
   };
 
   const handleCancelOrder = async () => {
-    if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) return
-    try {
-      setLoadingCancel(true)
-      const token = await getToken()
-      const res = await fetch(
-        `http://localhost:8800/api/orders/${order.id}/cancel`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+    toast(
+      "Bạn có chắc chắn muốn hủy đơn hàng này?",
+      {
+        action: {
+          label: "Xác nhận hủy",
+          onClick: async () => {
+            setLoadingCancel(true);
+            try {
+              const token = await getToken();
+              const res = await fetch(
+                `http://localhost:8800/api/orders/${order.id}/cancel`,
+                {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              );
+              const data = await res.json();
+              if (res.ok) {
+                onCancelClick(order.id);
+                toast.success("Đã hủy đơn hàng thành công!");
+              } else {
+                toast.error(data?.message || "Hủy đơn hàng thất bại!");
+              }
+            } catch (err) {
+              toast.error("Có lỗi xảy ra, vui lòng thử lại!");
+            } finally {
+              setLoadingCancel(false);
+            }
           },
-        }
-      )
-      const data = await res.json()
-      if (res.ok) {
-        onCancelClick(order)
+        },
+        cancel: "Đóng"
       }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoadingCancel(false)
-    }
+    );
   }
 
   const getStatusBadge = (status: string) => {
@@ -255,8 +269,13 @@ function OrderCard({
         return (
           <>
             <Button variant="outline">Contact Seller</Button>
-            <Button variant="outline" className="text-red-500 hover:bg-red-50">
-              Cancel Order
+            <Button
+              variant="outline"
+              className="text-red-500 hover:bg-red-50"
+              onClick={handleCancelOrder}
+              disabled={loadingCancel}
+            >
+              {loadingCancel ? "Cancelling..." : "Cancel Order"}
             </Button>
           </>
         )
@@ -266,9 +285,10 @@ function OrderCard({
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => onCancelClick(order)}
+              onClick={handleCancelOrder}
+              disabled={loadingCancel}
             >
-              Cancel Order
+              {loadingCancel ? "Cancelling..." : "Cancel Order"}
             </Button>
           </>
         );

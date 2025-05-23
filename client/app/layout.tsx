@@ -4,6 +4,7 @@ import { ClerkProvider, useUser } from "@clerk/nextjs"
 import { Inter } from "next/font/google"
 import type React from "react"
 import "./globals.css"
+import { Toaster } from 'sonner'
 
 import { BannedOverlay } from "@/components/BannedOverlay"
 import { Footer } from "@/components/footer"
@@ -50,6 +51,7 @@ export default function RootLayout({
     <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
       <html lang="en">
         <body className={inter.className} suppressHydrationWarning>
+          <Toaster richColors position="top-center" />
           <CurrencyProvider>
             <RoleCheck />
             {!isAdminRoute && <Navbar />}

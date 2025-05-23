@@ -21,6 +21,14 @@ const User = (sequelize) =>
         type: DataTypes.STRING(50),
         allowNull: false,
       },
+      name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      avatar: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       description: {
         type: DataTypes.TEXT,
         allowNull: true,

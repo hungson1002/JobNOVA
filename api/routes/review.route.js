@@ -2,12 +2,13 @@ import express from 'express';
 import {
   createReview,
   deleteReview,
-  updateReview,
   getAllReviews,
   getReviewById,
   updateHelpfulVote,
+  updateReview,
   updateSellerResponse
 } from '../controllers/review.controller.js';
+import { authenticateAndLoadUser } from '../middleware/getAuth.js';
 import requireAuth from '../middleware/requireAuth.js';
 
 const router = express.Router();
@@ -16,15 +17,17 @@ const router = express.Router();
 router.get('/', getAllReviews);
 // Lấy review theo id
 router.get('/:id', getReviewById);
+
+router.use(requireAuth, authenticateAndLoadUser);
 // Tạo review mới
-router.post('/', requireAuth, createReview);
+router.post('/', createReview);
 // Cập nhật review
-router.patch('/:id', requireAuth, updateReview);
+router.patch('/:id', updateReview);
 // Cập nhật sellerResponse
-router.patch("/:id/seller-response", requireAuth, updateSellerResponse);
+router.patch("/:id/seller-response", updateSellerResponse);
 // Cập nhật helpful vote
-router.post("/:id/helpful", requireAuth, updateHelpfulVote);
+router.post("/:id/helpful", updateHelpfulVote);
 // Xóa review
-router.delete('/:id', requireAuth, deleteReview);
+router.delete('/:id', deleteReview);
 
 export default router;
