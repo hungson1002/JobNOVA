@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Star, ChevronDown, ChevronUp, MessageCircle, MoreVertical } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
 
 interface Review {
   id: string;
@@ -28,9 +29,12 @@ interface ReviewListProps {
 }
 
 export function ReviewList({ reviews, className }: ReviewListProps) {
+  const [localReviews, setLocalReviews] = useState<Review[]>(reviews)
+
   const [expandedResponses, setExpandedResponses] = useState<string[]>([]);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { getToken } = useAuth();
 
   const toggleResponse = (reviewId: string) => {
     setExpandedResponses((prev) =>
@@ -42,16 +46,40 @@ export function ReviewList({ reviews, className }: ReviewListProps) {
 
   const handleHelpfulVote = async (reviewId: string, vote: "yes" | "no") => {
     try {
+      const token = await getToken?.();
       const res = await fetch(`http://localhost:8800/api/reviews/${reviewId}/helpful`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ vote }),
+        credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to update helpful vote");
+  
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to update helpful vote");
+  
+      // ✅ Cập nhật local state để UI tự thay đổi ngay
+      setLocalReviews((prev) =>
+        prev.map((r) =>
+          r.id === reviewId
+            ? {
+                ...r,
+                helpful: {
+                  yes: r.helpful.yes + (vote === "yes" ? 1 : 0),
+                  no: r.helpful.no + (vote === "no" ? 1 : 0),
+                },
+              }
+            : r
+        )
+      );
     } catch (error) {
-      console.error("Error voting helpful:", error);
+      console.error("❌ Error voting helpful:", error);
+      alert(error.message);
     }
   };
+  
 
   // Đóng menu khi click ngoài
   useEffect(() => {
@@ -69,13 +97,13 @@ export function ReviewList({ reviews, className }: ReviewListProps) {
       <h3 className="mb-4 text-xl font-bold text-gray-800">Customer Reviews</h3>
 
       {reviews.length === 0 ? (
-        <div className="flex flex-col items-center py-8 text-gray-400">
+        <div className="flex flex-col items-center py-8 text-gray-400 border-none">
           <MessageCircle className="w-10 h-10 mb-2" />
           <div className="font-medium">No reviews yet. Be the first to leave a review!</div>
         </div>
       ) : (
         <div className="space-y-8">
-          {reviews.map((review) => (
+          {localReviews.map((review) => (
             <div
               key={review.id}
               className="group relative flex gap-4 pb-8 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
@@ -86,7 +114,7 @@ export function ReviewList({ reviews, className }: ReviewListProps) {
                   alt={review.user.name}
                   width={48}
                   height={48}
-                  className="w-12 h-12 rounded-full border border-gray-200 object-cover"
+                  className="w-12 h-12 rounded-full object-cover"
                 />
               </div>
               <div className="flex-1 min-w-0">

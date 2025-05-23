@@ -808,7 +808,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                 {isSignedIn ? (
                   userOrder ? (
                     <ReviewForm
-                      onSubmit={handleReviewSubmit}
+                      onSubmitAction={handleReviewSubmit}
                       buyerInfo={{
                         name: user?.firstName + (user?.lastName ? ' ' + user.lastName : '') || user?.username || 'User',
                         country: typeof user?.publicMetadata?.country === 'string' ? user.publicMetadata.country : 'Unknown',

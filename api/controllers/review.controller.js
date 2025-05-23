@@ -354,11 +354,6 @@ export const updateHelpfulVote = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "Review not found" });
     }
 
-    // 👇 Thêm điều kiện này vào
-    if (review.reviewer_clerk_id === req.user.clerk_id) {
-      return res.status(403).json({ success: false, message: "You cannot vote on your own review" });
-    }
-
     if (vote === "yes") {
       await review.increment("helpfulYes");
     } else {

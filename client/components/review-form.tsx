@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 interface ReviewFormProps {
-  onSubmit: (review: {
+  onSubmitAction: (review: {
     rating: number;
     comment: string;
     sellerCommunication: number;
@@ -29,7 +29,7 @@ interface ReviewFormProps {
   };
 }
 
-export function ReviewForm({ onSubmit, initialReview, buyerInfo }: ReviewFormProps) {
+export function ReviewForm({ onSubmitAction, initialReview, buyerInfo }: ReviewFormProps) {
   const [rating, setRating] = useState(initialReview?.rating || 0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState(initialReview?.comment || "");
@@ -39,13 +39,10 @@ export function ReviewForm({ onSubmit, initialReview, buyerInfo }: ReviewFormPro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (rating === 0 || sellerCommunication === 0 || qualityOfDelivery === 0 || valueOfDelivery === 0) return;
-    onSubmit({ rating, comment, sellerCommunication, qualityOfDelivery, valueOfDelivery });
+    if (rating === 0) return;
+    onSubmitAction({ rating, comment, sellerCommunication: 0, qualityOfDelivery: 0, valueOfDelivery: 0 });
     setRating(0);
     setComment("");
-    setSellerCommunication(0);
-    setQualityOfDelivery(0);
-    setValueOfDelivery(0);
   };
 
   const renderStars = (currentRating: number, setRating: (rating: number) => void, label?: string) => (
@@ -120,7 +117,7 @@ export function ReviewForm({ onSubmit, initialReview, buyerInfo }: ReviewFormPro
 
       <Button
         type="submit"
-        disabled={rating === 0 || sellerCommunication === 0 || qualityOfDelivery === 0 || valueOfDelivery === 0}
+        disabled={rating === 0}
         className="w-full bg-emerald-500 hover:bg-emerald-600 text-base font-semibold py-3 rounded-lg shadow-md transition-all"
       >
         {initialReview ? "Update Review" : "Submit Review"}
