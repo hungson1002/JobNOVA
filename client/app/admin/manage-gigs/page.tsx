@@ -456,55 +456,56 @@ export default function ManageGigsPage() {
 
       {/* Modal xem chi tiết gig */}
       <Dialog open={showModal} onOpenChange={handleCloseModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Gig Details</DialogTitle>
-            <DialogDescription>
-              Thông tin chi tiết dịch vụ
-            </DialogDescription>
+        <DialogContent className="max-w-4xl w-[66vw] max-h-[75vh] overflow-y-auto p-0 rounded-2xl border border-gray-100 shadow-2xl scrollbar-thin scrollbar-thumb-gray-200">
+          <DialogHeader className="bg-emerald-600 px-10 py-6">
+            <DialogTitle className="text-white text-2xl">Gig Details</DialogTitle>
+            <DialogDescription className="text-emerald-100">Thông tin chi tiết dịch vụ</DialogDescription>
           </DialogHeader>
           {selectedGig && (
-            <div className="space-y-2">
-              <div><b>Tiêu đề:</b> {selectedGig.title}</div>
-              <div><b>Mô tả:</b> {selectedGig.description}</div>
-              <div><b>Người bán:</b> {
-                selectedGig.seller?.firstname && selectedGig.seller?.lastname
-                  ? selectedGig.seller.firstname + ' ' + selectedGig.seller.lastname
-                  : selectedGig.seller?.firstname
-                  ? selectedGig.seller.firstname
-                  : selectedGig.seller?.username
-                  ? selectedGig.seller.username
-                  : ''
-              }</div>
-              <div><b>Danh mục:</b> {selectedGig.category?.name}</div>
-              <div><b>Loại công việc:</b> {selectedGig.job_type?.job_type}</div>
-              <div><b>Giá:</b> ${selectedGig.starting_price}</div>
-              <div><b>Thời gian giao:</b> {selectedGig.delivery_time} ngày</div>
-              <div><b>Vị trí:</b> {selectedGig.city}, {selectedGig.country}</div>
-              <div><b>Trạng thái:</b> {selectedGig.status}</div>
-              <div><b>Ngày tạo:</b> {new Date(selectedGig.created_at).toLocaleDateString()}</div>
-              {/* Hiển thị nhiều ảnh/video nếu có */}
-              {selectedGig.gig_images && Array.isArray(selectedGig.gig_images) && selectedGig.gig_images.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '12px 0' }}>
-                  {selectedGig.gig_images.map((url: string, idx: number) =>
+            <div className="p-10 bg-white dark:bg-gray-900">
+              {/* Thông tin gig chia 2 cột */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 mb-8">
+                <div className="flex flex-col gap-3">
+                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Tiêu đề:</span> <span className="text-emerald-700 font-bold">{selectedGig.title}</span></div>
+                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Người bán:</span> <span className="text-emerald-700 font-medium">{
+                    selectedGig.seller?.firstname && selectedGig.seller?.lastname
+                      ? selectedGig.seller.firstname + ' ' + selectedGig.seller.lastname
+                      : selectedGig.seller?.firstname
+                      ? selectedGig.seller.firstname
+                      : selectedGig.seller?.username
+                      ? selectedGig.seller.username
+                      : ''
+                  }</span></div>
+                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Danh mục:</span> <span className="text-blue-700 font-medium">{selectedGig.category?.name}</span></div>
+                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Loại công việc:</span> <span className="text-indigo-700 font-medium">{selectedGig.job_type?.job_type}</span></div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Giá:</span> <span className="text-pink-600 font-semibold">${selectedGig.starting_price}</span></div>
+                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Thời gian giao:</span> <span className="text-orange-600 font-semibold">{selectedGig.delivery_time} ngày</span></div>
+                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Vị trí:</span> <span className="text-gray-800 dark:text-gray-100">{selectedGig.city}, {selectedGig.country}</span></div>
+                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Trạng thái:</span> <span className={`font-semibold ${selectedGig.status === 'pending' ? 'text-yellow-600' : selectedGig.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>{selectedGig.status}</span></div>
+                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Ngày tạo:</span> <span className="text-gray-500">{new Date(selectedGig.created_at).toLocaleDateString()}</span></div>
+                </div>
+              </div>
+              {/* Ảnh/video preview ở dưới */}
+              <div className="flex flex-wrap gap-4 justify-center items-center border-t border-gray-100 pt-6">
+                {selectedGig.gig_images && Array.isArray(selectedGig.gig_images) && selectedGig.gig_images.length > 0 ? (
+                  selectedGig.gig_images.map((url: string, idx: number) =>
                     url.match(/\.(mp4|mov|avi|wmv)$/i) ? (
-                      <video key={idx} src={url} controls style={{ width: 120, height: 80, borderRadius: 8, objectFit: 'cover' }} />
+                      <video key={idx} src={url} controls className="rounded-2xl border border-emerald-100 shadow-md w-48 h-32 object-cover hover:scale-105 transition-transform duration-200" />
                     ) : (
-                      <img key={idx} src={url} alt={`Gig media ${idx + 1}`} style={{ width: 120, height: 80, borderRadius: 8, objectFit: 'cover' }} />
+                      <img key={idx} src={url} alt={`Gig media ${idx + 1}`} className="rounded-2xl border border-emerald-100 shadow-md w-48 h-32 object-cover hover:scale-105 transition-transform duration-200" />
                     )
-                  )}
-                </div>
-              )}
-              {/* Fallback: chỉ có 1 ảnh */}
-              {!selectedGig.gig_images && selectedGig.gig_image && (
-                <div>
-                  <b>Ảnh:</b><br />
-                  <img src={selectedGig.gig_image} alt="Gig" className="max-w-full max-h-48 rounded border" />
-                </div>
-              )}
+                  )
+                ) : (
+                  selectedGig.gig_image && (
+                    <img src={selectedGig.gig_image} alt="Gig" className="rounded-2xl border border-emerald-100 shadow-md w-48 h-32 object-cover" />
+                  )
+                )}
+              </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="bg-gray-50 dark:bg-gray-800 px-10 py-4 flex justify-end">
             <Button onClick={handleCloseModal} variant="outline">Đóng</Button>
           </DialogFooter>
         </DialogContent>
