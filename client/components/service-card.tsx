@@ -2,7 +2,7 @@
 
 import { PriceDisplay } from "@/components/price-display"
 import { useSavedGigs } from "@/hooks/use-saved-gigs"
-import { useUser } from "@clerk/nextjs"
+import { useUser, SignInButton } from "@clerk/nextjs"
 import { Heart } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -110,23 +110,37 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
             </>
           )}
 
-
-
           {/* Save button */}
-          <button
-            onClick={handleSaveClick}
-            className={`absolute right-3 top-3 rounded-full p-1.5 z-10 transition duration-200
-              ${
-                isSaved
-                  ? "bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400"
-                  : "bg-white/80 text-gray-600 hover:text-red-500 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:text-red-400"
-              }`}
-            aria-label={isSaved ? "Remove from saved" : "Save gig"}
-            tabIndex={0}
-            disabled={isLoading}
-          >
-            <Heart className={`h-5 w-5 transition duration-200 ${isSaved ? "fill-current" : ""}`} />
-          </button>
+          {isLoggedIn ? (
+            <button
+              onClick={handleSaveClick}
+              className={`absolute right-3 top-3 rounded-full p-1.5 z-10 transition duration-200
+                ${
+                  isSaved
+                    ? "bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400"
+                    : "bg-white/80 text-gray-600 hover:text-red-500 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:text-red-400"
+                }`}
+              aria-label={isSaved ? "Remove from saved" : "Save gig"}
+              tabIndex={0}
+              disabled={isLoading}
+            >
+              <Heart className={`h-5 w-5 transition duration-200 ${isSaved ? "fill-current" : ""}`} />
+            </button>
+          ) : (
+            <SignInButton mode="modal">
+              <button
+                className="absolute right-3 top-3 rounded-full p-1.5 z-10 bg-white/80 text-gray-600 hover:text-red-500 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:text-red-400 transition duration-200"
+                aria-label="Save gig (login required)"
+                tabIndex={0}
+                onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <Heart className="h-5 w-5 transition duration-200" />
+              </button>
+            </SignInButton>
+          )}
 
           {/* Badges */}
           {service.badges && service.badges.length > 0 && (

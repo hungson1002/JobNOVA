@@ -1,36 +1,32 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useState, useEffect, useRef, use } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
 import {
-  Star,
-  Clock,
   Check,
-  Heart,
-  Share2,
-  Flag,
   ChevronDown,
-  ChevronUp,
-  ChevronRight,
   ChevronLeft,
-  ZoomIn,
-  X,
+  ChevronRight,
+  ChevronUp,
+  Flag,
+  Heart,
   Search,
+  Share2,
+  Star,
+  X,
+  ZoomIn
 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { UserBadge } from "@/components/user-badge";
-import { ReportModal } from "@/components/report-modal";
-import { ReviewForm } from "@/components/review-form";
-import { ReviewList } from "@/components/review-list";
+import { ChatAvatar } from "@/components/message/chatAvatar";
+import { ChatBubble } from "@/components/message/chatBubble";
+import { ContactMeButton } from "@/components/message/contactMeButton";
 import { PriceDisplay } from "@/components/price-display";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ReportModal } from "@/components/report-modal";
+import { ReviewList } from "@/components/review-list";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -40,13 +36,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserBadge } from "@/components/user-badge";
 import { useSavedGigs } from "@/hooks/use-saved-gigs";
-import { useUser } from "@clerk/nextjs";
-import { ChatBubble } from "@/components/message/chatBubble";
-import{ChatAvatar} from "@/components/message/chatAvatar";
-import {ContactMeButton} from "@/components/message/contactMeButton";
 import { useMessages } from "@/hooks/useMessages";
 import { fetchUser } from "@/lib/api";
+import { useUser, SignInButton } from "@clerk/nextjs";
 
 interface PageParams {
   id: string;
@@ -268,6 +264,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
 
   // Continue to checkout
   const handleContinue = () => {
+    if (!isSignedIn) return;
     router.push(`/checkout?gig=${resolvedParams.id}&package=${selectedPackage}`);
   };
 
@@ -736,12 +733,18 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                       </li>
                     ))}
                   </ul>
-                  <Button
-                    onClick={handleContinue}
-                    className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
-                  >
-                    Continue
-                  </Button>
+                  {isSignedIn ? (
+                    <Button
+                      onClick={handleContinue}
+                      className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
+                    >
+                      Continue
+                    </Button>
+                  ) : (
+                    <SignInButton mode="modal">
+                      <button className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors rounded-md py-2 font-semibold text-white text-lg">Continue</button>
+                    </SignInButton>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="standard" className="space-y-6">
@@ -759,12 +762,18 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                       </li>
                     ))}
                   </ul>
-                  <Button
-                    onClick={handleContinue}
-                    className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
-                  >
-                    Continue
-                  </Button>
+                  {isSignedIn ? (
+                    <Button
+                      onClick={handleContinue}
+                      className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
+                    >
+                      Continue
+                    </Button>
+                  ) : (
+                    <SignInButton mode="modal">
+                      <button className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors rounded-md py-2 font-semibold text-white text-lg">Continue</button>
+                    </SignInButton>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="premium" className="space-y-6">
@@ -782,26 +791,40 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                       </li>
                     ))}
                   </ul>
-                  <Button
-                    onClick={handleContinue}
-                    className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
-                  >
-                    Continue
-                  </Button>
+                  {isSignedIn ? (
+                    <Button
+                      onClick={handleContinue}
+                      className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
+                    >
+                      Continue
+                    </Button>
+                  ) : (
+                    <SignInButton mode="modal">
+                      <button className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors rounded-md py-2 font-semibold text-white text-lg">Continue</button>
+                    </SignInButton>
+                  )}
                 </TabsContent>
               </Tabs>
 
               <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSave}
-                  className="hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
-                  disabled={isSaving}
-                >
-                  <Heart className={`mr-2 h-4 w-4 ${isSaved ? "fill-red-500 text-red-500" : ""}`} />
-                  {isSaved ? "Saved" : "Save"}
-                </Button>
+                {isSignedIn ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSave}
+                    className="hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+                    disabled={isSaving}
+                  >
+                    <Heart className={`mr-2 h-4 w-4 ${isSaved ? "fill-red-500 text-red-500" : ""}`} />
+                    {isSaved ? "Saved" : "Save"}
+                  </Button>
+                ) : (
+                  <SignInButton mode="modal">
+                    <button className="border border-gray-200 rounded-md px-3 py-2 flex items-center gap-2 text-gray-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors" type="button">
+                      <Heart className="mr-2 h-4 w-4" />Save
+                    </button>
+                  </SignInButton>
+                )}
                 <Button
                   variant="outline"
                   size="sm"

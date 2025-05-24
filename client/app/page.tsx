@@ -14,7 +14,7 @@ import { ServiceCard } from "@/components/service-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAllSavedGigs } from "@/hooks/use-saved-gigs"
-import { useUser } from "@clerk/nextjs"
+import { useUser, SignInButton } from "@clerk/nextjs"
 
 // Định nghĩa type cho gig
 export interface Gig {
@@ -512,7 +512,7 @@ function mapGigToServiceCard(gig: Gig): any {
 
 
 export default function Home() {
-  const { user, isSignedIn } = useUser();
+  const { user, isSignedIn, isLoaded } = useUser();
   const [isClient, setIsClient] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [showSub, setShowSub] = useState(false);
@@ -862,35 +862,23 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-emerald-500 py-16 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="mb-4 text-3xl font-bold">Ready to start your project?</h2>
-          <p className="mb-8 text-lg opacity-90">
-            Join thousands of satisfied customers who have found the perfect freelance services
-          </p>
-          <Button asChild size="lg" className="bg-white text-emerald-600 hover:bg-gray-100">
-            <Link href="/register">Get Started</Link>
-          </Button>
-        </div>
-      </section>
-
-      {/* Gigs Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="mb-8 text-center text-3xl font-bold dark:text-white">Explore Gigs</h2>
-          {loading ? (
-            <div className="text-center py-8">Loading gigs...</div>
-          ) : gigs && gigs.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {gigs.map(gig => (
-              <GigCard key={gig.id} gig={gig} />
-            ))}
+      {isLoaded && !isSignedIn && (
+        <section className="bg-emerald-500 py-16 text-white">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="mb-4 text-3xl font-bold">Ready to start your project?</h2>
+            <p className="mb-8 text-lg opacity-90">
+              Join thousands of satisfied customers who have found the perfect freelance services
+            </p>
+            <SignInButton mode="modal">
+              <button className="bg-white text-emerald-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold text-lg transition">
+                Get Started
+              </button>
+            </SignInButton>
           </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">No gigs available at the moment.</div>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
+
+      
     </main>
   )
 }
