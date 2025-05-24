@@ -255,13 +255,24 @@ export default function MyGigsPage() {
                       <PopoverContent align="end" className="w-32 p-1">
                         <button
                           className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 text-sm"
-                          onClick={() => { setShowEditModal(true); setSelectedGig(gig); setEditForm({ title: gig.title, description: gig.description, starting_price: gig.starting_price.toString(), delivery_time: gig.delivery_time.toString(), city: gig.city, country: gig.country }); }}
+                          onClick={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowEditModal(true);
+                            setSelectedGig(gig);
+                            setEditForm({ title: gig.title, description: gig.description, starting_price: gig.starting_price.toString(), delivery_time: gig.delivery_time.toString(), city: gig.city, country: gig.country });
+                          }}
                         >
                           <Pencil className="h-4 w-4" /> Edit
                         </button>
                         <button
                           className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100 text-sm text-red-600"
-                          onClick={() => { setShowDeleteAlert(true); setSelectedGig(gig); }}
+                          onClick={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowDeleteAlert(true);
+                            setSelectedGig(gig);
+                          }}
                         >
                           <Trash2 className="h-4 w-4" /> Delete
                         </button>
