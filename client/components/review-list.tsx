@@ -1,16 +1,16 @@
-import Image from "next/image";
-import { Star, ChevronDown, ChevronUp, MessageCircle, MoreVertical } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { useAuth } from "@clerk/nextjs";
+import { MessageCircle, MoreVertical, Star } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { ReviewForm } from "./review-form";
 
 interface Review {
@@ -236,7 +236,7 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
             return (
               <div
                 key={review.id}
-                className="group relative flex gap-4 pb-8 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                className="group relative flex gap-4 px-6 py-6 w-ful bg-white border-b border-gray-200"
               >
                 <div className="flex-shrink-0">
                   <Image
