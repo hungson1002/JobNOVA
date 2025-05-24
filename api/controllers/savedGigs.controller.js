@@ -2,7 +2,6 @@ import { models } from '../models/Sequelize-mysql.js';
 
 export const saveGig = async (req, res, next) => {
   const currentUserClerkId = req.auth?.userId;
-  console.log("🧾 Current clerk ID:", req.auth?.userId);
   const gigId = req.params.gigId;
 
   if (!currentUserClerkId) {
@@ -37,10 +36,8 @@ export const saveGig = async (req, res, next) => {
     });
 
     if (created) {
-      console.log(`User ${currentUserClerkId} saved gig ${gigId}`);
       res.status(201).json({ success: true, message: 'Gig saved successfully.', savedGig });
     } else {
-      console.log(`User ${currentUserClerkId} attempted to save already saved gig ${gigId}`);
       res.status(200).json({ success: true, message: 'Gig was already saved.', savedGig });
     }
 
@@ -50,7 +47,6 @@ export const saveGig = async (req, res, next) => {
         err.status = 400;
         return next(err);
     }
-    console.error('Error saving gig:', error.message);
     next(error);
   }
 };
@@ -84,11 +80,9 @@ export const unsaveGig = async (req, res, next) => {
       return next(error);
     }
 
-    console.log(`User ${currentUserClerkId} unsaved gig ${gigId}`);
     res.status(204).send();
 
   } catch (error) {
-    console.error('Error unsaving gig:', error.message);
     next(error);
   }
 };
@@ -116,7 +110,6 @@ export const getSavedGigs = async (req, res, next) => {
             'title',
             'starting_price',
             'delivery_time',
-            'gig_image',
             'seller_clerk_id',
             'gig_images',
             'category_id',
@@ -125,23 +118,24 @@ export const getSavedGigs = async (req, res, next) => {
             'city',
             'country',
           ],
-          include: [
-            {
-              model: models.User,
-              as: 'seller',
-              attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar'],
-            },
-            {
-              model: models.Category,
-              as: 'category',
-              attributes: ['id', 'name'],
-            },
-            {
-              model: models.JobType,
-              as: 'job_type',
-              attributes: ['id', 'job_type'],
-            },
-          ],
+          // Tạm thời comment phần include con để xác định lỗi
+          // include: [
+          //   {
+          //     model: models.User,
+          //     as: 'seller',
+          //     attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar'],
+          //   },
+          //   {
+          //     model: models.Category,
+          //     as: 'category',
+          //     attributes: ['id', 'name'],
+          //   },
+          //   {
+          //     model: models.JobType,
+          //     as: 'job_type',
+          //     attributes: ['id', 'job_type'],
+          //   },
+          // ],
         }
       ],
       limit: parseInt(limit, 10),
@@ -159,29 +153,12 @@ export const getSavedGigs = async (req, res, next) => {
         if (gig && gig.gig_images) {
           try { gig.gig_images = JSON.parse(gig.gig_images); } catch { gig.gig_images = []; }
         }
-        if (gig && gig.seller) {
-          gig.seller = {
-            name: gig.seller.firstname && gig.seller.lastname
-              ? gig.seller.firstname + ' ' + gig.seller.lastname
-              : gig.seller.firstname
-              ? gig.seller.firstname
-              : gig.seller.username
-              ? gig.seller.username
-              : 'Người dùng',
-            avatar: gig.seller.avatar || '/placeholder.svg',
-          };
-        } else if (gig) {
-          gig.seller = {
-            name: 'Người dùng',
-            avatar: '/placeholder.svg',
-          };
-        }
+        // Không xử lý seller/category/job_type ở đây nữa
         return gig;
       })
     });
 
   } catch (error) {
-    console.error('Error fetching saved gigs:', error.message);
-    next(error);
+    res.status(500).json({ success: false, message: 'Error fetching saved gigs', error: error.message });
   }
 };
