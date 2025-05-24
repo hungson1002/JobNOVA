@@ -2,9 +2,10 @@ import { Op } from 'sequelize';
 import { models } from '../models/Sequelize-mysql.js';
 
 // Tạo gig
+// Tạo gig
 export const createGig = async (req, res, next) => {
   try {
-    const seller_clerk_id = req.user.clerk_id; // ✅ Lấy từ user đã xác thực
+    const seller_clerk_id = req.user.clerk_id;
 
     const {
       category_id,
@@ -17,7 +18,8 @@ export const createGig = async (req, res, next) => {
       gig_images,
       city,
       country,
-      faqs, // Thêm faqs từ request body
+      faqs,
+      gig_requirement_templates, // ✅ lấy từ body
     } = req.body;
 
     if (!seller_clerk_id || !title) {
@@ -39,18 +41,30 @@ export const createGig = async (req, res, next) => {
       status: "pending",
     });
 
-    // Tạo các FAQ nếu có
+    // ✅ Tạo FAQ nếu có
     if (faqs && Array.isArray(faqs)) {
-      await Promise.all(faqs.map(faq => 
+      await Promise.all(faqs.map(faq =>
         models.GigFaq.create({
           gig_id: gig.id,
           question: faq.question,
-          answer: faq.answer
+          answer: faq.answer,
+        })
+      ));
+    }
+
+    // ✅ Tạo các requirement templates nếu có
+    if (gig_requirement_templates && Array.isArray(gig_requirement_templates)) {
+      await Promise.all(gig_requirement_templates.map(req =>
+        models.GigRequirementTemplate.create({
+          gig_id: gig.id,
+          requirement_text: req.requirement_text,
+          is_required: req.is_required,
         })
       ));
     }
 
     const gigData = gig.toJSON();
+
     if (gigData.gig_images) {
       try {
         gigData.gig_images = JSON.parse(gigData.gig_images);
@@ -63,12 +77,20 @@ export const createGig = async (req, res, next) => {
     const createdFaqs = await models.GigFaq.findAll({ where: { gig_id: gig.id } });
     gigData.faqs = createdFaqs.map(f => ({ question: f.question, answer: f.answer }));
 
+    // ✅ Lấy Requirement Template đã tạo
+    const createdRequirements = await models.GigRequirementTemplate.findAll({ where: { gig_id: gig.id } });
+    gigData.requirements = createdRequirements.map(r => ({
+      requirement_text: r.requirement_text,
+      is_required: r.is_required,
+    }));
+
     return res.status(201).json({ success: true, message: "Gig created successfully", gig: gigData });
   } catch (error) {
     console.error("Error creating gig:", error.message);
     return res.status(500).json({ success: false, message: "Error creating gig", error: error.message });
   }
 };
+
 
 // Lấy tất cả gig (phân trang và lọc)
 export const getAllGigs = async (req, res, next) => {
