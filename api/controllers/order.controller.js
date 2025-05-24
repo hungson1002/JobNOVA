@@ -154,7 +154,7 @@ export const getOrders = async (req, res, next) => {
       include: [
         {
           model: models.Gig,
-          attributes: ['id', 'title', 'gig_image', 'gig_images'],
+          attributes: ['id', 'title', 'gig_images'],
           include: [
             {
               model: models.User,

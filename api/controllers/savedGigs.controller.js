@@ -118,24 +118,13 @@ export const getSavedGigs = async (req, res, next) => {
             'city',
             'country',
           ],
-          // Tạm thời comment phần include con để xác định lỗi
-          // include: [
-          //   {
-          //     model: models.User,
-          //     as: 'seller',
-          //     attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar'],
-          //   },
-          //   {
-          //     model: models.Category,
-          //     as: 'category',
-          //     attributes: ['id', 'name'],
-          //   },
-          //   {
-          //     model: models.JobType,
-          //     as: 'job_type',
-          //     attributes: ['id', 'job_type'],
-          //   },
-          // ],
+          include: [
+            {
+              model: models.User,
+              as: 'seller',
+              attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar'],
+            },
+          ],
         }
       ],
       limit: parseInt(limit, 10),
@@ -153,7 +142,22 @@ export const getSavedGigs = async (req, res, next) => {
         if (gig && gig.gig_images) {
           try { gig.gig_images = JSON.parse(gig.gig_images); } catch { gig.gig_images = []; }
         }
-        // Không xử lý seller/category/job_type ở đây nữa
+        // Map seller cho FE giống các session khác
+        let seller = { name: 'Người dùng', avatar: '/placeholder.svg' };
+        if (gig && gig.seller) {
+          const s = gig.seller;
+          seller = {
+            name: s.firstname && s.lastname
+              ? s.firstname + ' ' + s.lastname
+              : s.firstname
+              ? s.firstname
+              : s.username
+              ? s.username
+              : 'Người dùng',
+            avatar: s.avatar || '/placeholder.svg',
+          };
+        }
+        gig.seller = seller;
         return gig;
       })
     });

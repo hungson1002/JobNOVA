@@ -14,7 +14,7 @@ import { ServiceCard } from "@/components/service-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAllSavedGigs } from "@/hooks/use-saved-gigs"
-import { useUser, SignInButton } from "@clerk/nextjs"
+import { SignInButton, useUser } from "@clerk/nextjs"
 
 // Định nghĩa type cho gig
 export interface Gig {
@@ -583,7 +583,7 @@ export default function Home() {
           playsInline
           className="absolute top-0 left-0 w-full h-full object-cover z-0"
         >
-          <source src="https://res.cloudinary.com/kaleidoscop3/video/upload/v1747545962/video-banner_zjqq2d.mp4.xoacainaylacovideo" type="video/mp4" />
+          <source src="https://res.cloudinary.com/kaleidoscop3/video/upload/v1747545962/video-banner_zjqq2d.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
 

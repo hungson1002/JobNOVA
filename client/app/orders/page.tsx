@@ -25,15 +25,33 @@ export default function OrdersPage() {
 
     const fetchOrders = async () => {
       setLoading(true)
-      const token = await getToken()
-      const res = await fetch(`http://localhost:8800/api/orders/${user.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      const data = await res.json()
-      setOrders(data.orders || [])
-      setLoading(false)
+      try {
+        const token = await getToken()
+        console.log('Fetching orders for user:', user.id) // Debug log
+        const res = await fetch(`http://localhost:8800/api/orders/${user.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`)
+        }
+        const data = await res.json()
+        console.log('Orders API Response:', data) // Debug log
+        if (Array.isArray(data)) {
+          setOrders(data)
+        } else if (data.orders && Array.isArray(data.orders)) {
+          setOrders(data.orders)
+        } else {
+          console.error('Invalid orders data format:', data)
+          setOrders([])
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error)
+        setOrders([])
+      } finally {
+        setLoading(false)
+      }
     }
 
     fetchOrders()
@@ -52,77 +70,88 @@ export default function OrdersPage() {
 
   // Mapping orders by status
   const activeOrders = orders.filter(o => ["pending", "in_progress", "delivered"].includes(o.order_status));
-  const completedOrders = orders.filter(o => o.order_status === "completed");
+  const completedOrders = orders.filter(o => ["completed", "delivered"].includes(o.order_status));
   const cancelledOrders = orders.filter(o => o.order_status === "cancelled");
+
+  console.log('All Orders:', orders);
+  console.log('Active Orders:', activeOrders);
+  console.log('Completed Orders:', completedOrders);
+  console.log('Cancelled Orders:', cancelledOrders);
 
   return (
     <main className="container mx-auto px-4 py-8">
-      <div className="mb-8 flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center justify-center w-10 h-10 rounded border border-transparent hover:border-gray-300 hover:bg-gray-50 transition"
-          aria-label="Back"
-        >
-          <ArrowLeft className="h-5 w-5 text-black-600" />
-        </button>
-        <div>
-          <h1 className="text-3xl font-bold">Manage Orders</h1>
-          <p className="text-gray-600">Track and manage your orders</p>
-        </div>
-      </div>
+      {loading ? (
+        <div className="text-center py-16">Loading orders...</div>
+      ) : (
+        <>
+          <div className="mb-8 flex items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center justify-center w-10 h-10 rounded border border-transparent hover:border-gray-300 hover:bg-gray-50 transition"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5 text-black-600" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold">Manage Orders</h1>
+              <p className="text-gray-600">Track and manage your orders</p>
+            </div>
+          </div>
 
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="mb-6 grid w-full grid-cols-4 md:w-auto">
-          <TabsTrigger value="all">All Orders</TabsTrigger>
-          <TabsTrigger value="active">Active</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-        </TabsList>
-        <TabsContent value="all" className="space-y-6">
-          {orders.length === 0 ? (
-            <div className="text-center py-16 text-gray-500 text-lg font-medium">
-              You have no orders yet.
-            </div>
-          ) : (
-            orders.map((order) => (
-              <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
-            ))
-          )}
-        </TabsContent>
-        <TabsContent value="active" className="space-y-6">
-          {activeOrders.length === 0 ? (
-            <div className="text-center py-16 text-gray-500 text-lg font-medium">
-              You have no orders yet.
-            </div>
-          ) : (
-            activeOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
-            ))
-          )}
-        </TabsContent>
-        <TabsContent value="completed" className="space-y-6">
-          {completedOrders.length === 0 ? (
-            <div className="text-center py-16 text-gray-500 text-lg font-medium">
-              You have no orders yet.
-            </div>
-          ) : (
-            completedOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
-            ))
-          )}
-        </TabsContent>
-        <TabsContent value="cancelled" className="space-y-6">
-          {cancelledOrders.length === 0 ? (
-            <div className="text-center py-16 text-gray-500 text-lg font-medium">
-              You have no orders yet.
-            </div>
-          ) : (
-            cancelledOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
-            ))
-          )}
-        </TabsContent>
-      </Tabs>
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="mb-6 grid w-full grid-cols-4 md:w-auto">
+              <TabsTrigger value="all">All Orders</TabsTrigger>
+              <TabsTrigger value="active">Active</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
+              <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+            </TabsList>
+            <TabsContent value="all" className="space-y-6">
+              {orders.length === 0 ? (
+                <div className="text-center py-16 text-gray-500 text-lg font-medium">
+                  You have no orders yet.
+                </div>
+              ) : (
+                orders.map((order) => (
+                  <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
+                ))
+              )}
+            </TabsContent>
+            <TabsContent value="active" className="space-y-6">
+              {activeOrders.length === 0 ? (
+                <div className="text-center py-16 text-gray-500 text-lg font-medium">
+                  No active orders found.
+                </div>
+              ) : (
+                activeOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
+                ))
+              )}
+            </TabsContent>
+            <TabsContent value="completed" className="space-y-6">
+              {completedOrders.length === 0 ? (
+                <div className="text-center py-16 text-gray-500 text-lg font-medium">
+                  No completed orders found.
+                </div>
+              ) : (
+                completedOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
+                ))
+              )}
+            </TabsContent>
+            <TabsContent value="cancelled" className="space-y-6">
+              {cancelledOrders.length === 0 ? (
+                <div className="text-center py-16 text-gray-500 text-lg font-medium">
+                  No cancelled orders found.
+                </div>
+              ) : (
+                cancelledOrders.map((order) => (
+                  <OrderCard key={order.id} order={order} onCancelClick={handleCancelUI} />
+                ))
+              )}
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </main>
   );
 }
