@@ -58,11 +58,19 @@ export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess, onSubmi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("[DEBUG][ReviewForm] handleSubmit called", { onSubmit, orderId, gigId, initialReview });
     if (rating === 0 || !orderId || !gigId) return;
     setIsSubmitting(true);
 
     try {
       if (onSubmit) {
+        console.log("[DEBUG][ReviewForm] Calling onSubmit (update mode)", {
+          rating,
+          comment,
+          sellerCommunication,
+          qualityOfDelivery,
+          valueOfDelivery,
+        });
         await onSubmit({
           rating,
           comment,
@@ -76,6 +84,15 @@ export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess, onSubmi
       }
 
       const token = await getToken?.();
+      console.log("[DEBUG][ReviewForm] Creating new review (POST)", {
+        orderId,
+        gigId,
+        rating,
+        comment,
+        sellerCommunication,
+        qualityOfDelivery,
+        valueOfDelivery,
+      });
       const res = await fetch(`http://localhost:8800/api/reviews`, {
         method: "POST",
         headers: {
@@ -93,8 +110,9 @@ export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess, onSubmi
           valueOfDelivery,
         }),
       });
-
+      console.log("[DEBUG][ReviewForm] POST response status:", res.status);
       const data = await res.json();
+      console.log("[DEBUG][ReviewForm] POST response data:", data);
       if (!res.ok) throw new Error(data.message || "Tạo đánh giá thất bại");
       toast.success("Review submitted successfully!");
       if (onReviewSuccess) onReviewSuccess();
@@ -106,7 +124,7 @@ export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess, onSubmi
       setQualityOfDelivery(1);
       setValueOfDelivery(1);
     } catch (error) {
-      console.error("❌ Error submitting review:", error);
+      console.error("[DEBUG][ReviewForm] Error submitting review:", error);
       toast.error(String(error));
     } finally {
       setIsSubmitting(false);

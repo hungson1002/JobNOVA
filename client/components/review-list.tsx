@@ -12,6 +12,7 @@ import { MessageCircle, MoreVertical, Star } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ReviewForm } from "./review-form";
+import { toast } from "sonner";
 
 interface Review {
   id: string;
@@ -36,6 +37,8 @@ interface Review {
   qualityOfDelivery: number;
   valueOfDelivery: number;
   seller_clerk_id: string;
+  order_id: number;
+  gig_id: number;
 }
 
 interface ReviewListProps {
@@ -145,45 +148,41 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
   }) => {
     if (!editingReview) return;
     setIsSubmitting(true);
+    console.log('[DEBUG][handleEditReview] called', { editingReview, reviewData });
     try {
-      // Đảm bảo id là số nguyên
       let reviewId = editingReview.id;
       if (typeof reviewId === 'string' && reviewId.includes('/')) {
         const parts = reviewId.split('/');
         reviewId = parts[parts.length - 1] || editingReview.id;
       }
       const url = `http://localhost:8800/api/reviews/${reviewId}`;
-      console.log("[DEBUG] handleEditReview", { editingReview, reviewId, url });
+      console.log('[DEBUG][handleEditReview] PATCH URL:', url);
+      console.log('[DEBUG][handleEditReview] PATCH BODY:', reviewData);
+      const token = await getToken?.();
       const res = await fetch(url, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          ...(await getToken?.() ? { Authorization: `Bearer ${await getToken?.()}` } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(reviewData),
         credentials: "include",
+        body: JSON.stringify(reviewData),
       });
-      console.log("[DEBUG] response status", res.status);
-      const data = await res.json().catch(() => ({}));
-      console.log("[DEBUG] response data", data);
-      if (!res.ok) throw new Error("Failed to update review");
-      const updatedReview = {
-        ...editingReview,
-        ...reviewData,
-        id: reviewId,
-      };
-      setLocalReviews(prev =>
-        prev.map(review =>
-          review.id === editingReview.id ? updatedReview : review
-        )
-      );
-      onReviewUpdate?.(updatedReview);
+      const data = await res.json();
+      console.log('[DEBUG][handleEditReview] PATCH response status:', res.status);
+      console.log('[DEBUG][handleEditReview] PATCH response data:', data);
+      if (!res.ok) throw new Error(data.message || "Update review failed");
+      // Cập nhật lại local state nếu cần
+      setLocalReviews(prev => prev.map(r => r.id === editingReview.id ? { ...r, ...reviewData } : r));
       setEditingReview(null);
-    } catch (error) {
-      console.error("Error updating review:", error);
-      alert("Failed to update review. Please try again.");
+      toast.success("Review updated!");
+      if (onReviewUpdate) onReviewUpdate();
+    } catch (err) {
+      console.error('[DEBUG][handleEditReview] Error:', err);
+      toast.error(String(err));
     } finally {
       setIsSubmitting(false);
+      console.log('[DEBUG][handleEditReview] done');
     }
   };
 
@@ -415,16 +414,16 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
               </DialogDescription>
             </DialogHeader>
             <ReviewForm
-              orderId={Number(editingReview?.id)}
-              gigId={0}
+              orderId={editingReview.order_id}
+              gigId={editingReview.gig_id}
               buyerInfo={{
-                name: editingReview?.user.name || "",
-                country: editingReview?.user.country || "",
-                price: editingReview?.price || 0,
-                duration: editingReview?.duration || 0,
+                name: editingReview.user.name,
+                country: editingReview.user.country,
+                price: editingReview.price,
+                duration: editingReview.duration,
               }}
               onSubmit={handleEditReview}
-              initialReview={editingReview ?? undefined}
+              initialReview={editingReview}
             />
           </DialogContent>
         </Dialog>
