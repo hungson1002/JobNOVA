@@ -13,6 +13,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ReviewForm } from "./review-form";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
 interface Review {
   id: string;
@@ -23,7 +24,7 @@ interface Review {
     country: string;
   };
   rating: number;
-  date: string;
+  created_at: string;
   comment: string;
   price: number;
   duration: number;
@@ -197,7 +198,13 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
       console.log('[DEBUG][handleEditReview] PATCH response data:', data);
       if (!res.ok) throw new Error(data.message || "Update review failed");
       // Cập nhật lại local state nếu cần
-      setLocalReviews(prev => prev.map(r => r.id === editingReview.id ? { ...r, ...reviewData } : r));
+      const updatedReview = {
+        ...editingReview,
+        ...reviewData,
+        date: new Date().toISOString(), // hoặc dùng formatTimeAgo(new Date())
+      };
+      setLocalReviews(prev => prev.map(r => r.id === editingReview.id ? updatedReview : r));
+      onReviewUpdate?.(updatedReview);
       setEditingReview(null);
       toast.success("Review updated!");
       if (onReviewUpdate) onReviewUpdate({ ...editingReview, ...reviewData });
@@ -296,23 +303,30 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
                     className="w-12 h-12 rounded-full object-cover border-2 border-emerald-100 shadow-sm"
                   />
                   <div className="flex-1 min-w-0">
+                    {/* Tên + Quốc gia */}
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-base text-gray-900 truncate">{review.user.name}</span>
-                      <span className="ml-2 text-xs text-gray-500 flex items-center gap-1">
-                        <span className="inline-block w-4 h-3 mr-1 align-middle">
-                          <img src={`https://flagcdn.com/16x12/${(review.user.country || '').toLowerCase()}.png`} alt={review.user.country} className="inline-block w-4 h-3 object-cover rounded-sm border border-gray-200" onError={e => e.currentTarget.style.display='none'} />
-                        </span>
-                        {review.user.country}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-4 h-4 ${i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                      <div className="flex items-center text-xs text-gray-500 gap-1">
+                        <img
+                          src={`https://flagcdn.com/16x12/${(review.user.country || '').toLowerCase()}.png`}
+                          alt={review.user.country}
+                          className="inline-block w-4 h-3 object-cover rounded-sm border border-gray-200"
+                          onError={(e) => (e.currentTarget.style.display = 'none')}
                         />
-                      ))}
-                      <span className="ml-2 text-xs text-gray-400">• {review.date}</span>
+                        {review.user.country}
+                      </div>
+                    </div>
+                    {/* Rating + Thời gian */}
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-gray-400 text-xs">• {formatDistanceToNow(new Date(review.created_at), { addSuffix: true })}</span>
                     </div>
                   </div>
                 </div>
@@ -334,7 +348,7 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
                       alt={review.seller.name}
                       width={28}
                       height={28}
-                      className="rounded-full border border-yellow-300 mt-1"
+                      className="w-7 h-7 rounded-full border border-yellow-300 mt-1"
                     />
                     <div>
                       <span className="font-semibold text-yellow-700 text-sm">Seller's Response</span>

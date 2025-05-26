@@ -741,7 +741,16 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
               <ReviewList 
                 reviews={reviews.slice(0, reviewsToShow)} 
                 onReviewDelete={fetchOrderCompleted}
-                onReviewUpdate={refetchReviews}
+                onReviewUpdate={(updatedReview) => {
+                  if (!updatedReview) return;
+                  setReviews(prev =>
+                    prev.map(r => r.id === updatedReview.id ? {
+                      ...updatedReview,
+                      date: formatTimeAgo(updatedReview.created_at || new Date().toISOString()),
+                    } : r)
+                  );
+                  fetchReviews(); // để cập nhật cả breakdown
+                }}
               />
               </div>
 
