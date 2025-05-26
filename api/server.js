@@ -14,6 +14,7 @@ import companyRoute from "./routes/company.route.js";
 import companyImageRoute from "./routes/companyImage.route.js";
 import contactFormRoute from "./routes/contactForm.route.js";
 import cvFilesRoute from "./routes/cvFiles.route.js";
+import dashboardRoute from "./routes/dashboard.route.js";
 import experienceDetailRoute from "./routes/experienceDetail.route.js";
 import gigRoute from "./routes/gig.route.js";
 import gigFAQRoute from "./routes/gigFAQ.route.js";
@@ -35,7 +36,6 @@ import skillsRoute from "./routes/skills.route.js";
 import userRoute from "./routes/user.route.js";
 import userSearchHistoryRoute from "./routes/userSearchHistory.route.js";
 import messageSocketHandler from "./socket/messageSocket.js";
-import dashboardRoute from "./routes/dashboard.route.js";
 // .env
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 

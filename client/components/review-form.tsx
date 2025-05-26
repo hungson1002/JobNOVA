@@ -5,6 +5,7 @@ import { Star } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@clerk/nextjs";
+import { toast } from "sonner";
 
 interface ReviewFormProps {
   orderId: number;
@@ -15,15 +16,19 @@ interface ReviewFormProps {
     price: number;
     duration: number;
   };
+  onReviewSuccess?: () => void;
 }
 
-export function ReviewForm({ orderId, gigId, buyerInfo }: ReviewFormProps) {
+export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess }: ReviewFormProps) {
   const [rating, setRating] = useState(0);
-  const [hoveredRating, setHoveredRating] = useState(0);
+  const [hoveredOverall, setHoveredOverall] = useState(0);
+  const [hoveredCommunication, setHoveredCommunication] = useState(0);
+  const [hoveredQuality, setHoveredQuality] = useState(0);
+  const [hoveredValue, setHoveredValue] = useState(0);
   const [comment, setComment] = useState("");
-  const [sellerCommunication, setSellerCommunication] = useState(1);
-  const [qualityOfDelivery, setQualityOfDelivery] = useState(1);
-  const [valueOfDelivery, setValueOfDelivery] = useState(1);
+  const [sellerCommunication, setSellerCommunication] = useState(0);
+  const [qualityOfDelivery, setQualityOfDelivery] = useState(0);
+  const [valueOfDelivery, setValueOfDelivery] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { getToken } = useAuth();
 
@@ -54,7 +59,8 @@ export function ReviewForm({ orderId, gigId, buyerInfo }: ReviewFormProps) {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Tạo đánh giá thất bại");
-      alert("🎉 Review submitted successfully!");
+      toast.success("Review submitted successfully!");
+      if (onReviewSuccess) onReviewSuccess();
 
       // Reset form
       setRating(0);
@@ -64,26 +70,32 @@ export function ReviewForm({ orderId, gigId, buyerInfo }: ReviewFormProps) {
       setValueOfDelivery(1);
     } catch (error) {
       console.error("❌ Error submitting review:", error);
-      alert(String(error));
+      toast.error(String(error));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const renderStars = (currentRating: number, setRating: (rating: number) => void, label?: string) => (
+  const renderStars = (
+    currentRating: number,
+    setRating: (rating: number) => void,
+    hovered: number,
+    setHovered: (rating: number) => void,
+    label?: string
+  ) => (
     <div className="flex items-center gap-2 mt-1">
       {[1, 2, 3, 4, 5].map((star) => (
         <button
           key={star}
           type="button"
           onClick={() => setRating(star)}
-          onMouseEnter={() => setHoveredRating(star)}
-          onMouseLeave={() => setHoveredRating(0)}
+          onMouseEnter={() => setHovered(star)}
+          onMouseLeave={() => setHovered(0)}
           className="rounded-full p-1 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-all"
           aria-label={label ? `${label} ${star} stars` : `${star} stars`}
         >
           <Star
-            className={`h-7 w-7 ${star <= (hoveredRating || currentRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} transition-colors`}
+            className={`h-7 w-7 ${star <= (hovered || currentRating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} transition-colors`}
           />
         </button>
       ))}
@@ -109,7 +121,7 @@ export function ReviewForm({ orderId, gigId, buyerInfo }: ReviewFormProps) {
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Overall Rating <span className="text-gray-400 font-normal">(Chất lượng tổng thể)</span>
         </label>
-        {renderStars(rating, setRating, "Overall Rating")}
+        {renderStars(rating, setRating, hoveredOverall, setHoveredOverall, "Overall Rating")}
         <div className="text-xs text-gray-400 mt-1">Đánh giá tổng thể về dịch vụ này.</div>
       </div>
 
@@ -117,7 +129,7 @@ export function ReviewForm({ orderId, gigId, buyerInfo }: ReviewFormProps) {
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Seller Communication <span className="text-gray-400 font-normal">(Giao tiếp)</span>
         </label>
-        {renderStars(sellerCommunication, setSellerCommunication, "Seller Communication")}
+        {renderStars(sellerCommunication, setSellerCommunication, hoveredCommunication, setHoveredCommunication, "Seller Communication")}
         <div className="text-xs text-gray-400 mt-1">Người bán phản hồi nhanh, lịch sự, hỗ trợ tốt?</div>
       </div>
 
@@ -125,7 +137,7 @@ export function ReviewForm({ orderId, gigId, buyerInfo }: ReviewFormProps) {
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Quality of Delivery <span className="text-gray-400 font-normal">(Chất lượng giao hàng)</span>
         </label>
-        {renderStars(qualityOfDelivery, setQualityOfDelivery, "Quality of Delivery")}
+        {renderStars(qualityOfDelivery, setQualityOfDelivery, hoveredQuality, setHoveredQuality, "Quality of Delivery")}
         <div className="text-xs text-gray-400 mt-1">Sản phẩm giao đúng cam kết, chất lượng tốt?</div>
       </div>
 
@@ -133,7 +145,7 @@ export function ReviewForm({ orderId, gigId, buyerInfo }: ReviewFormProps) {
         <label className="block text-sm font-semibold text-gray-700 mb-1">
           Value of Delivery <span className="text-gray-400 font-normal">(Giá trị nhận được)</span>
         </label>
-        {renderStars(valueOfDelivery, setValueOfDelivery, "Value of Delivery")}
+        {renderStars(valueOfDelivery, setValueOfDelivery, hoveredValue, setHoveredValue, "Value of Delivery")}
         <div className="text-xs text-gray-400 mt-1">Bạn cảm thấy số tiền bỏ ra có xứng đáng?</div>
       </div>
 

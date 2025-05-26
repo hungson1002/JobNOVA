@@ -163,6 +163,10 @@ export const getOrders = async (req, res, next) => {
             },
           ],
         },
+        {
+          model: models.Review,
+          as: 'Review',
+        },
       ],
       order: [["order_date", "DESC"]],
     });
@@ -185,6 +189,8 @@ export const getOrders = async (req, res, next) => {
         };
       }
       plainOrder.seller = seller;
+      // Gắn review cho FE
+      plainOrder.review = plainOrder.Review || null;
       return {
         ...plainOrder,
         duration: plainOrder.order_date && plainOrder.delivery_deadline

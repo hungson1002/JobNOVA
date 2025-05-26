@@ -43,6 +43,7 @@ import { useSavedGigs } from "@/hooks/use-saved-gigs";
 import { useMessages } from "@/hooks/useMessages";
 import { fetchUser } from "@/lib/api";
 import { useUser, SignInButton } from "@clerk/nextjs";
+import { ReviewForm } from "@/components/review-form";
 
 interface PageParams {
   id: string;
@@ -72,6 +73,8 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   const reviewsRef = useRef<HTMLDivElement>(null);
   const [minimizedWindows, setMinimizedWindows] = useState<string[]>([]);
   const socketRef = useRef<any>(null);
+  const [userOrder, setUserOrder] = useState<any>(null);
+  const [userReview, setUserReview] = useState<any>(null);
 
   // Fetch gig data
   useEffect(() => {
@@ -113,6 +116,44 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     };
     fetchReviews();
   }, [gigId, searchQuery, reviewSort]);
+
+  // Kiểm tra user đã từng mua gig này chưa
+  const fetchOrderCompleted = async () => {
+    if (!isSignedIn || !user?.id || !gigId) {
+      console.log('[ReviewForm] Không đủ điều kiện fetch:', { isSignedIn, user, gigId });
+      return;
+    }
+    console.log('[ReviewForm] Bắt đầu fetch order completed:', { userId: user.id, gigId });
+    try {
+      const token = await getToken();
+      const res = await fetch(`http://localhost:8800/api/orders/${user.id}?gig_id=${gigId}&order_status=completed`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      console.log('[ReviewForm] Kết quả fetch order completed:', data);
+      if (data.success && data.orders && data.orders.length > 0) {
+        setUserOrder(data.orders[0]);
+        if (data.orders[0].review) {
+          setUserReview(data.orders[0].review);
+          console.log('[ReviewForm] Đã có review:', data.orders[0].review);
+        } else {
+          setUserReview(null);
+          console.log('[ReviewForm] Chưa có review, sẽ render form');
+        }
+      } else {
+        setUserOrder(null);
+        setUserReview(null);
+        console.log('[ReviewForm] Không tìm thấy order completed');
+      }
+    } catch (err) {
+      console.error('[ReviewForm] Lỗi fetch order completed:', err);
+    }
+  };
+  useEffect(() => {
+    fetchOrderCompleted();
+  }, [isSignedIn, user, gigId, getToken]);
 
   // Handle contact seller
   const handleContactSeller = async () => {
@@ -706,6 +747,18 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                 </Button>
               )}
             </div>
+
+            {/* Render ReviewForm */}
+            {isSignedIn && userOrder && !userReview && user?.id !== gig?.seller_clerk_id && (
+              <div className="my-8">
+                <ReviewForm orderId={userOrder.id} gigId={Number(gigId)} buyerInfo={{
+                  name: user?.fullName || user?.username || 'User',
+                  country: typeof user?.publicMetadata?.country === 'string' ? user.publicMetadata.country : '',
+                  price: userOrder.total_price,
+                  duration: userOrder.duration,
+                }} onReviewSuccess={fetchOrderCompleted} />
+              </div>
+            )}
           </div>
 
           {/* Right Column - Packages */}
