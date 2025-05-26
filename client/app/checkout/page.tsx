@@ -7,6 +7,7 @@ import Image from "next/image"
 import { ArrowLeft, Clock, Check } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useUser, useAuth } from "@clerk/nextjs"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -25,12 +26,66 @@ export default function CheckoutPage() {
 
   const gigId = searchParams.get("gig")
 
+  const getGigImage = () => {
+    let images: string[] = [];
+    if (Array.isArray(gig?.gig_images)) {
+      images = gig.gig_images;
+    } else if (typeof gig?.gig_images === "string") {
+      try {
+        const arr = JSON.parse(gig.gig_images);
+        if (Array.isArray(arr)) images = arr;
+      } catch {}
+    }
+    if (images.length > 0) {
+      const firstImg = images.find((url) => !url.match(/\.(mp4|mov|avi|wmv)$/i));
+      if (firstImg) return firstImg;
+    }
+    if (gig?.gig_image && typeof gig.gig_image === "string" && gig.gig_image.startsWith("http")) return gig.gig_image;
+    return "/placeholder.svg";
+  };
+
   useEffect(() => {
     if (!gigId) return
     setLoading(true)
     fetch(`http://localhost:8800/api/gigs/${gigId}`)
       .then(res => res.json())
-      .then(data => setGig(data.gig))
+      .then(async data => {
+        const gigData = data.gig;
+        // Nếu đã có seller đầy đủ thì dùng luôn
+        if (gigData.seller && gigData.seller.avatar && (gigData.seller.firstname || gigData.seller.username)) {
+          gigData.seller = {
+            name: gigData.seller.firstname && gigData.seller.lastname
+              ? gigData.seller.firstname + ' ' + gigData.seller.lastname
+              : gigData.seller.firstname
+              ? gigData.seller.firstname
+              : gigData.seller.username
+              ? gigData.seller.username
+              : 'Seller',
+            avatar: gigData.seller.avatar || '/placeholder.svg',
+          };
+        } else if (gigData.seller_clerk_id) {
+          // Nếu thiếu thông tin seller, fetch thêm từ API user
+          try {
+            const userRes = await fetch(`http://localhost:8800/api/users/${gigData.seller_clerk_id}`);
+            const userData = await userRes.json();
+            gigData.seller = {
+              name: userData.firstname && userData.lastname
+                ? userData.firstname + ' ' + userData.lastname
+                : userData.firstname
+                ? userData.firstname
+                : userData.username
+                ? userData.username
+                : 'Seller',
+              avatar: userData.avatar || '/placeholder.svg',
+            };
+          } catch {
+            gigData.seller = { name: 'Seller', avatar: '/placeholder.svg' };
+          }
+        } else {
+          gigData.seller = { name: 'Seller', avatar: '/placeholder.svg' };
+        }
+        setGig(gigData);
+      })
       .finally(() => setLoading(false))
   }, [gigId])
 
@@ -54,7 +109,7 @@ export default function CheckoutPage() {
     e.preventDefault()
     const token = await getToken()
     if (!user) {
-      alert("You must be signed in to order.")
+      toast.error("You must be signed in to order.")
       return
     }
 
@@ -76,7 +131,11 @@ export default function CheckoutPage() {
     const orderData = await orderRes.json()
 
     if (!orderData.success || !orderData.orderId) {
-      alert("Có lỗi khi tạo order!")
+      if (orderData.message === 'You cannot order your own service.') {
+        toast.error("You cannot order your own service.")
+      } else {
+        toast.error("There was an error creating your order. Please try again.")
+      }
       return
     }
 
@@ -94,7 +153,7 @@ export default function CheckoutPage() {
     if (qrRes.ok && typeof qrUrl === "string") {
       window.location.href = qrUrl
     } else {
-      alert("Không tạo được link thanh toán")
+      toast.error("Could not create payment link. Please try again.")
     }
   }
 
@@ -143,7 +202,7 @@ export default function CheckoutPage() {
               <div className="mb-4 flex gap-4">
                 <div className="h-16 w-24 flex-shrink-0 overflow-hidden rounded-md">
                   <Image
-                    src={gig.gig_image || "/placeholder.svg"}
+                    src={getGigImage()}
                     alt={gig.title}
                     width={150}
                     height={100}
@@ -160,7 +219,7 @@ export default function CheckoutPage() {
                       height={16}
                       className="mr-1 rounded-full"
                     />
-                    {gig.seller?.name || gig.seller_clerk_id}
+                    <span>{gig.seller?.name || "Seller"}</span>
                   </div>
                 </div>
               </div>

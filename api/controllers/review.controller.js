@@ -45,7 +45,6 @@ export const createReview = async (req, res, next) => {
       helpfulNo: 0,
     });
 
-    // Populate user để trả về đầy đủ cho FE không phải fetch lại
     const reviewer = await models.User.findOne({
       where: { clerk_id: reviewer_clerk_id },
       attributes: ['clerk_id', 'username', 'avatar', 'country', 'firstname', 'lastname'],
@@ -69,15 +68,11 @@ export const createReview = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error creating review:', error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Error creating review',
-      error: error.message,
-    });
+    return res.status(500).json({ success: false, message: 'Error creating review', error: error.message });
   }
 };
 
-// Lấy tất cả đánh giá (phân trang)
+// Lấy tất cả review (phân trang + filter + sort)
 export const getAllReviews = async (req, res, next) => {
   try {
     const { page = 1, limit = 10, gig_id, order_id, search, sort } = req.query;
@@ -94,7 +89,7 @@ export const getAllReviews = async (req, res, next) => {
       where.comment = { [Op.like]: `%${search}%` };
     }
 
-  const reviews = await models.Review.findAndCountAll({
+    const reviews = await models.Review.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -154,30 +149,29 @@ export const getAllReviews = async (req, res, next) => {
 
       return {
         ...plain,
-      user: {
+        user: {
           name: fullName || plain.reviewer?.username || plain.reviewer_clerk_id || 'User',
           avatar: plain.reviewer?.avatar || '/placeholder.svg',
           country: plain.reviewer?.country || 'Unknown',
-      },
+        },
         price: plain.order?.total_price || 50,
         duration: plain.order?.delivery_deadline && plain.created_at
           ? Math.ceil((new Date(plain.order.delivery_deadline) - new Date(plain.created_at)) / (1000 * 60 * 60 * 24))
-        : 13,
+          : 13,
         sellerResponse: plain.sellerResponse || null,
-      helpful: {
+        helpful: {
           yes: plain.helpfulYes || 0,
           no: plain.helpfulNo || 0,
-      },
-      seller: {
+        },
+        seller: {
           name: [plain.gig?.seller?.firstname, plain.gig?.seller?.lastname].filter(Boolean).join(' ').trim() || 'Seller',
           avatar: plain.gig?.seller?.avatar || '/placeholder.svg',
-      },
+        },
       };
     });
 
-    let sortedReviews = enrichedReviews;
     if (sort === 'relevant') {
-      sortedReviews.sort((a, b) => {
+      enrichedReviews.sort((a, b) => {
         const scoreA = a.rating * 1000 + (new Date(a.created_at).getTime() / 1000000);
         const scoreB = b.rating * 1000 + (new Date(b.created_at).getTime() / 1000000);
         return scoreB - scoreA;
@@ -188,7 +182,7 @@ export const getAllReviews = async (req, res, next) => {
       success: true,
       total: reviews.count,
       pages: Math.ceil(reviews.count / limit),
-      reviews: sortedReviews,
+      reviews: enrichedReviews,
       ratingSummary: {
         average: parseFloat(ratingSummary[0]?.average || 0).toFixed(1),
         total: ratingSummary[0]?.total || 0,
@@ -212,16 +206,16 @@ export const getAllReviews = async (req, res, next) => {
   }
 };
 
-// Lấy đánh giá theo ID
+// Lấy theo ID
 export const getReviewById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const review = await models.Review.findByPk(id, {
-    include: [
+      include: [
         {
           model: models.User,
           as: "reviewer",
-          attributes: ["clerk_id", "country"],
+          attributes: ["clerk_id", "country", "firstname", "lastname", "avatar", "username"],
         },
         {
           model: models.Order,
@@ -246,10 +240,11 @@ export const getReviewById = async (req, res, next) => {
     if (!review) {
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
+
     const enrichedReview = {
       ...review.get({ plain: true }),
       user: {
-        name: review.reviewer?.name || "User",
+        name: [review.reviewer?.firstname, review.reviewer?.lastname].filter(Boolean).join(" ").trim() || review.reviewer?.username || "User",
         avatar: review.reviewer?.avatar || "/placeholder.svg",
         country: review.reviewer?.country || "Unknown",
       },
@@ -263,14 +258,15 @@ export const getReviewById = async (req, res, next) => {
         no: review.helpfulNo || 0,
       },
       seller: {
-        name: review.gig?.seller?.name || "Seller",
+        name: [review.gig?.seller?.firstname, review.gig?.seller?.lastname].filter(Boolean).join(" ").trim() || "Seller",
         avatar: review.gig?.seller?.avatar || "/placeholder.svg",
       },
     };
+
     return res.status(200).json({ success: true, review: enrichedReview });
   } catch (error) {
-    console.error('Error fetching review:', error.message);
-    return res.status(500).json({ success: false, message: 'Error fetching review', error: error.message });
+    console.error("Error fetching review:", error.message);
+    return res.status(500).json({ success: false, message: "Error fetching review", error: error.message });
   }
 };
 
@@ -280,11 +276,17 @@ export const updateReview = async (req, res, next) => {
     const { id } = req.params;
     const { rating, comment, sellerCommunication, qualityOfDelivery, valueOfDelivery } = req.body;
     const review = await models.Review.findByPk(id);
+
     if (!review) {
       return res.status(404).json({ success: false, message: "Review not found" });
     }
+
+    if (review.reviewer_clerk_id !== req.user.clerk_id) {
+      return res.status(403).json({ success: false, message: "You can only update your own review" });
+    }
+
     await review.update({ rating, comment, sellerCommunication, qualityOfDelivery, valueOfDelivery });
-    console.log(`Review updated: id=${id}`);
+
     return res.status(200).json({ success: true, message: "Review updated successfully", review });
   } catch (error) {
     console.error("Error updating review:", error.message);
@@ -297,17 +299,24 @@ export const deleteReview = async (req, res, next) => {
   try {
     const { id } = req.params;
     const review = await models.Review.findByPk(id);
+
     if (!review) {
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
+
+    if (review.reviewer_clerk_id !== req.user.clerk_id) {
+      return res.status(403).json({ success: false, message: "You can only delete your own review" });
+    }
+
     await review.destroy();
-    console.log(`Review deleted: id=${id}`);
+
     return res.status(200).json({ success: true, message: 'Review deleted successfully' });
   } catch (error) {
     console.error('Error deleting review:', error.message);
     return res.status(500).json({ success: false, message: 'Error deleting review', error: error.message });
   }
 };
+
 
 // Cập nhật sellerResponse
 export const updateSellerResponse = async (req, res, next) => {

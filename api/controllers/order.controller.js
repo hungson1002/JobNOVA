@@ -41,7 +41,7 @@ export const createPaymentIntent = async (req, res, next) => {
 
     // Kiểm tra quyền: buyer không được là seller của gig
     if (finalBuyerClerkId === finalSellerClerkId) {
-      return next(createError(403, 'You cannot order your own gig'));
+      return next(createError(403, 'You cannot order your own service.'));
     }
 
     // Kiểm tra định dạng ngày

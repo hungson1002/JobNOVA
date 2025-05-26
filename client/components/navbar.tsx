@@ -122,17 +122,6 @@ export function Navbar() {
     setIsAuthModalOpen(true)
   }
 
-  const handleLogout = () => {
-    // Không cần clear role nữa vì chúng ta chỉ dùng publicMetadata
-  }
-
-  const getDashboardLink = () => {
-    if (isAdmin) return "../admin/admin-dashboard"
-    if (isSeller && isBuyer) return "/dashboard"
-    if (isSeller) return "/dashboard/user"
-    if (isBuyer) return "/dashboard/buyer"
-    return "/dashboard"
-  }
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -154,7 +143,7 @@ export function Navbar() {
     if (isLoaded && isSignedIn) {
       if (isAdmin && pathname !== "/admin/admin-dashboard" && pathname !== "/select-role") {
         router.push("/admin/admin-dashboard");
-      } else if ((isSeller || isBuyer || (isSeller && isBuyer)) && pathname === "/sign-in") {
+      } else if ((isSeller || isBuyer || (isSeller && isBuyer)) && pathname === "/dashboard" || pathname === "/dashboard/user" || pathname === "/dashboard/buyer" || pathname === "/dashboard/seller" || pathname === "/sign-in") {
         router.push("/");
       }
     }

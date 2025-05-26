@@ -1,26 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Star } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useAuth } from "@clerk/nextjs";
 
 interface ReviewFormProps {
-  onSubmitAction: (review: {
-    rating: number;
-    comment: string;
-    sellerCommunication: number;
-    qualityOfDelivery: number;
-    valueOfDelivery: number;
-  }) => void;
-  initialReview?: {
-    rating: number;
-    comment: string;
-    sellerCommunication: number;
-    qualityOfDelivery: number;
-    valueOfDelivery: number;
-  };
+  orderId: number;
+  gigId: number;
   buyerInfo: {
     name: string;
     country: string;
@@ -29,23 +17,57 @@ interface ReviewFormProps {
   };
 }
 
-export function ReviewForm({ onSubmitAction, initialReview, buyerInfo }: ReviewFormProps) {
-  const [rating, setRating] = useState(initialReview?.rating || 0);
+export function ReviewForm({ orderId, gigId, buyerInfo }: ReviewFormProps) {
+  const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
-  const [comment, setComment] = useState(initialReview?.comment || "");
-  const [sellerCommunication, setSellerCommunication] = useState(initialReview?.sellerCommunication || 1);
-  const [qualityOfDelivery, setQualityOfDelivery] = useState(initialReview?.qualityOfDelivery || 1);
-  const [valueOfDelivery, setValueOfDelivery] = useState(initialReview?.valueOfDelivery || 1);
+  const [comment, setComment] = useState("");
+  const [sellerCommunication, setSellerCommunication] = useState(1);
+  const [qualityOfDelivery, setQualityOfDelivery] = useState(1);
+  const [valueOfDelivery, setValueOfDelivery] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { getToken } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (rating === 0) return;
-    onSubmitAction({ rating, comment, sellerCommunication, qualityOfDelivery, valueOfDelivery });
-    setRating(0);
-    setComment("");
-    setSellerCommunication(1);
-    setQualityOfDelivery(1);
-    setValueOfDelivery(1);
+    if (rating === 0 || !orderId || !gigId) return;
+    setIsSubmitting(true);
+
+    try {
+      const token = await getToken?.();
+      const res = await fetch(`http://localhost:8800/api/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          order_id: orderId,
+          gig_id: gigId,
+          rating,
+          comment,
+          sellerCommunication,
+          qualityOfDelivery,
+          valueOfDelivery,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Tạo đánh giá thất bại");
+      alert("🎉 Review submitted successfully!");
+
+      // Reset form
+      setRating(0);
+      setComment("");
+      setSellerCommunication(1);
+      setQualityOfDelivery(1);
+      setValueOfDelivery(1);
+    } catch (error) {
+      console.error("❌ Error submitting review:", error);
+      alert(String(error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderStars = (currentRating: number, setRating: (rating: number) => void, label?: string) => (
@@ -78,29 +100,39 @@ export function ReviewForm({ onSubmitAction, initialReview, buyerInfo }: ReviewF
         <div className="text-sm text-gray-500 mb-2">
           <span className="font-medium text-gray-700">{buyerInfo.name}</span> ({buyerInfo.country})
         </div>
-        <div className="text-xs text-gray-400 mb-2">Up to ${buyerInfo.price} • Duration {buyerInfo.duration} days</div>
+        <div className="text-xs text-gray-400 mb-2">
+          Up to ${buyerInfo.price} • Duration {buyerInfo.duration} days
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Overall Rating <span className="text-gray-400 font-normal">(Chất lượng tổng thể)</span></label>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Overall Rating <span className="text-gray-400 font-normal">(Chất lượng tổng thể)</span>
+        </label>
         {renderStars(rating, setRating, "Overall Rating")}
         <div className="text-xs text-gray-400 mt-1">Đánh giá tổng thể về dịch vụ này.</div>
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Seller Communication <span className="text-gray-400 font-normal">(Giao tiếp)</span></label>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Seller Communication <span className="text-gray-400 font-normal">(Giao tiếp)</span>
+        </label>
         {renderStars(sellerCommunication, setSellerCommunication, "Seller Communication")}
         <div className="text-xs text-gray-400 mt-1">Người bán phản hồi nhanh, lịch sự, hỗ trợ tốt?</div>
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Quality of Delivery <span className="text-gray-400 font-normal">(Chất lượng giao hàng)</span></label>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Quality of Delivery <span className="text-gray-400 font-normal">(Chất lượng giao hàng)</span>
+        </label>
         {renderStars(qualityOfDelivery, setQualityOfDelivery, "Quality of Delivery")}
         <div className="text-xs text-gray-400 mt-1">Sản phẩm giao đúng cam kết, chất lượng tốt?</div>
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">Value of Delivery <span className="text-gray-400 font-normal">(Giá trị nhận được)</span></label>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          Value of Delivery <span className="text-gray-400 font-normal">(Giá trị nhận được)</span>
+        </label>
         {renderStars(valueOfDelivery, setValueOfDelivery, "Value of Delivery")}
         <div className="text-xs text-gray-400 mt-1">Bạn cảm thấy số tiền bỏ ra có xứng đáng?</div>
       </div>
@@ -120,10 +152,10 @@ export function ReviewForm({ onSubmitAction, initialReview, buyerInfo }: ReviewF
 
       <Button
         type="submit"
-        disabled={rating === 0}
+        disabled={rating === 0 || isSubmitting}
         className="w-full bg-emerald-500 hover:bg-emerald-600 text-base font-semibold py-3 rounded-lg shadow-md transition-all"
       >
-        {initialReview ? "Update Review" : "Submit Review"}
+        {isSubmitting ? "Submitting..." : "Submit Review"}
       </Button>
     </form>
   );

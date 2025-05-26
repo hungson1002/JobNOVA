@@ -25,28 +25,23 @@ const Review = (sequelize) => {
         allowNull: false,
         validate: { min: 1, max: 5 },
       },
-      comment: { 
-        type: DataTypes.TEXT, 
-        allowNull: true 
+      comment: {
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
-      created_at: { 
-        type: DataTypes.DATE, 
-        allowNull: false, 
-        defaultValue: DataTypes.NOW 
+      sellerResponse: {
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
-      sellerResponse: { 
-        type: DataTypes.TEXT, 
-        allowNull: true 
+      helpfulYes: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
       },
-      helpfulYes: { 
-        type: DataTypes.INTEGER, 
-        allowNull: false, 
-        defaultValue: 0 
-      },
-      helpfulNo: { 
-        type: DataTypes.INTEGER, 
-        allowNull: false, 
-        defaultValue: 0 
+      helpfulNo: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
       },
       sellerCommunication: {
         type: DataTypes.TINYINT,
@@ -66,11 +61,12 @@ const Review = (sequelize) => {
     },
     {
       tableName: "reviews",
-      timestamps: false,
+      timestamps: true,
+      createdAt: "created_at",
+      updatedAt: false,
     }
   );
 
-  // ✅ Thêm alias đúng cách
   ReviewModel.associate = function (models) {
     ReviewModel.belongsTo(models.User, {
       foreignKey: "reviewer_clerk_id",

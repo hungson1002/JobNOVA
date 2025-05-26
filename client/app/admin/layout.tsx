@@ -9,6 +9,9 @@ const sidebarItems = [
   { label: "Dashboard", href: "/admin/admin-dashboard" },
   { label: "Manager User", href: "/admin/manage-users" },
   { label: "Manager Service", href: "/admin/manage-gigs" },
+  { label: "Order Management", href: "/admin/manage-orders" },
+  { label: "Category Management", href: "/admin/manage-categories" },
+  { label: "Report Management", href: "/admin/manage-reports" },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
