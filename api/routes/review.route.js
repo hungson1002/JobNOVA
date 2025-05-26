@@ -6,7 +6,8 @@ import {
   getReviewById,
   updateHelpfulVote,
   updateReview,
-  updateSellerResponse
+  updateSellerResponse,
+  getHelpfulVote
 } from '../controllers/review.controller.js';
 import { authenticateAndLoadUser } from '../middleware/getAuth.js';
 import requireAuth from '../middleware/requireAuth.js';
@@ -29,5 +30,7 @@ router.patch('/:id/seller-response', updateSellerResponse);
 router.post("/:id/helpful", updateHelpfulVote);
 // Xóa review
 router.delete('/:id', deleteReview);
+// Lấy trạng thái vote helpful của user cho 1 review
+router.get('/:id/helpful-vote', getHelpfulVote);
 
 export default router;

@@ -396,6 +396,23 @@ export const updateHelpfulVote = async (req, res, next) => {
   }
 };
 
+// Lấy helpful vote của user cho 1 review
+export const getHelpfulVote = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const clerk_id = req.user.clerk_id;
+    const vote = await models.ReviewHelpfulVote.findOne({
+      where: { review_id: id, clerk_id },
+    });
+    return res.status(200).json({
+      success: true,
+      vote: vote ? vote.vote : null,
+    });
+  } catch (error) {
+    console.error("Error fetching helpful vote:", error.message);
+    return res.status(500).json({ success: false, message: "Error fetching helpful vote", error: error.message });
+  }
+};
 
 // Mã bình luận (giữ nguyên để tham khảo)
 // export const createReview = async (req, res, next) => {

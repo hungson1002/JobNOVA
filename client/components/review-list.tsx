@@ -86,7 +86,12 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
         credentials: "include",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to update helpful vote");
+      if (!res.ok) {
+        if (data.message === "Review not found") {
+          setLocalReviews(prev => prev.filter(r => r.id !== reviewId));
+        }
+        throw new Error(data.message || "Failed to update helpful vote");
+      }
       setLocalReviews((prev) =>
         prev.map((r) =>
           r.id === reviewId
@@ -122,10 +127,29 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
 
   // Khi mount, fetch trạng thái vote của user cho từng review (nếu backend trả về, hoặc có thể fetch riêng)
   useEffect(() => {
-    // Nếu backend trả về trạng thái vote của user, hãy set vào userVotes ở đây
-    // Nếu chưa có, mặc định là null
-    const votes: Record<string, "yes" | "no" | null> = {};
-    setUserVotes(votes);
+    async function fetchUserVotes() {
+      if (!userId) return;
+      const votes: Record<string, "yes" | "no" | null> = {};
+      await Promise.all(
+        reviews.map(async (review) => {
+          try {
+            const token = await getToken?.();
+            const res = await fetch(`http://localhost:8800/api/reviews/${review.id}/helpful-vote`, {
+              headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              credentials: "include",
+            });
+            const data = await res.json();
+            votes[review.id] = data.vote || null;
+          } catch (err) {
+            votes[review.id] = null;
+          }
+        })
+      );
+      setUserVotes(votes);
+    }
+    fetchUserVotes();
   }, [reviews, userId]);
 
   // Đóng menu khi click ngoài
