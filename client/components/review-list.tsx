@@ -313,6 +313,7 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
                           className="inline-block w-4 h-3 object-cover rounded-sm border border-gray-200"
                           onError={(e) => (e.currentTarget.style.display = 'none')}
                         />
+                        <div className="text-gray-400 text-xs opacity-75"> | </div>
                         {review.user.country}
                       </div>
                     </div>
@@ -326,16 +327,19 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
                           />
                         ))}
                       </div>
-                      <span className="text-gray-400 text-xs">• {formatDistanceToNow(new Date(review.created_at), { addSuffix: true })}</span>
+                      <span className="text-gray-400 text-xs">•   {formatDistanceToNow(new Date(review.created_at), { addSuffix: true })}</span>
                     </div>
                   </div>
                 </div>
+                {/* Đường kẻ mảnh dưới rating */}
+                <div className="border-b border-gray-200 mt-3 mb-2" />
                 <div className="mt-2 text-gray-900 text-[15px] leading-relaxed break-words">{review.comment}</div>
                 <div className="flex gap-8 mt-2 text-xs text-gray-600">
                   <div>
                     <span className="font-semibold">US${review.price}</span>
                     <span className="ml-1">Price</span>
                   </div>
+                  <div className="text-gray-400 text-xs opacity-75"> | </div>
                   <div>
                     <span className="font-semibold">{review.duration} {review.duration > 1 ? 'days' : 'day'}</span>
                     <span className="ml-1">Duration</span>
