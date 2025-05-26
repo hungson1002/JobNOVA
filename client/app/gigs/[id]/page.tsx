@@ -734,7 +734,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
               </div>
 
               <div className="mt-6">
-                <ReviewList reviews={reviews.slice(0, reviewsToShow)} />
+                <ReviewList reviews={reviews.slice(0, reviewsToShow)} onReviewDelete={fetchOrderCompleted} />
               </div>
 
               {reviewsToShow < reviews.length && (
