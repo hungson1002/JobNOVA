@@ -352,7 +352,7 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
       {/* Edit Review Modal */}
       {editingReview && (
         <Dialog open={!!editingReview} onOpenChange={() => setEditingReview(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[100vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Review</DialogTitle>
               <DialogDescription>
@@ -368,6 +368,8 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
                 price: editingReview.price,
                 duration: editingReview.duration,
               }}
+              onSubmit={handleEditReview}
+              initialReview={editingReview}
             />
           </DialogContent>
         </Dialog>

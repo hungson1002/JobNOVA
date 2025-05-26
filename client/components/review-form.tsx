@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Star } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,23 @@ interface ReviewFormProps {
     duration: number;
   };
   onReviewSuccess?: () => void;
+  onSubmit?: (data: {
+    rating: number;
+    comment: string;
+    sellerCommunication: number;
+    qualityOfDelivery: number;
+    valueOfDelivery: number;
+  }) => Promise<void>;
+  initialReview?: {
+    rating: number;
+    comment: string;
+    sellerCommunication: number;
+    qualityOfDelivery: number;
+    valueOfDelivery: number;
+  };
 }
 
-export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess }: ReviewFormProps) {
+export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess, onSubmit, initialReview }: ReviewFormProps) {
   const [rating, setRating] = useState(0);
   const [hoveredOverall, setHoveredOverall] = useState(0);
   const [hoveredCommunication, setHoveredCommunication] = useState(0);
@@ -32,12 +46,35 @@ export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess }: Revie
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { getToken } = useAuth();
 
+  useEffect(() => {
+    if (initialReview) {
+      setRating(initialReview.rating);
+      setComment(initialReview.comment);
+      setSellerCommunication(initialReview.sellerCommunication);
+      setQualityOfDelivery(initialReview.qualityOfDelivery);
+      setValueOfDelivery(initialReview.valueOfDelivery);
+    }
+  }, [initialReview]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0 || !orderId || !gigId) return;
     setIsSubmitting(true);
 
     try {
+      if (onSubmit) {
+        await onSubmit({
+          rating,
+          comment,
+          sellerCommunication,
+          qualityOfDelivery,
+          valueOfDelivery,
+        });
+        if (onReviewSuccess) onReviewSuccess();
+        setIsSubmitting(false);
+        return;
+      }
+
       const token = await getToken?.();
       const res = await fetch(`http://localhost:8800/api/reviews`, {
         method: "POST",
