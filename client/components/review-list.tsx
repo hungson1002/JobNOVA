@@ -232,67 +232,82 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
           {localReviews.map((review) => {
             const userVote = userVotes[review.id] || null;
             const isOwner = userId === review.reviewer_clerk_id;
-            
             return (
               <div
                 key={review.id}
-                className="group relative flex gap-4 px-6 py-6 w-ful bg-white border-b border-gray-200"
+                className="group relative flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-7 transition"
               >
-                <div className="flex-shrink-0">
+                <div className="flex items-center gap-4">
                   <Image
                     src={review.user.avatar || "/placeholder.svg"}
                     alt={review.user.name}
                     width={48}
                     height={48}
-                    className="w-12 h-12 rounded-full object-cover"
+                    className="w-12 h-12 rounded-full object-cover border-2 border-emerald-100 shadow-sm"
                   />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-base text-gray-900 truncate">{review.user.name}</span>
-                    <span className="text-xs text-gray-400">{review.date}</span>
-                    <span className="ml-2 flex items-center gap-1">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-base text-gray-900 truncate">{review.user.name}</span>
+                      <span className="ml-2 text-xs text-gray-500 flex items-center gap-1">
+                        <span className="inline-block w-4 h-3 mr-1 align-middle">
+                          <img src={`https://flagcdn.com/16x12/${(review.user.country || '').toLowerCase()}.png`} alt={review.user.country} className="inline-block w-4 h-3 object-cover rounded-sm border border-gray-200" onError={e => e.currentTarget.style.display='none'} />
+                        </span>
+                        {review.user.country}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
                       {[...Array(5)].map((_, i) => (
                         <Star
                           key={i}
                           className={`w-4 h-4 ${i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
                         />
                       ))}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-gray-800 text-sm break-words">{review.comment}</div>
-                  {review.sellerResponse && (
-                    <div className="mt-4 ml-8 flex gap-2 items-start bg-gray-50 border-l-4 border-emerald-300 rounded-md p-3">
-                      <Image
-                        src={review.seller.avatar}
-                        alt={review.seller.name}
-                        width={28}
-                        height={28}
-                        className="rounded-full border border-emerald-200 mt-1"
-                      />
-                      <div>
-                        <span className="font-semibold text-emerald-700 text-sm">{review.seller.name}</span>
-                        <div className="text-gray-700 text-sm mt-1">{review.sellerResponse}</div>
-                      </div>
+                      <span className="ml-2 text-xs text-gray-400">• {review.date}</span>
                     </div>
-                  )}
-                  <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
-                    <span>Helpful?</span>
-                    <button
-                      onClick={() => handleHelpfulVote(review.id, "yes")}
-                      className={`px-2 py-1 rounded-full border border-emerald-200 transition-colors ${userVote === "yes" ? "bg-emerald-100 text-emerald-700 font-bold" : "hover:bg-emerald-50 hover:text-emerald-600"}`}
-                      disabled={userVote === "no"}
-                    >
-                      👍 {review.helpful?.yes ?? 0}
-                    </button>
-                    <button
-                      onClick={() => handleHelpfulVote(review.id, "no")}
-                      className={`px-2 py-1 rounded-full border border-red-200 transition-colors ${userVote === "no" ? "bg-red-100 text-red-700 font-bold" : "hover:bg-red-50 hover:text-red-600"}`}
-                      disabled={userVote === "yes"}
-                    >
-                      👎 {review.helpful?.no ?? 0}
-                    </button>
                   </div>
+                </div>
+                <div className="mt-2 text-gray-900 text-[15px] leading-relaxed break-words">{review.comment}</div>
+                <div className="flex gap-8 mt-2 text-xs text-gray-600">
+                  <div>
+                    <span className="font-semibold">US${review.price}</span>
+                    <span className="ml-1">Price</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">{review.duration} {review.duration > 1 ? 'days' : 'day'}</span>
+                    <span className="ml-1">Duration</span>
+                  </div>
+                </div>
+                {review.sellerResponse && (
+                  <div className="mt-5 flex items-start gap-2 bg-yellow-50 border-l-4 border-yellow-400 rounded-md p-4 shadow-sm">
+                    <Image
+                      src={review.seller.avatar}
+                      alt={review.seller.name}
+                      width={28}
+                      height={28}
+                      className="rounded-full border border-yellow-300 mt-1"
+                    />
+                    <div>
+                      <span className="font-semibold text-yellow-700 text-sm">Seller's Response</span>
+                      <div className="text-gray-700 text-sm mt-1 leading-relaxed">{review.sellerResponse}</div>
+                    </div>
+                  </div>
+                )}
+                <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
+                  <span className="font-medium">Helpful?</span>
+                  <button
+                    onClick={() => handleHelpfulVote(review.id, "yes")}
+                    className={`px-2 py-1 rounded-full border border-emerald-200 transition-colors ${userVote === "yes" ? "bg-emerald-100 text-emerald-700 font-bold" : "hover:bg-emerald-50 hover:text-emerald-600"}`}
+                    disabled={userVote === "no"}
+                  >
+                    👍 {review.helpful?.yes ?? 0}
+                  </button>
+                  <button
+                    onClick={() => handleHelpfulVote(review.id, "no")}
+                    className={`px-2 py-1 rounded-full border border-red-200 transition-colors ${userVote === "no" ? "bg-red-100 text-red-700 font-bold" : "hover:bg-red-50 hover:text-red-600"}`}
+                    disabled={userVote === "yes"}
+                  >
+                    👎 {review.helpful?.no ?? 0}
+                  </button>
                 </div>
                 {isOwner && (
                   <div className="absolute top-2 right-3 z-10">
@@ -345,14 +360,8 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
               </DialogDescription>
             </DialogHeader>
             <ReviewForm
-              initialReview={{
-                rating: editingReview.rating,
-                comment: editingReview.comment,
-                sellerCommunication: editingReview.sellerCommunication,
-                qualityOfDelivery: editingReview.qualityOfDelivery,
-                valueOfDelivery: editingReview.valueOfDelivery,
-              }}
-              onSubmitAction={handleEditReview}
+              orderId={Number(editingReview.id)}
+              gigId={0}
               buyerInfo={{
                 name: editingReview.user.name,
                 country: editingReview.user.country,
