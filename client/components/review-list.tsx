@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { MessageCircle, MoreVertical, Star } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -35,6 +35,7 @@ interface Review {
   sellerCommunication: number;
   qualityOfDelivery: number;
   valueOfDelivery: number;
+  seller_clerk_id: string;
 }
 
 interface ReviewListProps {
@@ -48,7 +49,7 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
   const [localReviews, setLocalReviews] = useState<Review[]>(reviews)
   const [userVotes, setUserVotes] = useState<Record<string, "yes" | "no" | null>>({});
   const { getToken, userId } = useAuth();
-
+  const { user } = useUser();
   const [expandedResponses, setExpandedResponses] = useState<string[]>([]);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -58,6 +59,8 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
   const [deletingReview, setDeletingReview] = useState<Review | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [replyingReviewId, setReplyingReviewId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
 
   const toggleResponse = (reviewId: string) => {
     setExpandedResponses((prev) =>
@@ -218,6 +221,29 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
     }
   };
 
+  // Hàm gửi reply
+  const handleReplySubmit = async (reviewId: string) => {
+    try {
+      const token = await getToken?.();
+      const res = await fetch(`http://localhost:8800/api/reviews/${reviewId}/seller-response`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({ sellerResponse: replyContent }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to reply");
+      setLocalReviews(prev => prev.map(r => r.id === reviewId ? { ...r, sellerResponse: replyContent } : r));
+      setReplyingReviewId(null);
+      setReplyContent("");
+    } catch (error) {
+      alert("Failed to reply review");
+    }
+  };
+
   return (
     <div className={className}>
       <h3 className="mb-4 text-xl font-bold text-gray-800">Customer Reviews</h3>
@@ -232,6 +258,7 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
           {localReviews.map((review) => {
             const userVote = userVotes[review.id] || null;
             const isOwner = userId === review.reviewer_clerk_id;
+            const isGigOwner = !!user && user.id === review.seller_clerk_id;
             return (
               <div
                 key={review.id}
@@ -343,6 +370,34 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
                     )}
                   </div>
                 )}
+                {/* Reply cho chủ gig */}
+                {isGigOwner && !review.sellerResponse && (
+                  <div className="mt-2">
+                    {replyingReviewId === review.id ? (
+                      <div className="flex flex-col gap-2">
+                        <textarea
+                          className="border rounded p-2 min-h-[40px]"
+                          value={replyContent}
+                          onChange={e => setReplyContent(e.target.value)}
+                          placeholder="Nhập phản hồi cho khách hàng..."
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => handleReplySubmit(review.id)} disabled={!replyContent.trim()}>
+                            Submit
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => { setReplyingReviewId(null); setReplyContent(""); }}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="ghost" onClick={() => setReplyingReviewId(review.id)}>
+                        Reply
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -360,16 +415,16 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
               </DialogDescription>
             </DialogHeader>
             <ReviewForm
-              orderId={Number(editingReview.id)}
+              orderId={Number(editingReview?.id)}
               gigId={0}
               buyerInfo={{
-                name: editingReview.user.name,
-                country: editingReview.user.country,
-                price: editingReview.price,
-                duration: editingReview.duration,
+                name: editingReview?.user.name || "",
+                country: editingReview?.user.country || "",
+                price: editingReview?.price || 0,
+                duration: editingReview?.duration || 0,
               }}
               onSubmit={handleEditReview}
-              initialReview={editingReview}
+              initialReview={editingReview ?? undefined}
             />
           </DialogContent>
         </Dialog>

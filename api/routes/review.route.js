@@ -23,8 +23,8 @@ router.use(requireAuth, authenticateAndLoadUser);
 router.post('/', createReview);
 // Cập nhật review
 router.patch('/:id', updateReview);
-// Cập nhật sellerResponse
-router.patch("/:id/seller-response", updateSellerResponse);
+// Cập nhật sellerResponse (reply)
+router.patch('/:id/seller-response', updateSellerResponse);
 // Cập nhật helpful vote
 router.post("/:id/helpful", updateHelpfulVote);
 // Xóa review

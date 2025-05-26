@@ -167,6 +167,7 @@ export const getAllReviews = async (req, res, next) => {
           name: [plain.gig?.seller?.firstname, plain.gig?.seller?.lastname].filter(Boolean).join(' ').trim() || 'Seller',
           avatar: plain.gig?.seller?.avatar || '/placeholder.svg',
         },
+        seller_clerk_id: plain.gig?.seller_clerk_id || null,
       };
     });
 
@@ -261,6 +262,7 @@ export const getReviewById = async (req, res, next) => {
         name: [review.gig?.seller?.firstname, review.gig?.seller?.lastname].filter(Boolean).join(" ").trim() || "Seller",
         avatar: review.gig?.seller?.avatar || "/placeholder.svg",
       },
+      seller_clerk_id: review.gig?.seller_clerk_id || null,
     };
 
     return res.status(200).json({ success: true, review: enrichedReview });
