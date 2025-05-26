@@ -200,7 +200,7 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
       setLocalReviews(prev => prev.map(r => r.id === editingReview.id ? { ...r, ...reviewData } : r));
       setEditingReview(null);
       toast.success("Review updated!");
-      if (onReviewUpdate) onReviewUpdate();
+      if (onReviewUpdate) onReviewUpdate({ ...editingReview, ...reviewData });
     } catch (err) {
       console.error('[DEBUG][handleEditReview] Error:', err);
       toast.error(String(err));
@@ -438,16 +438,24 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
               </DialogDescription>
             </DialogHeader>
             <ReviewForm
-              orderId={editingReview.order_id}
-              gigId={editingReview.gig_id}
+              reviewId={editingReview.id}
               buyerInfo={{
                 name: editingReview.user.name,
                 country: editingReview.user.country,
                 price: editingReview.price,
                 duration: editingReview.duration,
               }}
+              initialReview={{
+                rating: editingReview.rating,
+                comment: editingReview.comment,
+                sellerCommunication: editingReview.sellerCommunication,
+                qualityOfDelivery: editingReview.qualityOfDelivery,
+                valueOfDelivery: editingReview.valueOfDelivery,
+              }}
+              onReviewSuccess={() => {
+                setEditingReview(null);
+              }}
               onSubmit={handleEditReview}
-              initialReview={editingReview}
             />
           </DialogContent>
         </Dialog>

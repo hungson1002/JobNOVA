@@ -8,8 +8,8 @@ import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 
 interface ReviewFormProps {
-  orderId: number;
-  gigId: number;
+  orderId?: number;
+  gigId?: number;
   buyerInfo: {
     name: string;
     country: string;
@@ -17,6 +17,14 @@ interface ReviewFormProps {
     duration: number;
   };
   onReviewSuccess?: () => void;
+  reviewId?: string; 
+  initialValues?: {
+    rating: number;
+    comment: string;
+    sellerCommunication: number;
+    qualityOfDelivery: number;
+    valueOfDelivery: number;
+  };
   onSubmit?: (data: {
     rating: number;
     comment: string;
@@ -33,7 +41,7 @@ interface ReviewFormProps {
   };
 }
 
-export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess, onSubmit, initialReview }: ReviewFormProps) {
+export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess, onSubmit, initialReview, reviewId }: ReviewFormProps) {
   const [rating, setRating] = useState(0);
   const [hoveredOverall, setHoveredOverall] = useState(0);
   const [hoveredCommunication, setHoveredCommunication] = useState(0);
@@ -58,79 +66,61 @@ export function ReviewForm({ orderId, gigId, buyerInfo, onReviewSuccess, onSubmi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("[DEBUG][ReviewForm] handleSubmit called", { onSubmit, orderId, gigId, initialReview });
-    if (rating === 0 || !orderId || !gigId) return;
     setIsSubmitting(true);
-
+  
+    const payload = {
+      rating,
+      comment,
+      sellerCommunication,
+      qualityOfDelivery,
+      valueOfDelivery,
+    };
+  
     try {
       if (onSubmit) {
-        console.log("[DEBUG][ReviewForm] Calling onSubmit (update mode)", {
-          rating,
-          comment,
-          sellerCommunication,
-          qualityOfDelivery,
-          valueOfDelivery,
+        await onSubmit(payload);
+      } else {
+        const token = await getToken?.();
+        const url = reviewId
+          ? `http://localhost:8800/api/reviews/${reviewId}`
+          : `http://localhost:8800/api/reviews`;
+        const method = reviewId ? "PATCH" : "POST";
+  
+        const res = await fetch(url, {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            ...(reviewId ? {} : { order_id: orderId, gig_id: gigId }),
+            ...payload,
+          }),
         });
-        await onSubmit({
-          rating,
-          comment,
-          sellerCommunication,
-          qualityOfDelivery,
-          valueOfDelivery,
-        });
-        if (onReviewSuccess) onReviewSuccess();
-        setIsSubmitting(false);
-        return;
+  
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to submit review");
+        toast.success(reviewId ? "Review updated!" : "Review submitted!");
       }
-
-      const token = await getToken?.();
-      console.log("[DEBUG][ReviewForm] Creating new review (POST)", {
-        orderId,
-        gigId,
-        rating,
-        comment,
-        sellerCommunication,
-        qualityOfDelivery,
-        valueOfDelivery,
-      });
-      const res = await fetch(`http://localhost:8800/api/reviews`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          order_id: orderId,
-          gig_id: gigId,
-          rating,
-          comment,
-          sellerCommunication,
-          qualityOfDelivery,
-          valueOfDelivery,
-        }),
-      });
-      console.log("[DEBUG][ReviewForm] POST response status:", res.status);
-      const data = await res.json();
-      console.log("[DEBUG][ReviewForm] POST response data:", data);
-      if (!res.ok) throw new Error(data.message || "Tạo đánh giá thất bại");
-      toast.success("Review submitted successfully!");
+  
       if (onReviewSuccess) onReviewSuccess();
-
-      // Reset form
-      setRating(0);
-      setComment("");
-      setSellerCommunication(1);
-      setQualityOfDelivery(1);
-      setValueOfDelivery(1);
-    } catch (error) {
-      console.error("[DEBUG][ReviewForm] Error submitting review:", error);
-      toast.error(String(error));
+  
+      if (!reviewId) {
+        setRating(0);
+        setComment("");
+        setSellerCommunication(1);
+        setQualityOfDelivery(1);
+        setValueOfDelivery(1);
+      }
+    } catch (err) {
+      console.error("❌ Review submit error:", err);
+      toast.error(String(err));
     } finally {
       setIsSubmitting(false);
     }
   };
-
+  
   const renderStars = (
     currentRating: number,
     setRating: (rating: number) => void,
