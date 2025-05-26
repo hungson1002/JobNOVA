@@ -86,34 +86,38 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
       .finally(() => setLoadingGig(false));
   }, [gigId]);
 
+  const fetchReviews = async () => {
+    const query = `gig_id=${gigId}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${reviewSort ? `&sort=${reviewSort}` : ""}`;
+    const res = await fetch(`http://localhost:8800/api/reviews?${query}`);
+    const data = await res.json();
+    if (data.success) {
+      const reviewsWithUser = await Promise.all(
+        data.reviews.map(async (review: any) => {
+          if (review.user) return review;
+          const userRes = await fetch(`http://localhost:8800/api/users/${review.reviewer_clerk_id}`);
+          const userData = await userRes.json();
+          return {
+            ...review,
+            user: {
+              name: userData.name || userData.username || "User",
+              avatar: userData.avatar || "/placeholder.svg",
+              country: userData.country || "Unknown",
+            },
+            date: formatTimeAgo(review.created_at),
+          };
+        })
+      );
+      setReviews(reviewsWithUser);
+      setRatingSummary(data.ratingSummary);
+      setRatingBreakdown(data.ratingBreakdown);
+    }
+  };
+
+  const refetchReviews = async () => {
+    await fetchReviews();
+  };
   // Fetch reviews
   useEffect(() => {
-    const fetchReviews = async () => {
-      const query = `gig_id=${gigId}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${reviewSort ? `&sort=${reviewSort}` : ""}`;
-      const res = await fetch(`http://localhost:8800/api/reviews?${query}`);
-      const data = await res.json();
-      if (data.success) {
-        const reviewsWithUser = await Promise.all(
-          data.reviews.map(async (review: any) => {
-            if (review.user) return review;
-            const userRes = await fetch(`http://localhost:8800/api/users/${review.reviewer_clerk_id}`);
-            const userData = await userRes.json();
-            return {
-              ...review,
-              user: {
-                name: userData.name || userData.username || "User",
-                avatar: userData.avatar || "/placeholder.svg",
-                country: userData.country || "Unknown",
-              },
-              date: formatTimeAgo(review.created_at),
-            };
-          })
-        );
-        setReviews(reviewsWithUser);
-        setRatingSummary(data.ratingSummary);
-        setRatingBreakdown(data.ratingBreakdown);
-      }
-    };
     fetchReviews();
   }, [gigId, searchQuery, reviewSort]);
 
@@ -734,7 +738,11 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
               </div>
 
               <div className="mt-6">
-                <ReviewList reviews={reviews.slice(0, reviewsToShow)} onReviewDelete={fetchOrderCompleted} />
+              <ReviewList 
+                reviews={reviews.slice(0, reviewsToShow)} 
+                onReviewDelete={fetchOrderCompleted}
+                onReviewUpdate={refetchReviews}
+              />
               </div>
 
               {reviewsToShow < reviews.length && (
@@ -756,7 +764,12 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                   country: typeof user?.publicMetadata?.country === 'string' ? user.publicMetadata.country : '',
                   price: userOrder.total_price,
                   duration: userOrder.duration,
-                }} onReviewSuccess={fetchOrderCompleted} />
+                }} 
+                onReviewSuccess={() => {
+                  fetchOrderCompleted();
+                  fetchReviews();
+                }} 
+                />
               </div>
             )}
           </div>

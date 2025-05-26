@@ -44,7 +44,7 @@ interface Review {
 interface ReviewListProps {
   reviews: Review[];
   className?: string;
-  onReviewUpdate?: (updatedReview: Review) => void;
+  onReviewUpdate?: (updatedReview?: Review) => void;
   onReviewDelete?: (reviewId: string) => void;
 }
 
@@ -454,6 +454,7 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
               }}
               onReviewSuccess={() => {
                 setEditingReview(null);
+                if (onReviewUpdate) onReviewUpdate();
               }}
               onSubmit={handleEditReview}
             />
