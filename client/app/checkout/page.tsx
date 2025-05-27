@@ -217,7 +217,7 @@ export default function CheckoutPage() {
                       alt={gig.seller?.name || "Seller"}
                       width={16}
                       height={16}
-                      className="mr-1 rounded-full"
+                      className="h-7 w-7 mr-1 rounded-full"
                     />
                     <span>{gig.seller?.name || "Seller"}</span>
                   </div>

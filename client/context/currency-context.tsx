@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 // Define exchange rates
 export const exchangeRates = {
   USD: 1,
-  VND: 24000,
+  VND: 25000,
   EUR: 0.9,
   GBP: 0.78,
   CAD: 1.35,
