@@ -47,6 +47,8 @@ export function Navbar() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDeletingHistory, setIsDeletingHistory] = useState(false);
+  const clickedInsideDropdownRef = useRef(false);
+
 
   // Mapping tên category sang icon
   const categoryIcons: Record<string, React.ReactNode> = {
@@ -164,7 +166,10 @@ export function Navbar() {
   // Khi blur, ẩn dropdown sau 200ms (để kịp click), nhưng không ẩn nếu đang xóa
   const handleInputBlur = () => {
     setTimeout(() => {
-      if (!isDeletingHistory) setShowHistoryDropdown(false);
+      if (!clickedInsideDropdownRef.current && !isDeletingHistory) {
+        setShowHistoryDropdown(false);
+      }
+      clickedInsideDropdownRef.current = false;
     }, 200);
   };
 
@@ -272,7 +277,10 @@ export function Navbar() {
               />
               {/* Dropdown lịch sử tìm kiếm */}
               {showHistoryDropdown && (
-                <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
+                <div 
+                  onMouseDown={() => (clickedInsideDropdownRef.current = true)}
+                  className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto"
+                  >
                   <div className="px-4 py-2 text-xs italic text-gray-400 border-b">Search history</div>
                   {loadingHistory ? (
                     <div className="p-4 text-center text-gray-500 text-sm">Đang tải...</div>
