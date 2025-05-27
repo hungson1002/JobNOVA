@@ -48,7 +48,7 @@ export function Navbar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDeletingHistory, setIsDeletingHistory] = useState(false);
   const clickedInsideDropdownRef = useRef(false);
-
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Mapping tên category sang icon
   const categoryIcons: Record<string, React.ReactNode> = {
@@ -63,6 +63,44 @@ export function Navbar() {
     "Database": <Database className="h-4 w-4" />,
     "UI/UX": <Smile className="h-4 w-4" />,
   };
+
+// Ẩn dropdown khi click ra ngoài
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target as Node) &&
+      inputRef.current &&
+      !inputRef.current.contains(event.target as Node)
+    ) {
+      setShowHistoryDropdown(false);
+    }
+  };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const goToSearch = (keyword: string) => {
+    const query = keyword.trim();
+    if (!query) return;
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.set("q", query);
+  
+    let currency = "USD";
+    if (typeof window !== "undefined") {
+      currency = localStorage.getItem("currency") || "USD";
+    }
+  
+    if (!currentParams.get("minPrice")) currentParams.set("minPrice", currency === "VND" ? "0" : "10");
+    if (!currentParams.get("maxPrice")) currentParams.set("maxPrice", currency === "VND" ? "30000000" : "500");
+  
+    router.push(`/search?${currentParams.toString()}`);
+    setSearchQuery(query);
+    setShowHistoryDropdown(false);
+  };
+  
 
   // Fetch search history
   const fetchSearchHistory = async () => {
@@ -139,21 +177,9 @@ export function Navbar() {
   // Khi submit search, lưu lịch sử nếu đã đăng nhập
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      if (userId) {
-        await handleSaveSearchHistory(searchQuery.trim());
-      }
-      const currentParams = new URLSearchParams(window.location.search);
-      currentParams.set("q", searchQuery.trim());
-      let currency = "USD";
-      if (typeof window !== 'undefined') {
-        currency = localStorage.getItem("currency") || "USD";
-      }
-      if (!currentParams.get("minPrice")) currentParams.set("minPrice", currency === "VND" ? "0" : "10");
-      if (!currentParams.get("maxPrice")) currentParams.set("maxPrice", currency === "VND" ? "30000000" : "500");
-      router.push(`/search?${currentParams.toString()}`);
-      setShowHistoryDropdown(false);
-    }
+    if (!searchQuery.trim()) return;
+    if (userId) await handleSaveSearchHistory(searchQuery.trim());
+    goToSearch(searchQuery);
   };
 
   // Khi focus vào ô search, fetch lịch sử
@@ -278,28 +304,34 @@ export function Navbar() {
               {/* Dropdown lịch sử tìm kiếm */}
               {showHistoryDropdown && (
                 <div 
+                  ref={dropdownRef}
                   onMouseDown={() => (clickedInsideDropdownRef.current = true)}
                   className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto"
                   >
-                  <div className="px-4 py-2 text-xs italic text-gray-400 border-b">Search history</div>
+                  <div className="px-4 py-2 text-xs italic text-gray-500 border-b bg-gray-50 rounded-t-xl">Lịch sử tìm kiếm</div>
                   {loadingHistory ? (
                     <div className="p-4 text-center text-gray-500 text-sm">Đang tải...</div>
                   ) : searchHistory.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500 text-sm">Không có lịch sử tìm kiếm</div>
+                    <div className="p-4 text-center text-gray-400 text-sm">Không có lịch sử tìm kiếm</div>
                   ) : (
                     <>
                       <ul>
                         {searchHistory.map((item) => (
                           <li
                             key={item.id}
-                            className="group flex items-center justify-between px-4 py-2 hover:bg-emerald-50 cursor-pointer text-gray-700 truncate"
+                            className="group flex items-center justify-between px-4 py-2 hover:bg-emerald-50 transition-colors cursor-pointer text-gray-700"
+                            onClick={() => goToSearch(item.search_keyword)}
                           >
-                            <span className="truncate flex-1">{item.search_keyword}</span>
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="truncate">{item.search_keyword}</span>
+                            </div>
                             <button
                               className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
-                              onClick={e => { e.stopPropagation(); handleDeleteHistory(item.id); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteHistory(item.id);
+                              }}
                               tabIndex={-1}
-                              aria-label="Xóa lịch sử"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -307,10 +339,10 @@ export function Navbar() {
                         ))}
                       </ul>
                       <button
-                        className="w-full text-center text-xs text-red-500 hover:bg-red-50 py-2 border-t border-gray-100 font-medium"
+                        className="w-full text-center text-xs text-red-500 hover:bg-red-50 py-2 border-t border-gray-100 font-semibold"
                         onClick={handleDeleteAllHistory}
                       >
-                        Xóa tất cả
+                        Xóa tất cả lịch sử
                       </button>
                     </>
                   )}
