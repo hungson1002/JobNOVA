@@ -172,7 +172,7 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
               alt={service.seller.name}
               width={24}
               height={24}
-              className="rounded-full"
+              className="w-6 h-6 rounded-full border border-gray-200 object-cover"
             />
             <span className="text-sm font-medium dark:text-gray-200">{service.seller.name}</span>
             <span className="text-xs text-gray-500 dark:text-gray-400">| {service.seller.level}</span>

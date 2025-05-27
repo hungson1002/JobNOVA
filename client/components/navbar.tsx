@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs"
-import { BarChart, Bell, Briefcase, Camera, ChevronLeft, ChevronRight, Code, Database, Heart, LayoutDashboard, MessageSquare, Music, Palette, PenTool, Search, ShoppingCart, Smile, Video, User, FolderKanban } from "lucide-react"
+import { SignInButton, SignUpButton, UserButton, useUser, useAuth } from "@clerk/nextjs"
+import { BarChart, Bell, Briefcase, Camera, ChevronLeft, ChevronRight, Code, Database, Heart, LayoutDashboard, MessageSquare, Music, Palette, PenTool, Search, ShoppingCart, Smile, Video, User, FolderKanban, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -41,6 +41,12 @@ export function Navbar() {
   const isAdmin = user?.publicMetadata?.isAdmin
   const isSeller = user?.publicMetadata?.isSeller
   const isBuyer = user?.publicMetadata?.isBuyer
+  const { userId, getToken } = useAuth();
+  const [searchHistory, setSearchHistory] = useState<any[]>([]);
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isDeletingHistory, setIsDeletingHistory] = useState(false);
 
   // Mapping tên category sang icon
   const categoryIcons: Record<string, React.ReactNode> = {
@@ -56,25 +62,111 @@ export function Navbar() {
     "UI/UX": <Smile className="h-4 w-4" />,
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      const currentParams = new URLSearchParams(window.location.search)
-      currentParams.set("q", searchQuery.trim())
-
-      // Lấy loại tiền tệ từ localStorage hoặc mặc định USD
-      let currency = "USD"
-      if (typeof window !== 'undefined') {
-        currency = localStorage.getItem("currency") || "USD"
+  // Fetch search history
+  const fetchSearchHistory = async () => {
+    if (!userId) return;
+    setLoadingHistory(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`http://localhost:8800/api/userSearchHistory?clerk_id=${userId}&limit=10`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.history)) {
+        setSearchHistory(data.history);
+      } else {
+        setSearchHistory([]);
       }
-
-      // Nếu không có minPrice/maxPrice thì thêm mặc định theo loại tiền tệ
-      if (!currentParams.get("minPrice")) currentParams.set("minPrice", currency === "VND" ? "0" : "10")
-      if (!currentParams.get("maxPrice")) currentParams.set("maxPrice", currency === "VND" ? "30000000" : "500")
-
-      router.push(`/search?${currentParams.toString()}`)
+    } catch {
+      setSearchHistory([]);
+    } finally {
+      setLoadingHistory(false);
     }
-  }
+  };
+
+  // Save search history
+  const handleSaveSearchHistory = async (keyword: string) => {
+    if (!userId || !keyword) return;
+    try {
+      const token = await getToken();
+      await fetch(`http://localhost:8800/api/userSearchHistory`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          clerk_id: userId,
+          search_keyword: keyword,
+          search_date: new Date().toISOString(),
+        }),
+      });
+    } catch {}
+  };
+
+  // Xóa 1 lịch sử
+  const handleDeleteHistory = async (id: number) => {
+    if (!userId) return;
+    setIsDeletingHistory(true);
+    try {
+      const token = await getToken();
+      await fetch(`http://localhost:8800/api/userSearchHistory/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSearchHistory((prev) => prev.filter((item) => item.id !== id));
+    } catch {}
+    setTimeout(() => setIsDeletingHistory(false), 100); // Đảm bảo flag reset sau thao tác
+  };
+
+  // Xóa tất cả lịch sử
+  const handleDeleteAllHistory = async () => {
+    if (!userId) return;
+    setIsDeletingHistory(true);
+    try {
+      const token = await getToken();
+      await fetch(`http://localhost:8800/api/userSearchHistory/all?clerk_id=${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSearchHistory([]);
+    } catch {}
+    setTimeout(() => setIsDeletingHistory(false), 100);
+  };
+
+  // Khi submit search, lưu lịch sử nếu đã đăng nhập
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      if (userId) {
+        await handleSaveSearchHistory(searchQuery.trim());
+      }
+      const currentParams = new URLSearchParams(window.location.search);
+      currentParams.set("q", searchQuery.trim());
+      let currency = "USD";
+      if (typeof window !== 'undefined') {
+        currency = localStorage.getItem("currency") || "USD";
+      }
+      if (!currentParams.get("minPrice")) currentParams.set("minPrice", currency === "VND" ? "0" : "10");
+      if (!currentParams.get("maxPrice")) currentParams.set("maxPrice", currency === "VND" ? "30000000" : "500");
+      router.push(`/search?${currentParams.toString()}`);
+      setShowHistoryDropdown(false);
+    }
+  };
+
+  // Khi focus vào ô search, fetch lịch sử
+  const handleInputFocus = () => {
+    if (userId) {
+      fetchSearchHistory();
+      setShowHistoryDropdown(true);
+    }
+  };
+  // Khi blur, ẩn dropdown sau 200ms (để kịp click), nhưng không ẩn nếu đang xóa
+  const handleInputBlur = () => {
+    setTimeout(() => {
+      if (!isDeletingHistory) setShowHistoryDropdown(false);
+    }, 200);
+  };
 
   const checkScrollButtons = () => {
     if (!categoriesRef.current) return
@@ -169,12 +261,53 @@ export function Navbar() {
             <form onSubmit={handleSearch} className="relative flex-1 mx-4 flex">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
+                ref={inputRef}
                 type="search"
                 placeholder="Search services..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
                 className="w-full h-10 pl-10 pr-12 text-base rounded-md bg-background placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-emerald-500 border"
               />
+              {/* Dropdown lịch sử tìm kiếm */}
+              {showHistoryDropdown && (
+                <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto">
+                  <div className="px-4 py-2 text-xs italic text-gray-400 border-b">Search history</div>
+                  {loadingHistory ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">Đang tải...</div>
+                  ) : searchHistory.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">Không có lịch sử tìm kiếm</div>
+                  ) : (
+                    <>
+                      <ul>
+                        {searchHistory.map((item) => (
+                          <li
+                            key={item.id}
+                            className="group flex items-center justify-between px-4 py-2 hover:bg-emerald-50 cursor-pointer text-gray-700 truncate"
+                          >
+                            <span className="truncate flex-1">{item.search_keyword}</span>
+                            <button
+                              className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+                              onClick={e => { e.stopPropagation(); handleDeleteHistory(item.id); }}
+                              tabIndex={-1}
+                              aria-label="Xóa lịch sử"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        className="w-full text-center text-xs text-red-500 hover:bg-red-50 py-2 border-t border-gray-100 font-medium"
+                        onClick={handleDeleteAllHistory}
+                      >
+                        Xóa tất cả
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
               <Button
                 type="submit"
                 className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-3 bg-emerald-500 text-white hover:bg-emerald-600 rounded-md"

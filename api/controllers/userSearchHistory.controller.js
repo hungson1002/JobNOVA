@@ -80,3 +80,18 @@ export const deleteUserSearchHistory = async (req, res, next) => {
     return res.status(500).json({ success: false, message: 'Error deleting search history', error: error.message });
   }
 };
+
+// Xóa tất cả lịch sử tìm kiếm của user
+export const deleteAllUserSearchHistory = async (req, res, next) => {
+  try {
+    const { clerk_id } = req.query;
+    if (!clerk_id) {
+      return res.status(400).json({ success: false, message: 'Missing required query: clerk_id' });
+    }
+    const deleted = await models.UserSearchHistory.destroy({ where: { clerk_id } });
+    return res.status(200).json({ success: true, message: 'All search history deleted', deleted });
+  } catch (error) {
+    console.error('Error deleting all search history:', error.message);
+    return res.status(500).json({ success: false, message: 'Error deleting all search history', error: error.message });
+  }
+};

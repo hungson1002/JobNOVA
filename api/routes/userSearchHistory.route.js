@@ -3,7 +3,8 @@ import {
     createUserSearchHistory,
     deleteUserSearchHistory,
     getAllUserSearchHistory,
-    getUserSearchHistoryById
+    getUserSearchHistoryById,
+    deleteAllUserSearchHistory
 } from '../controllers/userSearchHistory.controller.js';
 import requireAuth from '../middleware/requireAuth.js';
 
@@ -15,6 +16,8 @@ router.get('/', requireAuth, getAllUserSearchHistory);
 router.get('/:id', requireAuth, getUserSearchHistoryById);
 // Tạo user search history mới
 router.post('/', requireAuth, createUserSearchHistory);
+// Xóa tất cả lịch sử tìm kiếm của user
+router.delete('/all', requireAuth, deleteAllUserSearchHistory);
 // Xóa user search history
 router.delete('/:id', requireAuth, deleteUserSearchHistory);
 
