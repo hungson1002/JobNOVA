@@ -345,14 +345,13 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   const images = gig.gig_images && Array.isArray(gig.gig_images) && gig.gig_images.length > 0
     ? gig.gig_images
     : (gig.gig_image ? [gig.gig_image] : ["/placeholder.svg"]);
-  const seller = gig.seller || {
-    clerk_id: gig.seller_clerk_id || "default_id",
-    name: gig.seller_name || "AlexDesigns",
-    username: gig.seller_username || "alexdesigns",
-    avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-    level: "Level 2 Seller",
-    bio: "I'm a professional graphic designer with over 5 years of experience specializing in logo design and brand identity.",
-  };
+  const seller = gig.seller || {};
+  const sellerName =
+    (seller.firstname && seller.lastname && `${seller.firstname} ${seller.lastname}`) ||
+    seller.firstname ||
+    seller.username ||
+    "Seller";
+  const sellerAvatar = seller.avatar || "/placeholder.svg";
   const faqs = gig.faqs || [
     {
       question: "How many revisions do I get?",
@@ -448,8 +447,8 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             <div className="mb-8 flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
               <div className="h-12 w-12 overflow-hidden rounded-full border border-gray-200">
                 <Image
-                  src={seller.avatar}
-                  alt={seller.name}
+                  src={sellerAvatar}
+                  alt={sellerName}
                   width={48}
                   height={48}
                   className="h-full w-full object-cover"
@@ -457,13 +456,12 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
               </div>
               <div className="flex-1">
                 <Link
-                  href={`/users/${seller.username}`}
+                  href={`/users/${seller.username || ""}`}
                   className="font-medium hover:text-emerald-600 transition-colors"
                 >
-                  {seller.name}
+                  {sellerName}
                 </Link>
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <UserBadge level={seller.level} />
                   <span className="text-gray-300">|</span>
                   <div className="flex items-center">
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -476,7 +474,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     </button>
                   </div>
                   <span className="text-gray-300">|</span>
-                  <span className="text-gray-600">3 orders</span>
+                  <span className="text-gray-600">{gig.order_count === 1 ? '1 order' : `${gig.order_count || 0} orders`}</span>
                 </div>
               </div>
               <ContactMeButton onClick={handleContactSeller} />

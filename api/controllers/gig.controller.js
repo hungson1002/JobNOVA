@@ -134,7 +134,7 @@ export const getAllGigs = async (req, res, next) => {
       ],
     });
     // Parse gig_images cho từng gig và map seller cho FE
-    const gigsRows = gigs.rows.map(gig => {
+    const gigsRows = await Promise.all(gigs.rows.map(async gig => {
       const gigData = gig.toJSON();
       if (gigData.gig_images) {
         try { gigData.gig_images = JSON.parse(gigData.gig_images); } catch { gigData.gig_images = []; }
@@ -157,8 +157,10 @@ export const getAllGigs = async (req, res, next) => {
           avatar: '/placeholder.svg',
         };
       }
+      // Đếm số order của gig này
+      gigData.order_count = await models.Order.count({ where: { gig_id: gigData.id } });
       return gigData;
-    });
+    }));
     return res.status(200).json({
       success: true,
       total: gigs.count,
@@ -175,7 +177,15 @@ export const getAllGigs = async (req, res, next) => {
 export const getGigById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const gig = await models.Gig.findByPk(id);
+    const gig = await models.Gig.findByPk(id, {
+      include: [
+        {
+          model: models.User,
+          as: 'seller',
+          attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar'],
+        },
+      ],
+    });
     if (!gig) {
       return res.status(404).json({ success: false, message: 'Gig not found' });
     }
@@ -192,6 +202,8 @@ export const getGigById = async (req, res, next) => {
     } else {
       gigData.requirements = [];
     }
+    // Đếm số order của gig này
+    gigData.order_count = await models.Order.count({ where: { gig_id: gigData.id } });
     return res.status(200).json({ success: true, gig: gigData });
   } catch (error) {
     console.error('Error fetching gig:', error.message);
