@@ -257,7 +257,13 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
         body: JSON.stringify({ sellerResponse: replyContent }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to reply");
+      if (!res.ok) {
+        if (data.message === "Review not found") {
+          setLocalReviews(prev => prev.filter(r => r.id !== reviewId));
+          toast.error("Review này đã bị xóa hoặc không tồn tại!");
+        }
+        throw new Error(data.message || "Failed to reply");
+      }
       setLocalReviews(prev => prev.map(r => r.id === reviewId ? { ...r, sellerResponse: replyContent } : r));
       setReplyingReviewId(null);
       setReplyContent("");
