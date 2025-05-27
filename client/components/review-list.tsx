@@ -173,7 +173,6 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
   }) => {
     if (!editingReview) return;
     setIsSubmitting(true);
-    console.log('[DEBUG][handleEditReview] called', { editingReview, reviewData });
     try {
       let reviewId = editingReview.id;
       if (typeof reviewId === 'string' && reviewId.includes('/')) {
@@ -181,8 +180,6 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
         reviewId = parts[parts.length - 1] || editingReview.id;
       }
       const url = `http://localhost:8800/api/reviews/${reviewId}`;
-      console.log('[DEBUG][handleEditReview] PATCH URL:', url);
-      console.log('[DEBUG][handleEditReview] PATCH BODY:', reviewData);
       const token = await getToken?.();
       const res = await fetch(url, {
         method: "PATCH",
@@ -194,8 +191,6 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
         body: JSON.stringify(reviewData),
       });
       const data = await res.json();
-      console.log('[DEBUG][handleEditReview] PATCH response status:', res.status);
-      console.log('[DEBUG][handleEditReview] PATCH response data:', data);
       if (!res.ok) throw new Error(data.message || "Update review failed");
       // Cập nhật lại local state nếu cần
       const updatedReview = {
@@ -209,11 +204,9 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
       toast.success("Review updated!");
       if (onReviewUpdate) onReviewUpdate({ ...editingReview, ...reviewData });
     } catch (err) {
-      console.error('[DEBUG][handleEditReview] Error:', err);
       toast.error(String(err));
     } finally {
       setIsSubmitting(false);
-      console.log('[DEBUG][handleEditReview] done');
     }
   };
 
@@ -228,7 +221,6 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
         reviewId = parts[parts.length - 1] || deletingReview.id;
       }
       const url = `http://localhost:8800/api/reviews/${reviewId}`;
-      console.log("[DEBUG] handleDeleteReview", { deletingReview, reviewId, url });
       const res = await fetch(url, {
         method: "DELETE",
         headers: {
@@ -273,6 +265,10 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
       alert("Failed to reply review");
     }
   };
+
+  useEffect(() => {
+    setLocalReviews(reviews);
+  }, [reviews]);
 
   return (
     <div className={className}>

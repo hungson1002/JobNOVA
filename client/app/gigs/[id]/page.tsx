@@ -75,16 +75,8 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   const socketRef = useRef<any>(null);
   const [userOrder, setUserOrder] = useState<any>(null);
   const [userReview, setUserReview] = useState<any>(null);
-
-  // Fetch gig data
-  useEffect(() => {
-    setLoadingGig(true);
-    fetch(`http://localhost:8800/api/gigs/${gigId}`)
-      .then((res) => res.json())
-      .then((data) => setGig(data.gig))
-      .catch((err) => console.error("Fetch gig error:", err))
-      .finally(() => setLoadingGig(false));
-  }, [gigId]);
+  const [visibleReviews, setVisibleReviews] = useState<any[]>([]);
+  const [showReviewForm, setShowReviewForm] = useState(false);
 
   const fetchReviews = async () => {
     const query = `gig_id=${gigId}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${reviewSort ? `&sort=${reviewSort}` : ""}`;
@@ -108,10 +100,27 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
         })
       );
       setReviews(reviewsWithUser);
+      setVisibleReviews(reviewsWithUser.slice(0, reviewsToShow));
       setRatingSummary(data.ratingSummary);
       setRatingBreakdown(data.ratingBreakdown);
     }
   };
+
+  const handleReviewSuccess = async () => {
+    await fetchOrderCompleted();
+    await fetchReviews();
+    setShowReviewForm(false);
+  };
+  // Fetch gig data
+  useEffect(() => {
+    setLoadingGig(true);
+    fetch(`http://localhost:8800/api/gigs/${gigId}`)
+      .then((res) => res.json())
+      .then((data) => setGig(data.gig))
+      .catch((err) => console.error("Fetch gig error:", err))
+      .finally(() => setLoadingGig(false));
+  }, [gigId]);
+  
 
   const refetchReviews = async () => {
     await fetchReviews();
@@ -124,10 +133,8 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   // Kiểm tra user đã từng mua gig này chưa
   const fetchOrderCompleted = async () => {
     if (!isSignedIn || !user?.id || !gigId) {
-      console.log('[ReviewForm] Không đủ điều kiện fetch:', { isSignedIn, user, gigId });
       return;
     }
-    console.log('[ReviewForm] Bắt đầu fetch order completed:', { userId: user.id, gigId });
     try {
       const token = await getToken();
       const res = await fetch(`http://localhost:8800/api/orders/${user.id}?gig_id=${gigId}&order_status=completed`, {
@@ -136,23 +143,18 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
         },
       });
       const data = await res.json();
-      console.log('[ReviewForm] Kết quả fetch order completed:', data);
       if (data.success && data.orders && data.orders.length > 0) {
         setUserOrder(data.orders[0]);
         if (data.orders[0].review) {
           setUserReview(data.orders[0].review);
-          console.log('[ReviewForm] Đã có review:', data.orders[0].review);
         } else {
           setUserReview(null);
-          console.log('[ReviewForm] Chưa có review, sẽ render form');
         }
       } else {
         setUserOrder(null);
         setUserReview(null);
-        console.log('[ReviewForm] Không tìm thấy order completed');
       }
     } catch (err) {
-      console.error('[ReviewForm] Lỗi fetch order completed:', err);
     }
   };
   useEffect(() => {
@@ -168,7 +170,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     try {
       const token = await getToken();
       if (!token) {
-        console.error("Token is missing");
         return;
       }
       const userData = await fetchUser(gig.seller_clerk_id, token);
@@ -199,7 +200,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
         });
       }
     } catch (err) {
-      console.error("Fetch seller info error:", err);
     }
   };
 
@@ -209,9 +209,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     const response = await sendMessage(content, userId, receiverId, null) as { success: boolean; message?: string; error?: string };
     if (response.success) {
       // Tin nhắn đã được gửi thành công và cập nhật trong state
-      console.log("Message sent successfully");
     } else {
-      console.error("Failed to send message:", response.error || response.message);
     }
   };
 
@@ -739,7 +737,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
 
               <div className="mt-6">
               <ReviewList 
-                reviews={reviews.slice(0, reviewsToShow)} 
+                reviews={visibleReviews} 
                 onReviewDelete={fetchOrderCompleted}
                 onReviewUpdate={(updatedReview) => {
                   if (!updatedReview) return;
@@ -754,11 +752,15 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
               />
               </div>
 
-              {reviewsToShow < reviews.length && (
+              {visibleReviews.length < reviews.length && (
                 <Button
                   variant="outline"
                   className="mt-6 w-full hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
-                  onClick={() => setReviewsToShow((prev) => prev + 3)}
+                  onClick={() => {
+                    const newCount = reviewsToShow + 3;
+                    setReviewsToShow(newCount);
+                    setVisibleReviews(reviews.slice(0, newCount));
+                  }}
                 >
                   Show More Reviews
                 </Button>
@@ -775,8 +777,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                   duration: userOrder.duration,
                 }} 
                 onReviewSuccess={() => {
-                  fetchOrderCompleted();
-                  fetchReviews();
+                  handleReviewSuccess();
                 }} 
                 />
               </div>
