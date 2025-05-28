@@ -496,6 +496,14 @@ function mapGigToServiceCard(gig: Gig): any {
     : gig.gig_image
     ? [gig.gig_image]
     : ["/placeholder.svg"];
+
+  let categoryName = "";
+  if (typeof gig.category === "string") {
+    categoryName = gig.category;
+  } else if (typeof gig.category === "object" && gig.category?.name) {
+    categoryName = gig.category.name;
+  }
+
   return {
     id: gig.id,
     title: gig.title,
@@ -506,12 +514,12 @@ function mapGigToServiceCard(gig: Gig): any {
       name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
       avatar: gig.seller?.avatar || "/placeholder.svg",
     },
-    rating: gig.rating || 0,
-    reviewCount: gig.review_count || 0,
-    category: gig.category?.name || "",
+    rating: typeof gig.rating === "number" ? gig.rating : 0,
+    reviewCount: typeof gig.review_count === "number" ? gig.review_count : 0,
+    category: categoryName,
     deliveryTime: gig.delivery_time,
     badges: gig.badges || [],
-    isSaved: false,
+    isSaved: true,
   }
 }
 

@@ -23,6 +23,10 @@ interface Gig {
   id: number;
   seller_clerk_id: string;
   category_id: number;
+  category?: {
+    id: number;
+    name: string;
+  };
   job_type_id: number;
   title: string;
   description: string;
@@ -38,6 +42,8 @@ interface Gig {
     avatar: string;
     level: string;
   };
+  rating?: number;
+  review_count?: number;
 }
 
 function mapGigToServiceCard(gig: Gig): any {
@@ -46,6 +52,14 @@ function mapGigToServiceCard(gig: Gig): any {
     : gig.gig_image
     ? [gig.gig_image]
     : ["/placeholder.svg"];
+
+  let categoryName = "";
+  if (typeof gig.category === "string") {
+    categoryName = gig.category;
+  } else if (typeof gig.category === "object" && gig.category?.name) {
+    categoryName = gig.category.name;
+  }
+
   return {
     id: gig.id,
     title: gig.title,
@@ -55,11 +69,11 @@ function mapGigToServiceCard(gig: Gig): any {
     seller: {
       name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
       avatar: gig.seller?.avatar || "/placeholder.svg",
-      level: "Level 1 Seller",
+      level: gig.seller?.level || "Level 1 Seller",
     },
-    rating: 5,
-    reviewCount: 0,
-    category: gig.category_id?.toString() || "",
+    rating: typeof gig.rating === "number" ? gig.rating : 0,
+    reviewCount: typeof gig.review_count === "number" ? gig.review_count : 0,
+    category: categoryName || "Uncategorized",
     deliveryTime: gig.delivery_time,
     badges: [],
     isSaved: false,
@@ -119,7 +133,10 @@ export default function SearchPage() {
     setLoadingGigs(true)
     fetch("http://localhost:8800/api/gigs")
       .then(res => res.json())
-      .then(data => setGigs(data.gigs || []))
+      .then(data => {
+        const gigsData = Array.isArray(data.gigs) ? data.gigs : Array.isArray(data) ? data : [];
+        setGigs(gigsData);
+      })
       .finally(() => setLoadingGigs(false))
   }, [])
 
@@ -763,7 +780,7 @@ export default function SearchPage() {
                 <ServiceCard
                   key={service.id}
                   service={service}
-                  showCategory={true}
+                  showCategory
                 />
               ))}
             </div>
