@@ -8,6 +8,7 @@ import Image from "next/image"
 import Link from "next/link"
 import type React from "react"
 import { useRef, useState } from "react"
+import { toast } from "sonner"
 
 interface ServiceCardProps {
   service: {
@@ -44,7 +45,18 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
   const handleSaveClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (isLoggedIn) toggleSave()
+    if (isLoggedIn) {
+      toggleSave()
+      if (!isSaved) {
+        toast.success("Added to favorites", {
+          description: "Service has been added to your favorites list"
+        })
+      } else {
+        toast.success("Removed from favorites", {
+          description: "Service has been removed from your favorites list"
+        })
+      }
+    }
   }
 
   const goNext = () => setCurrentIndex((prev) => (prev + 1) % mediaList.length)
