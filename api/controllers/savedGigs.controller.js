@@ -91,9 +91,7 @@ export const getSavedGigs = async (req, res, next) => {
   const currentUserClerkId = req.auth?.userId;
 
   if (!currentUserClerkId) {
-    const error = new Error("Unauthorized: User ID not found.");
-    error.status = 401;
-    return next(error);
+    return res.status(401).json({ success: false, message: "Unauthorized: User ID not found." });
   }
 
   try {
@@ -106,17 +104,8 @@ export const getSavedGigs = async (req, res, next) => {
         {
           model: models.Gig,
           attributes: [
-            'id',
-            'title',
-            'starting_price',
-            'delivery_time',
-            'seller_clerk_id',
-            'gig_images',
-            'category_id',
-            'job_type_id',
-            'status',
-            'city',
-            'country',
+            'id', 'title', 'starting_price', 'delivery_time', 'seller_clerk_id',
+            'gig_images', 'category_id', 'job_type_id', 'status', 'city', 'country', 'created_at'
           ],
           include: [
             {
@@ -124,42 +113,65 @@ export const getSavedGigs = async (req, res, next) => {
               as: 'seller',
               attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar'],
             },
+            {
+              model: models.Category,
+              as: 'category',
+              attributes: ['name'],
+            },
           ],
         }
       ],
       limit: parseInt(limit, 10),
-      offset: offset,
+      offset,
       order: [['saved_date', 'DESC']]
     });
+
+    const enrichedGigs = await Promise.all(savedGigsData.rows.map(async (sg) => {
+      const gig = sg.Gig?.toJSON ? sg.Gig.toJSON() : sg.Gig;
+      if (!gig) return null;
+
+      if (gig.gig_images) {
+        try { gig.gig_images = JSON.parse(gig.gig_images); } catch { gig.gig_images = []; }
+      }
+
+      gig.seller = {
+        name: gig.seller?.firstname && gig.seller?.lastname
+          ? `${gig.seller.firstname} ${gig.seller.lastname}`
+          : gig.seller?.firstname || gig.seller?.username || 'Người dùng',
+        avatar: gig.seller?.avatar || '/placeholder.svg',
+      };
+
+      const reviews = await models.Review.findAll({
+        where: { gig_id: gig.id },
+        attributes: ['rating'],
+      });
+
+      const totalStars = reviews.reduce((sum, r) => sum + r.rating, 0);
+      gig.rating = reviews.length ? totalStars / reviews.length : 0;
+      gig.review_count = reviews.length;
+
+      gig.badges = [];
+      const createdAt = new Date(gig.created_at);
+      const isNew = Date.now() - createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
+      if (isNew) gig.badges.push("new");
+      if (gig.id % 2 === 0) gig.badges.push("top_rated");
+
+      if (gig.category && typeof gig.category === "object") {
+        gig.category = {
+          id: gig.category_id,
+          name: gig.category.name || "Uncategorized"
+        };
+      }
+
+      return gig;
+    }));
 
     res.status(200).json({
       success: true,
       totalItems: savedGigsData.count,
       totalPages: Math.ceil(savedGigsData.count / parseInt(limit, 10)),
       currentPage: parseInt(page, 10),
-      savedGigs: savedGigsData.rows.map(sg => {
-        const gig = sg.Gig?.toJSON ? sg.Gig.toJSON() : sg.Gig;
-        if (gig && gig.gig_images) {
-          try { gig.gig_images = JSON.parse(gig.gig_images); } catch { gig.gig_images = []; }
-        }
-        // Map seller cho FE giống các session khác
-        let seller = { name: 'Người dùng', avatar: '/placeholder.svg' };
-        if (gig && gig.seller) {
-          const s = gig.seller;
-          seller = {
-            name: s.firstname && s.lastname
-              ? s.firstname + ' ' + s.lastname
-              : s.firstname
-              ? s.firstname
-              : s.username
-              ? s.username
-              : 'Người dùng',
-            avatar: s.avatar || '/placeholder.svg',
-          };
-        }
-        gig.seller = seller;
-        return gig;
-      })
+      savedGigs: enrichedGigs.filter(Boolean),
     });
 
   } catch (error) {

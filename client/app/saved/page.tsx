@@ -14,6 +14,14 @@ function mapGigToServiceCard(gig: any) {
     : gig.gig_image
     ? [gig.gig_image]
     : ["/placeholder.svg"];
+
+  let categoryName = "";
+  if (typeof gig.category === "string") {
+    categoryName = gig.category;
+  } else if (typeof gig.category === "object" && gig.category?.name) {
+    categoryName = gig.category.name;
+  }
+
   return {
     id: gig.id,
     title: gig.title,
@@ -23,13 +31,13 @@ function mapGigToServiceCard(gig: any) {
     seller: {
       name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
       avatar: gig.seller?.avatar || "/placeholder.svg",
-      level: "Level 1 Seller",
+      level: gig.seller?.level || "Level 1 Seller",
     },
-    rating: 5,
-    reviewCount: 0,
-    category: gig.category_id?.toString() || "",
+    rating: typeof gig.rating === "number" ? gig.rating : 0,
+    reviewCount: typeof gig.review_count === "number" ? gig.review_count : 0,
+    category: categoryName || "Uncategorized",
     deliveryTime: gig.delivery_time,
-    badges: [],
+    badges: gig.badges || [],
     isSaved: true,
   };
 }
@@ -63,6 +71,7 @@ export default function SavedGigsPage() {
             <ServiceCard
               key={gig.id}
               service={mapGigToServiceCard(gig)}
+              showCategory
             />
           ))}
             {/* Thêm placeholder để đủ 12 ô */}
