@@ -49,6 +49,7 @@ export function Navbar() {
   const [isDeletingHistory, setIsDeletingHistory] = useState(false);
   const clickedInsideDropdownRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifyRef = useRef<HTMLDivElement>(null);
 
   // Mapping tên category sang icon
   const categoryIcons: Record<string, React.ReactNode> = {
@@ -76,6 +77,20 @@ useEffect(() => {
       setShowHistoryDropdown(false);
     }
   };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Handle click outside for notification dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifyRef.current && !notifyRef.current.contains(event.target as Node)) {
+        setOpenNotify(false);
+      }
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -394,17 +409,13 @@ useEffect(() => {
                     </TooltipProvider>
                   ) : null}
 
-                  {/* Notify Dropdown on hover - fix hover gap */}
-                  <div
-                    className="relative flex items-center"
-                    onMouseEnter={() => setOpenNotify(true)}
-                    onMouseLeave={() => setOpenNotify(false)}
-                  >
-                    <DropdownMenu open={openNotify}>
-                      <DropdownMenuTrigger asChild>
-                        <Link href="/notifications" prefetch>
+                  {/* Notify Dropdown on click with tooltip on hover */}
+                  <div className="relative flex items-center" ref={notifyRef}>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Button
-                            tabIndex={-1}
+                            onClick={() => setOpenNotify(!openNotify)}
                             variant="ghost"
                             size="icon"
                             className="hidden md:flex hover:bg-emerald-50 hover:text-emerald-600 transition-colors focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 !outline-none !ring-0"
@@ -412,37 +423,35 @@ useEffect(() => {
                           >
                             <Bell className="h-5 w-5" />
                           </Button>
-                        </Link>
-                      </DropdownMenuTrigger>
-                      {openNotify && (
-                        <div className="absolute top-full right-0 z-50 w-80 min-h-[400px] max-h-[700px] bg-white shadow-lg rounded-b-lg overflow-y-auto">
-                          <div className="font-semibold px-4 py-2 border-b">Notifications</div>
-                          {notifications.length === 0 ? (
-                            <div className="text-center text-gray-500 py-8">No notifications</div>
-                          ) : (
-                            notifications.map((item, idx) => (
-                              <div key={idx} className="whitespace-normal py-3 px-4 hover:bg-gray-100 cursor-pointer">
-                                <div className="font-medium">{item.title}</div>
-                                <div className="text-xs text-gray-500">{item.time}</div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </DropdownMenu>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Notifications</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    {openNotify && (
+                      <div className="absolute top-full right-0 z-50 w-80 min-h-[400px] max-h-[700px] bg-white shadow-lg rounded-b-lg overflow-y-auto">
+                        <div className="font-semibold px-4 py-2 border-b">Notifications</div>
+                        {notifications.length === 0 ? (
+                          <div className="text-center text-gray-500 py-8">No notifications</div>
+                        ) : (
+                          notifications.map((item, idx) => (
+                            <div key={idx} className="whitespace-normal py-3 px-4 hover:bg-gray-100 cursor-pointer">
+                              <div className="font-medium">{item.title}</div>
+                              <div className="text-xs text-gray-500">{item.time}</div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Message Dropdown on hover - fix hover gap */}
-                  <div
-                    className="relative flex items-center"
-                    onMouseEnter={() => setOpenMsg(true)}
-                    onMouseLeave={() => setOpenMsg(false)}
-                  >
-                    <DropdownMenu open={openMsg}>
-                      <DropdownMenuTrigger asChild>
-                        <Link href="/messages" prefetch>
+                  {/* Message button with tooltip */}
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link href="/messages">
                           <Button
-                            tabIndex={-1}
                             variant="ghost"
                             size="icon"
                             className="hidden md:flex hover:bg-emerald-50 hover:text-emerald-600 transition-colors focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 !outline-none !ring-0"
@@ -451,24 +460,12 @@ useEffect(() => {
                             <MessageSquare className="h-5 w-5" />
                           </Button>
                         </Link>
-                      </DropdownMenuTrigger>
-                      {openMsg && (
-                        <div className="absolute top-full right-0 z-50 w-80 min-h-[400px] max-h-[700px] bg-white shadow-lg rounded-b-lg overflow-y-auto">
-                          <div className="font-semibold px-4 py-2 border-b">Messages</div>
-                          {messages.length === 0 ? (
-                            <div className="text-center text-gray-500 py-8">No messages</div>
-                          ) : (
-                            messages.map((item, idx) => (
-                              <div key={idx} className="whitespace-normal py-3 px-4 hover:bg-gray-100 cursor-pointer">
-                                <div className="font-medium">{item.title}</div>
-                                <div className="text-xs text-gray-500">{item.time}</div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </DropdownMenu>
-                  </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Messages</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
                   {/* Saved Tooltip */}
                   <TooltipProvider delayDuration={0}>
