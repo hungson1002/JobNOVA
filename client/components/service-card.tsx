@@ -107,9 +107,11 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
                   e.stopPropagation()
                   goPrev()
                 }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-1.5 text-gray-700 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-white opacity-0 group-hover:opacity-100 dark:bg-gray-900/90 dark:text-gray-200"
+                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 w-8 h-8 flex items-center justify-center text-gray-700 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-white hover:scale-110 opacity-0 group-hover:opacity-100 dark:bg-gray-900/90 dark:text-gray-200"
               >
-                ◀
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                </svg>
               </button>
               <button
                 onClick={(e) => {
@@ -117,9 +119,11 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
                   e.stopPropagation()
                   goNext()
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-1.5 text-gray-700 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-white opacity-0 group-hover:opacity-100 dark:bg-gray-900/90 dark:text-gray-200"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 w-8 h-8 flex items-center justify-center text-gray-700 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-white hover:scale-110 opacity-0 group-hover:opacity-100 dark:bg-gray-900/90 dark:text-gray-200"
               >
-                ▶
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
               </button>
             </>
           )}
