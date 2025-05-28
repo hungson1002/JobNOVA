@@ -697,7 +697,7 @@ export default function Home() {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
                 {recentlyViewed.map((service) => (
                   <ServiceCard key={service.id} service={service} />
                 ))}
@@ -716,8 +716,8 @@ export default function Home() {
                   </Link>
                 </Button>
               </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {serviceCards.slice(0, 4).map((service) => (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+                {serviceCards.slice(0, 5).map((service) => (
                   <ServiceCard key={service.id} service={service} />
                 ))}
               </div>
@@ -735,8 +735,8 @@ export default function Home() {
                   </Link>
                 </Button>
               </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {serviceCards.slice(0, 4).map((service) => (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+                {serviceCards.slice(0, 5).map((service) => (
                   <ServiceCard key={service.id} service={service} />
                 ))}
               </div>
@@ -755,8 +755,8 @@ export default function Home() {
                 </Button>
               </div>
               {savedGigs.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                  {savedGigs.slice(0, 4).map((gig) => (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+                  {savedGigs.slice(0, 5).map((gig) => (
                     <ServiceCard key={gig.id} service={mapGigToServiceCard(gig)} />
                   ))}
                 </div>
@@ -800,8 +800,8 @@ export default function Home() {
               </Link>
             </Button>
           </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {serviceCards.slice(0, 4).map((service) => (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+            {serviceCards.slice(0, 5).map((service) => (
               <ServiceCard
                 key={service.id}
                 service={service}
