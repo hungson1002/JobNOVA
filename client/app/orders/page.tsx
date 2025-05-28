@@ -350,7 +350,7 @@ function OrderCard({
             <h2 className="text-xl font-bold mb-1">{gig.title || "Gig"}</h2>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-gray-500 text-sm">Seller:</span>
-              <Image src={seller.avatar} alt={seller.name} width={28} height={28} className="rounded-full border" />
+              <Image src={seller.avatar} alt={seller.name} width={28} height={28} className="rounded-full border w-8 h-8" />
               <span className="font-medium text-gray-800">{seller.name}</span>
               <span className="text-xs text-gray-400 ml-1">{seller.level}</span>
             </div>
