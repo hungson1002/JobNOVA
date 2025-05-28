@@ -20,7 +20,10 @@ import { SignInButton, useUser } from "@clerk/nextjs"
 export interface Gig {
   id: number;
   seller_clerk_id: string;
-  category_id: number;
+  category?: {
+    id: number;
+    name: string;
+  };
   job_type_id: number;
   title: string;
   description: string;
@@ -502,11 +505,10 @@ function mapGigToServiceCard(gig: Gig): any {
     seller: {
       name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
       avatar: gig.seller?.avatar || "/placeholder.svg",
-      level: gig.seller?.level || "Level 1 Seller",
     },
     rating: gig.rating || 0,
     reviewCount: gig.review_count || 0,
-    category: gig.category_id?.toString() || "",
+    category: gig.category?.name || "",
     deliveryTime: gig.delivery_time,
     badges: gig.badges || [],
     isSaved: false,
@@ -717,7 +719,7 @@ export default function Home() {
               </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
                 {serviceCards.slice(0, 5).map((service) => (
-                  <ServiceCard key={service.id} service={service} />
+                  <ServiceCard key={service.id} service={service} showCategory/>
                 ))}
               </div>
             </div>
@@ -736,7 +738,7 @@ export default function Home() {
               </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
                 {serviceCards.slice(0, 5).map((service) => (
-                  <ServiceCard key={service.id} service={service} />
+                  <ServiceCard key={service.id} service={service} showCategory />
                 ))}
               </div>
             </div>
@@ -756,7 +758,7 @@ export default function Home() {
               {savedGigs.length > 0 ? (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
                   {savedGigs.slice(0, 5).map((gig) => (
-                    <ServiceCard key={gig.id} service={mapGigToServiceCard(gig)} />
+                    <ServiceCard key={gig.id} service={mapGigToServiceCard(gig)} showCategory />
                   ))}
                 </div>
               ) : (
