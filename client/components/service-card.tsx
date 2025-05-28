@@ -19,7 +19,6 @@ interface ServiceCardProps {
     seller: {
       name: string
       avatar: string
-      level: string
     }
     rating: number
     reviewCount: number
@@ -52,9 +51,9 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
   const goPrev = () => setCurrentIndex((prev) => (prev - 1 + mediaList.length) % mediaList.length)
 
   return (
-    <Link href={`/gigs/${service.id}`} className="block h-full">
+    <Link href={`/gigs/${service.id}`} className="block w-[250px]">
       <div
-        className="group flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
+        className="group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200/50 bg-white transition-all duration-300  hover:shadow-xl hover:shadow-gray-200/50 dark:border-gray-800 dark:bg-gray-900 dark:hover:shadow-gray-900/30"
         onMouseEnter={() => {
           setHovered(true)
           if (videoRef.current) videoRef.current.play()
@@ -64,8 +63,11 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
           if (videoRef.current) videoRef.current.pause()
         }}
       >
+        {/* Glass effect overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
         {/* Media */}
-        <div className="relative aspect-video overflow-hidden">
+        <div className="relative h-[140px] overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
           {isVideo ? (
             <video
               ref={videoRef}
@@ -73,14 +75,14 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
               muted
               loop
               playsInline
-              className="w-full h-full object-cover pointer-events-none"
+              className="h-full w-full object-cover"
             />
           ) : (
             <Image
               src={currentMedia || "/placeholder.svg"}
               alt={service.title}
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105 pointer-events-none"
+              className="object-cover"
             />
           )}
 
@@ -93,7 +95,7 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
                   e.stopPropagation()
                   goPrev()
                 }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full p-2 bg-white text-black shadow opacity-0 group-hover:opacity-100 transition duration-300"
+                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-1.5 text-gray-700 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-white opacity-0 group-hover:opacity-100 dark:bg-gray-900/90 dark:text-gray-200"
               >
                 ◀
               </button>
@@ -103,7 +105,7 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
                   e.stopPropagation()
                   goNext()
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 bg-white text-black shadow opacity-0 group-hover:opacity-100 transition duration-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-1.5 text-gray-700 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-white opacity-0 group-hover:opacity-100 dark:bg-gray-900/90 dark:text-gray-200"
               >
                 ▶
               </button>
@@ -114,22 +116,21 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
           {isLoggedIn ? (
             <button
               onClick={handleSaveClick}
-              className={`absolute right-3 top-3 rounded-full p-1.5 z-10 transition duration-200
-                ${
-                  isSaved
-                    ? "bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400"
-                    : "bg-white/80 text-gray-600 hover:text-red-500 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:text-red-400"
-                }`}
+              className={`absolute right-2 top-2 rounded-full p-1.5 z-10 transition-all duration-300 ${
+                isSaved
+                  ? "bg-red-50/95 text-red-500 shadow-lg shadow-red-500/20 dark:bg-red-500/20 dark:text-red-400"
+                  : "bg-white/90 text-gray-600 hover:bg-white hover:text-red-500 dark:bg-gray-900/90 dark:text-gray-400 dark:hover:text-red-400"
+              }`}
               aria-label={isSaved ? "Remove from saved" : "Save gig"}
               tabIndex={0}
               disabled={isLoading}
             >
-              <Heart className={`h-5 w-5 transition duration-200 ${isSaved ? "fill-current" : ""}`} />
+              <Heart className={`h-4 w-4 transition-all duration-300 ${isSaved ? "fill-current" : ""}`} />
             </button>
           ) : (
             <SignInButton mode="modal">
               <button
-                className="absolute right-3 top-3 rounded-full p-1.5 z-10 bg-white/80 text-gray-600 hover:text-red-500 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:text-red-400 transition duration-200"
+                className="absolute right-2 top-2 rounded-full p-1.5 z-10 bg-white/90 text-gray-600 hover:bg-white hover:text-red-500 transition-all duration-300 dark:bg-gray-900/90 dark:text-gray-400 dark:hover:text-red-400"
                 aria-label="Save gig (login required)"
                 tabIndex={0}
                 onClick={e => {
@@ -137,27 +138,22 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
                   e.stopPropagation();
                 }}
               >
-                <Heart className="h-5 w-5 transition duration-200" />
+                <Heart className="h-4 w-4 transition-all duration-300" />
               </button>
             </SignInButton>
           )}
 
           {/* Badges */}
           {service.badges && service.badges.length > 0 && (
-            <div className="absolute bottom-2 left-2 flex flex-wrap gap-1">
+            <div className="absolute bottom-2 left-2 flex flex-wrap gap-1.5">
               {service.badges.includes("top_rated") && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                  Top Rated
+                <span className="animate-bounce duration-[10000ms] rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[10px] font-medium text-white shadow-lg backdrop-blur-sm">
+                  🔥 Top Rated
                 </span>
               )}
-              {service.badges.includes("pro") && (
-                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                  Pro
-                </span>
-              )}
-              {service.badges.includes("new") && (
-                <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                  New
+              {service.badges?.includes("new") && (
+                <span className="rounded-full bg-gradient-to-r from-emerald-500 to-green-500 px-2 py-0.5 text-[10px] font-medium text-white shadow-lg backdrop-blur-sm animate-pulse">
+                  🟢 New
                 </span>
               )}
             </div>
@@ -165,46 +161,60 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
         </div>
 
         {/* Content */}
-        <div className="flex flex-1 flex-col p-4">
+        <div className="flex flex-1 flex-col p-3">
           <div className="mb-2 flex items-center gap-2">
-            <Image
-              src={service.seller.avatar || "/placeholder.svg"}
-              alt={service.seller.name}
-              width={24}
-              height={24}
-              className="w-6 h-6 rounded-full border border-gray-200 object-cover"
-            />
-            <span className="text-sm font-medium dark:text-gray-200">{service.seller.name}</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">| {service.seller.level}</span>
+            <div className="relative">
+              <div className="relative h-6 w-6 overflow-hidden rounded-full ring-2 ring-white ring-offset-1 dark:ring-gray-800">
+                <Image
+                  src={service.seller.avatar || "/placeholder.svg"}
+                  alt={service.seller.name}
+                  width={24}
+                  height={24}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white bg-green-500 dark:ring-gray-800"></div>
+            </div>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{service.seller.name}</span>
           </div>
 
-          <h3 className="mb-2 line-clamp-2 text-sm font-medium dark:text-white">{service.title}</h3>
+          <h3 className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-gray-900 dark:text-white">
+            {service.title}
+          </h3>
 
-          <div className="mb-2 flex items-center gap-1">
-            <svg className="h-4 w-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            <span className="text-sm font-medium dark:text-gray-200">{service.rating.toFixed(1)}</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">({service.reviewCount})</span>
+          <div className="mb-2 flex items-center gap-1.5">
+            <div className="flex items-center">
+              <svg className="h-3.5 w-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+              <span className="ml-0.5 text-xs font-semibold text-gray-900 dark:text-white">{service.rating.toFixed(1)}</span>
+            </div>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400">({service.reviewCount} reviews)</span>
           </div>
 
           {showCategory && service.category && (
-            <div className="mb-2">
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+            <div className="mb-4">
+              <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-300">
                 {service.category.replace("-", " ")}
               </span>
             </div>
           )}
 
           {service.deliveryTime && (
-            <div className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+            <div className="mb-2 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               Delivery in {service.deliveryTime} day{service.deliveryTime > 1 ? "s" : ""}
             </div>
           )}
 
-          <div className="mt-auto flex items-center justify-between pt-3">
-            <div className="text-xs text-gray-500 dark:text-gray-400">Starting at</div>
-            <PriceDisplay priceUSD={service.price} className="text-base font-semibold dark:text-white" />
+          <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-2 dark:border-gray-800">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Starting at</div>
+            <PriceDisplay 
+              priceUSD={service.price} 
+              className="text-sm font-bold text-gray-900 dark:text-white" 
+            />
           </div>
         </div>
       </div>

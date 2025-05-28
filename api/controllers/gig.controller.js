@@ -92,23 +92,20 @@ export const createGig = async (req, res, next) => {
 };
 
 
-// Lấy tất cả gig (phân trang và lọc)
+// Lấy tất cả gig 
 export const getAllGigs = async (req, res, next) => {
   try {
     const { page = 1, limit = 10, category_id, status } = req.query;
     const offset = (page - 1) * limit;
     const where = {};
+
     if (category_id) where.category_id = category_id;
-    // Thêm lọc theo seller_clerk_id nếu có
+
+    // Lọc theo seller hoặc theo trạng thái
     if (req.query.seller_clerk_id) {
       where.seller_clerk_id = req.query.seller_clerk_id;
     } else {
-      // Nếu không lọc theo seller_clerk_id thì chỉ lấy gig active (hoặc theo status nếu có)
-      if (status) {
-        where.status = status;
-      } else {
-        where.status = "active";
-      }
+      where.status = status || "active";
     }
 
     const gigs = await models.Gig.findAndCountAll({
@@ -133,34 +130,49 @@ export const getAllGigs = async (req, res, next) => {
         },
       ],
     });
-    // Parse gig_images cho từng gig và map seller cho FE
-    const gigsRows = await Promise.all(gigs.rows.map(async gig => {
+
+    const gigsRows = gigs.rows.map(gig => {
       const gigData = gig.toJSON();
+
+      // Parse ảnh nếu có
       if (gigData.gig_images) {
-        try { gigData.gig_images = JSON.parse(gigData.gig_images); } catch { gigData.gig_images = []; }
+        try {
+          gigData.gig_images = JSON.parse(gigData.gig_images);
+        } catch {
+          gigData.gig_images = [];
+        }
       }
-      // Map seller cho FE
+
+      // Map seller
       if (gigData.seller) {
         gigData.seller = {
-          name: gigData.seller.firstname && gigData.seller.lastname
-            ? gigData.seller.firstname + ' ' + gigData.seller.lastname
-            : gigData.seller.firstname
-            ? gigData.seller.firstname
-            : gigData.seller.username
-            ? gigData.seller.username
-            : 'Người dùng',
+          name:
+            gigData.seller.firstname && gigData.seller.lastname
+              ? gigData.seller.firstname + ' ' + gigData.seller.lastname
+              : gigData.seller.firstname || gigData.seller.username || 'Người dùng',
           avatar: gigData.seller.avatar || '/placeholder.svg',
+          level: 'Seller', // hoặc thêm level nếu có field
         };
       } else {
         gigData.seller = {
           name: 'Người dùng',
           avatar: '/placeholder.svg',
+          level: 'Seller',
         };
       }
-      // Đếm số order của gig này
-      gigData.order_count = await models.Order.count({ where: { gig_id: gigData.id } });
+
+      // ✅ Gắn badge "new" nếu tạo trong vòng 7 ngày
+      const createdAt = new Date(gigData.created_at);
+      const isNew = Date.now() - createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
+      gigData.badges = [];
+      if (isNew) {
+        gigData.badges.push("new");
+      }
+      if (gigData.id % 2 === 0) gigData.badges.push("top_rated");
+
       return gigData;
-    }));
+    });
+
     return res.status(200).json({
       success: true,
       total: gigs.count,
@@ -169,9 +181,14 @@ export const getAllGigs = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error fetching gigs:', error.message);
-    return res.status(500).json({ success: false, message: 'Error fetching gigs', error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching gigs',
+      error: error.message,
+    });
   }
 };
+
 
 // Lấy gig theo ID
 export const getGigById = async (req, res, next) => {

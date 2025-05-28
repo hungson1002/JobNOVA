@@ -31,6 +31,7 @@ export interface Gig {
   country?: string;
   status: string;
   gig_images?: string[];
+  badges?: string[];
   seller?: {
     name: string;
     avatar: string;
@@ -505,7 +506,7 @@ function mapGigToServiceCard(gig: Gig): any {
     reviewCount: 0,
     category: gig.category_id?.toString() || "",
     deliveryTime: gig.delivery_time,
-    badges: [],
+    badges: gig.badges || [],
     isSaved: false,
   }
 }
