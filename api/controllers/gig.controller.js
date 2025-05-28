@@ -91,7 +91,6 @@ export const createGig = async (req, res, next) => {
   }
 };
 
-
 // Lấy tất cả gig 
 export const getAllGigs = async (req, res, next) => {
   try {
@@ -101,7 +100,6 @@ export const getAllGigs = async (req, res, next) => {
 
     if (category_id) where.category_id = category_id;
 
-    // Lọc theo seller hoặc theo trạng thái
     if (req.query.seller_clerk_id) {
       where.seller_clerk_id = req.query.seller_clerk_id;
     } else {
@@ -131,10 +129,10 @@ export const getAllGigs = async (req, res, next) => {
       ],
     });
 
-    const gigsRows = gigs.rows.map(gig => {
+    // ✅ Chuyển sang map bất đồng bộ để xử lý thêm rating
+    const gigsRows = await Promise.all(gigs.rows.map(async (gig) => {
       const gigData = gig.toJSON();
 
-      // Parse ảnh nếu có
       if (gigData.gig_images) {
         try {
           gigData.gig_images = JSON.parse(gigData.gig_images);
@@ -143,7 +141,6 @@ export const getAllGigs = async (req, res, next) => {
         }
       }
 
-      // Map seller
       if (gigData.seller) {
         gigData.seller = {
           name:
@@ -151,7 +148,7 @@ export const getAllGigs = async (req, res, next) => {
               ? gigData.seller.firstname + ' ' + gigData.seller.lastname
               : gigData.seller.firstname || gigData.seller.username || 'Người dùng',
           avatar: gigData.seller.avatar || '/placeholder.svg',
-          level: 'Seller', // hoặc thêm level nếu có field
+          level: 'Seller',
         };
       } else {
         gigData.seller = {
@@ -161,17 +158,24 @@ export const getAllGigs = async (req, res, next) => {
         };
       }
 
-      // ✅ Gắn badge "new" nếu tạo trong vòng 7 ngày
       const createdAt = new Date(gigData.created_at);
       const isNew = Date.now() - createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
       gigData.badges = [];
-      if (isNew) {
-        gigData.badges.push("new");
-      }
+      if (isNew) gigData.badges.push("new");
       if (gigData.id % 2 === 0) gigData.badges.push("top_rated");
 
+      // ✅ Tính rating trung bình và tổng số đánh giá
+      const reviews = await models.Review.findAll({
+        where: { gig_id: gig.id },
+        attributes: ['rating'],
+      });
+
+      const totalStars = reviews.reduce((sum, r) => sum + r.rating, 0);
+      gigData.rating = reviews.length ? totalStars / reviews.length : 0;
+      gigData.review_count = reviews.length;
+
       return gigData;
-    });
+    }));
 
     return res.status(200).json({
       success: true,
@@ -188,7 +192,6 @@ export const getAllGigs = async (req, res, next) => {
     });
   }
 };
-
 
 // Lấy gig theo ID
 export const getGigById = async (req, res, next) => {

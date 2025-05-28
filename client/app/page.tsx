@@ -37,6 +37,8 @@ export interface Gig {
     avatar: string;
     level: string;
   };
+  rating?: number;
+  review_count?: number;
 }
 
 // Component Card hiển thị từng gig
@@ -495,15 +497,15 @@ function mapGigToServiceCard(gig: Gig): any {
     id: gig.id,
     title: gig.title,
     price: gig.starting_price,
-    image: mediaList[0], // Ảnh đầu tiên để hiển thị nhanh
-    gig_images: mediaList, // Truyền cả mảng media cho gallery
+    image: mediaList[0],
+    gig_images: mediaList,
     seller: {
       name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
       avatar: gig.seller?.avatar || "/placeholder.svg",
-      level: "Level 1 Seller",
+      level: gig.seller?.level || "Level 1 Seller",
     },
-    rating: 5,
-    reviewCount: 0,
+    rating: gig.rating || 0,
+    reviewCount: gig.review_count || 0,
     category: gig.category_id?.toString() || "",
     deliveryTime: gig.delivery_time,
     badges: gig.badges || [],
@@ -545,14 +547,11 @@ export default function Home() {
   useEffect(() => {
     fetch("http://localhost:8800/api/gigs")
       .then(res => res.json())
-      .then(data => {
+      .then(async data => {
         console.log('Dữ liệu gigs trả về:', data);
-        // Nếu trả về object có gigs
-        if (Array.isArray(data.gigs)) setGigs(data.gigs)
-        // Nếu trả về mảng trực tiếp
-        else if (Array.isArray(data)) setGigs(data)
-        // Nếu không đúng định dạng
-        else setGigs([])
+        let gigsData = Array.isArray(data.gigs) ? data.gigs : Array.isArray(data) ? data : [];              
+    
+        setGigs(gigsData);
       })
       .finally(() => setLoading(false));
   }, []);
