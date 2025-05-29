@@ -44,6 +44,7 @@ import { useMessages } from "@/hooks/useMessages";
 import { fetchUser } from "@/lib/api";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { ReviewForm } from "@/components/review-form";
+import { PortfolioSection } from "@/components/portfolio-section";
 
 interface PageParams {
   id: string;
@@ -584,6 +585,16 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
               <h2 className="mb-4 text-xl font-semibold">About This Gig</h2>
               <div className="prose max-w-none">
                 <p>{gig.description}</p>
+              </div>
+            </div>
+
+            {/* Portfolio Section */}
+            <div className="mb-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-xl font-semibold">My Portfolio</h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {gig.seller_clerk_id && (
+                  <PortfolioSection clerkId={gig.seller_clerk_id} />
+                )}
               </div>
             </div>
 
