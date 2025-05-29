@@ -15,7 +15,7 @@ router.use(requireAuth);
 router.use(authenticateAndLoadUser);
 
 // Lấy danh sách order
-router.get('/:clerk_id', getOrders);
+router.get('/', getOrders);
 
 // Tạo payment intent
 router.post('/payment-intent', createPaymentIntent);

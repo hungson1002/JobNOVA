@@ -2,11 +2,11 @@
 
 import type React from "react"
 
-import { ArrowRight, Search } from "lucide-react"
+import { ArrowRight, Search, ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 
 import { BannedOverlay } from "@/components/BannedOverlay"
 import { SearchAutocomplete } from "@/components/search-autocomplete"
@@ -14,7 +14,8 @@ import { ServiceCard } from "@/components/service-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAllSavedGigs } from "@/hooks/use-saved-gigs"
-import { SignInButton, useUser } from "@clerk/nextjs"
+import { SignInButton, useUser, useAuth } from "@clerk/nextjs"
+import { PriceDisplay } from "@/components/price-display"
 
 // Định nghĩa type cho gig
 export interface Gig {
@@ -42,6 +43,7 @@ export interface Gig {
   };
   rating?: number;
   review_count?: number;
+  created_at: string;
 }
 
 // Component Card hiển thị từng gig
@@ -179,312 +181,66 @@ const categories = [
   },
 ]
 
-// Sample services
-const popularServices = [
+// Sample banner slides
+const bannerSlides = [
   {
-    id: 1,
-    title: "I will design a professional logo for your business",
-    price: 25,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "Nguyễn Văn Thuận",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Level 2 Seller",
-    },
-    rating: 4.9,
-    reviewCount: 156,
-    badges: ["top_rated"],
-    category: "graphics-design",
-    deliveryTime: 1,
-    isSaved: true,
+    image: "/banner/banner1.jpg",
+    title: "Find Expert Freelancers",
+    description: "Get your projects done by skilled professionals",
+    cta: {
+      text: "Hire Now",
+      link: "/search"
+    }
   },
   {
-    id: 2,
-    title: "I will create a stunning website using WordPress",
-    price: 95,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "Nguyễn Hồ Ngọc Trúc",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Top Rated",
-    },
-    rating: 5.0,
-    reviewCount: 231,
-    category: "programming-tech",
-    deliveryTime: 3,
+    image: "/banner/banner2.jpg",
+    title: "Become a Seller",
+    description: "Turn your skills into earnings",
+    cta: {
+      text: "Start Selling",
+      link: "/become-seller"
+    }
   },
   {
-    id: 3,
-    title: "I will write SEO-optimized content for your blog",
-    price: 45,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "ContentPro",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Level 1 Seller",
-    },
-    rating: 4.7,
-    reviewCount: 89,
-    category: "writing-translation",
-    deliveryTime: 2,
-    isSaved: true,
-  },
-  {
-    id: 4,
-    title: "I will create a professional video intro for your brand",
-    price: 75,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "VideoWizard",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Level 2 Seller",
-    },
-    rating: 4.8,
-    reviewCount: 124,
-    badges: ["new"],
-    category: "video-animation",
-    deliveryTime: 5,
-  },
-]
-
-// Sample testimonials
-const testimonials = [
-  {
-    id: 1,
-    name: "Nguyễn Văn Thuận",
-    role: "Marketing Director",
-    company: "TechStart Inc.",
-    avatar: "/avatar/thuan.jpg?height=60&width=60",
-    content:
-      "Tôi đã sử dụng nền tảng này hơn một năm rồi, và chất lượng công việc mà tôi nhận được luôn ở mức xuất sắc. Các freelancer ở đây rất chuyên nghiệp và luôn hoàn thành đúng hạn.",
-    rating: 5,
-  },
-  {
-    id: 2,
-    name: "Nguyễn Hồ Ngọc Trúc",
-    role: "Entrepreneur",
-    company: "GrowFast",
-    avatar: "/avatar/truc.jpg?height=60&width=60",
-    content:
-      "Là một nhà sáng lập startup, tôi nghĩ mình cần những sản phẩm chất lượng với ngân sách khá hạn chế. Nền tảng này đã kết nối tôi với những freelancer tài năng, hiểu đúng tầm nhìn & mong muốn của tôi và mang lại kết quả vượt ngoài mong đợi.",
-    rating: 4,
-  },
-  {
-    id: 3,
-    name: "Trần Văn Thắng",
-    role: "Creative Director",
-    company: "DesignHub",
-    avatar: "/avatar/thang.jpg?height=60&width=60",
-    content:
-      "Nền tảng này sở hữu một nguồn nhân lực sáng tạo vô cùng ấn tượng. Chúng tôi đã tìm được những nhà thiết kế nắm bắt hoàn hảo phong cách thương hiệu chúng tôi cần và những cây viết thể hiện tiếng nói của chúng tôi một cách chính xác.",
-    rating: 5,
-  },
-]
-
-// Recently viewed services
-const recentlyViewed = [
-  {
-    id: 5,
-    title: "I will design social media graphics for your brand",
-    price: 35,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "SocialDesigner",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Level 1 Seller",
-    },
-    rating: 4.6,
-    reviewCount: 78,
-    category: "graphics-design",
-    deliveryTime: 2,
-    viewedAt: "2 hours ago",
-  },
-  {
-    id: 6,
-    title: "I will create a custom WordPress theme for your website",
-    price: 120,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "ThemeDeveloper",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Top Rated",
-    },
-    rating: 4.9,
-    reviewCount: 112,
-    badges: ["pro"],
-    category: "programming-tech",
-    deliveryTime: 7,
-    viewedAt: "Yesterday",
-  },
-  {
-    id: 7,
-    title: "I will create a digital marketing strategy for your business",
-    price: 150,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "MarketingGuru",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Top Rated",
-    },
-    rating: 4.9,
-    reviewCount: 87,
-    category: "digital-marketing",
-    deliveryTime: 5,
-    viewedAt: "3 days ago",
-  },
-]
-
-// Recommended services
-const recommendedServices = [
-  {
-    id: 8,
-    title: "I will translate your content from English to Spanish",
-    price: 30,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "TranslationPro",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Level 1 Seller",
-    },
-    rating: 4.7,
-    reviewCount: 65,
-    category: "writing-translation",
-    deliveryTime: 3,
-  },
-  {
-    id: 9,
-    title: "I will compose original music for your project",
-    price: 80,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "MusicMaestro",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "New Seller",
-    },
-    rating: 4.5,
-    reviewCount: 23,
-    category: "music-audio",
-    deliveryTime: 4,
-  },
-  {
-    id: 10,
-    title: "I will create a mobile app for your business",
-    price: 250,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "AppDeveloper",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Top Rated",
-    },
-    rating: 4.9,
-    reviewCount: 78,
-    category: "programming-tech",
-    deliveryTime: 14,
-    badges: ["pro"],
-  },
-  {
-    id: 11,
-    title: "I will design a professional business card",
-    price: 15,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "CardDesigner",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Level 2 Seller",
-    },
-    rating: 4.8,
-    reviewCount: 112,
-    category: "graphics-design",
-    deliveryTime: 1,
-  },
-]
-
-// Trending services
-const trendingServices = [
-  {
-    id: 12,
-    title: "I will create AI-generated art for your project",
-    price: 40,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "AIArtist",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Level 2 Seller",
-    },
-    rating: 4.9,
-    reviewCount: 87,
-    category: "graphics-design",
-    deliveryTime: 2,
-    badges: ["trending"],
-  },
-  {
-    id: 13,
-    title: "I will optimize your website for SEO",
-    price: 75,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "SEOmaster",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Top Rated",
-    },
-    rating: 5.0,
-    reviewCount: 156,
-    category: "digital-marketing",
-    deliveryTime: 5,
-    badges: ["trending"],
-  },
-  {
-    id: 14,
-    title: "I will create a TikTok marketing strategy",
-    price: 60,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "TikTokPro",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Level 1 Seller",
-    },
-    rating: 4.7,
-    reviewCount: 42,
-    category: "digital-marketing",
-    deliveryTime: 3,
-    badges: ["trending"],
-  },
-  {
-    id: 15,
-    title: "I will create a 3D product animation",
-    price: 120,
-    image: "/placeholder.svg?height=200&width=300",
-    seller: {
-      name: "3DAnimator",
-      avatar: "/placeholder.svg?height=40&width=40",
-      level: "Level 2 Seller",
-    },
-    rating: 4.8,
-    reviewCount: 93,
-    category: "video-animation",
-    deliveryTime: 7,
-    badges: ["trending"],
-  },
-]
+    image: "/banner/banner3.jpg",
+    title: "Quality Work Guaranteed",
+    description: "100% satisfaction or money back",
+    cta: {
+      text: "Learn More",
+      link: "/about"
+    }
+  }
+];
 
 // AnimatedWords: Hiện từng từ một, gọi onDone khi xong
-function AnimatedWords({ text, className, onDone }: { text: string, className?: string, onDone?: () => void }) {
+function AnimatedWords({ text, className = "", onDone }: { text: string, className?: string, onDone?: () => void }) {
   const words = text.split(" ");
-  const [visibleCount, setVisibleCount] = useState(0);
+  const [visibleCount, setVisibleCount] = useState<number>(0);
 
   useEffect(() => {
     if (visibleCount < words.length) {
-      const timeout = setTimeout(() => setVisibleCount(visibleCount + 1), 180);
-      return () => clearTimeout(timeout);
-    } else if (visibleCount === words.length && onDone) {
+      const timer = setTimeout(() => {
+        setVisibleCount((prev: number) => prev + 1);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else if (onDone) {
       onDone();
     }
   }, [visibleCount, words.length, onDone]);
 
   return (
     <span className={className}>
-      {words.slice(0, visibleCount).join(" ")}
-      <span className="opacity-0">{words.slice(visibleCount).join(" ")}</span>
+      {words.map((word, i) => (
+        <span
+          key={i}
+          className={`inline transition-opacity duration-200 ${
+            i < visibleCount ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {word}
+          {i < words.length - 1 ? " " : ""}
+        </span>
+      ))}
     </span>
   );
 }
@@ -526,6 +282,7 @@ function mapGigToServiceCard(gig: Gig): any {
 
 export default function Home() {
   const { user, isSignedIn, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const [isClient, setIsClient] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [showSub, setShowSub] = useState(false);
@@ -533,7 +290,16 @@ export default function Home() {
   const [isBanned, setIsBanned] = useState(false);
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
-  const savedGigs = useAllSavedGigs();
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [showNewest, setShowNewest] = useState(false);
+  const slideInterval = useRef<NodeJS.Timeout | null>(null);
+
+  // States cho thống kê người dùng
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [savedGigsCount, setSavedGigsCount] = useState(0);
+  const [ordersCount, setOrdersCount] = useState(0);
+  const [totalSpent, setTotalSpent] = useState(0);
+  const [postedGigsCount, setPostedGigsCount] = useState(0);
 
   useEffect(() => {
     setIsClient(true)
@@ -566,6 +332,68 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Auto-advance slides every 4 seconds
+  useEffect(() => {
+    slideInterval.current = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % bannerSlides.length);
+    }, 4000);
+
+    return () => {
+      if (slideInterval.current) {
+        clearInterval(slideInterval.current);
+      }
+    };
+  }, []);
+
+  // Fetch dữ liệu thống kê khi user đăng nhập
+  useEffect(() => {
+    if (isSignedIn && user?.id) {
+      const fetchStats = async () => {
+        setStatsLoading(true);
+        try {
+          const token = await getToken();
+          const headers = {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          };
+
+          // Fetch saved gigs
+          const savedRes = await fetch(`http://localhost:8800/api/savedGigs`, { headers });
+          const savedData = await savedRes.json();
+          if (savedData.success) {
+            setSavedGigsCount(savedData.totalItems || 0);
+          }
+
+          // Fetch orders
+          const ordersRes = await fetch(`http://localhost:8800/api/orders`, { headers });
+          const ordersData = await ordersRes.json();
+          if (ordersData.success) {
+            setOrdersCount(ordersData.total || 0);
+            // Tính tổng chi tiêu từ các đơn hàng completed
+            const completedOrders = (ordersData.orders || []).filter((order: any) => order.order_status === 'completed');
+            const total = completedOrders.reduce((sum: number, order: any) => sum + Number(order.total_price || 0), 0);
+            setTotalSpent(total);
+          }
+
+          // Fetch posted gigs nếu là seller
+          if (user.publicMetadata?.isSeller) {
+            const gigsRes = await fetch(`http://localhost:8800/api/gigs?seller_clerk_id=${user.id}`, { headers });
+            const gigsData = await gigsRes.json();
+            if (gigsData.success) {
+              setPostedGigsCount(gigsData.total || 0);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching user stats:', error);
+        } finally {
+          setStatsLoading(false);
+        }
+      };
+
+      fetchStats();
+    }
+  }, [isSignedIn, user?.id]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
@@ -580,6 +408,9 @@ export default function Home() {
   if (loading) return <div>Loading gigs...</div>;
 
   const serviceCards = (gigs || []).map(mapGigToServiceCard);
+  const sortedGigs = showNewest 
+    ? [...gigs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    : gigs;
 
   return (
     <main>
@@ -600,7 +431,7 @@ export default function Home() {
         {/* Overlay */}
         <div className="absolute inset-0 bg-black bg-opacity-50 z-10" />
 
-        {/* Nội dung chữ */}
+        {/* Content */}
         <div className="container mx-auto px-4 relative z-20 h-full flex items-center">
           <div className="max-w-3xl">
             {(isClient && isSignedIn) ? (
@@ -637,9 +468,6 @@ export default function Home() {
                         placeholder="What service are you looking for today?"
                         className="w-full max-w-xl text-black"
                       />
-                      <Button asChild size="lg" variant="outline" className="border-white text-black hover:bg-white/10">
-                        <Link href="/saved">View Saved Services</Link>
-                      </Button>
                     </>
                   )}
                 </div>
@@ -688,121 +516,124 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent dark:from-gray-950"></div>
       </section>
 
-      {/* Logged-in specific sections */}
-      {isClient && isSignedIn && (
-        <>
-          {/* Recently Viewed Section */}
-          <section className="py-12">
-            <div className="container mx-auto px-4">
-              <div className="mb-8 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold dark:text-white">Recently Viewed</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Services you've checked out recently</p>
-                </div>
-                <Button variant="ghost" asChild>
-                  <Link href="/search" className="flex items-center gap-1">
-                    View All <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-                {recentlyViewed.map((service) => (
-                  <ServiceCard key={service.id} service={service} />
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Recommended for You Section */}
-          <section className="bg-gray-50 py-12 dark:bg-gray-900">
-            <div className="container mx-auto px-4">
-              <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-bold dark:text-white">Recommended for You</h2>
-                <Button variant="ghost" asChild>
-                  <Link href="/search" className="flex items-center gap-1">
-                    View All <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-                {serviceCards.slice(0, 5).map((service) => (
-                  <ServiceCard key={service.id} service={service} showCategory/>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Trending Now Section */}
-          <section className="py-12">
-            <div className="container mx-auto px-4">
-              <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-bold dark:text-white">Trending Now</h2>
-                <Button variant="ghost" asChild>
-                  <Link href="/search" className="flex items-center gap-1">
-                    View All <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-                {serviceCards.slice(0, 5).map((service) => (
-                  <ServiceCard key={service.id} service={service} showCategory />
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Saved Services Section */}
-          <section className="bg-gray-50 py-12 dark:bg-gray-900">
-            <div className="container mx-auto px-4">
-              <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-bold dark:text-white">Saved Services</h2>
-                <Button variant="ghost" asChild>
-                  <Link href="/saved" className="flex items-center gap-1">
-                    View All <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-              {savedGigs.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-                  {savedGigs.slice(0, 5).map((gig) => (
-                    <ServiceCard key={gig.id} service={mapGigToServiceCard(gig)} showCategory />
+      {/* User Stats Section - Chỉ hiển thị khi đã đăng nhập */}
+      {isSignedIn && (
+        <section className="bg-gray-50 py-12">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-bold mb-8 text-center">Tổng quan hoạt động của bạn</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 text-center">
+              {statsLoading ? (
+                // Loading skeleton
+                <>
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="bg-white p-6 rounded-xl shadow animate-pulse">
+                      <div className="h-8 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-2/3 mx-auto"></div>
+                    </div>
                   ))}
-                </div>
+                </>
               ) : (
-                <div className="text-center py-8 text-gray-500">You don't have any favorite jobs yet.</div>
+                <>
+                  <div className="bg-white p-6 rounded-xl shadow">
+                    <h3 className="text-3xl font-bold text-emerald-600">{savedGigsCount}</h3>
+                    <p className="text-gray-600">Dịch vụ đã lưu</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-xl shadow">
+                    <h3 className="text-3xl font-bold text-emerald-600">{ordersCount}</h3>
+                    <p className="text-gray-600">Đơn hàng đã đặt</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-xl shadow">
+                    <h3 className="text-3xl font-bold text-emerald-600">
+                      <PriceDisplay priceUSD={totalSpent} size="large" />
+                    </h3>
+                    <p className="text-gray-600">Tổng chi tiêu</p>
+                  </div>
+                  {(user?.publicMetadata as { isSeller?: boolean })?.isSeller && (
+                    <div className="bg-white p-6 rounded-xl shadow">
+                      <h3 className="text-3xl font-bold text-emerald-600">{postedGigsCount}</h3>
+                      <p className="text-gray-600">Dịch vụ đã đăng</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-          </section>
-        </>
+          </div>
+        </section>
       )}
 
-      {/* Categories Section */}
-      <section className="py-16">
+      {/* Banner Slider Section */}
+      <section className="py-12">
         <div className="container mx-auto px-4">
-          <h2 className="mb-8 text-center text-3xl font-bold dark:text-white">Popular Categories</h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/search?category=${category.slug}`}
-                className="flex flex-col items-center rounded-lg p-4 text-center transition-colors hover:bg-gray-50 dark:hover:bg-gray-900"
-              >
-                <div className="mb-3 rounded-full bg-emerald-100 p-3 dark:bg-emerald-900/20">
-                  <Image src={category.icon || "/placeholder.svg"} alt={category.name} width={24} height={24} />
-                </div>
-                <span className="text-sm font-medium dark:text-white">{category.name}</span>
-              </Link>
-            ))}
+          <div className="relative max-w-6xl mx-auto">
+            <div className="overflow-hidden rounded-xl">
+              <div className="relative flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+                {bannerSlides.map((slide, index) => (
+                  <div key={index} className="w-full flex-shrink-0">
+                    <div className="relative h-[400px] rounded-xl overflow-hidden">
+                      <Image
+                        src={slide.image}
+                        alt={slide.title}
+                        fill
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center">
+                        <div className="text-white p-12">
+                          <h3 className="text-4xl font-bold mb-4">{slide.title}</h3>
+                          <p className="text-xl mb-6">{slide.description}</p>
+                          <Button size="lg" asChild variant="secondary">
+                            <Link href={slide.cta.link}>{slide.cta.text}</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => setCurrentSlide(prev => (prev - 1 + bannerSlides.length) % bannerSlides.length)}
+              className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all"
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </button>
+            <button
+              onClick={() => setCurrentSlide(prev => (prev + 1) % bannerSlides.length)}
+              className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all"
+            >
+              <ChevronRight className="h-8 w-8" />
+            </button>
           </div>
         </div>
       </section>
+
+      {/* Popular Categories Section - Chỉ hiển thị khi chưa đăng nhập */}
+      {!isSignedIn && (
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <h2 className="mb-8 text-center text-3xl font-bold dark:text-white">Danh Mục Phổ Biến</h2>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
+              {categories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/search?category=${category.slug}`}
+                  className="flex flex-col items-center rounded-lg p-4 text-center transition-colors hover:bg-gray-50 dark:hover:bg-gray-900"
+                >
+                  <div className="mb-3 rounded-full bg-emerald-100 p-3 dark:bg-emerald-900/20">
+                    <Image src={category.icon || "/placeholder.svg"} alt={category.name} width={24} height={24} />
+                  </div>
+                  <span className="text-sm font-medium dark:text-white">{category.name}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Popular Services Section */}
       <section className="bg-gray-50 py-16 dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="mb-8 flex items-center justify-between">
-            <h2 className="text-2xl font-bold dark:text-white">Popular Services</h2>
+            <h2 className="text-2xl font-bold dark:text-white">Top Picks</h2>
             <Button variant="ghost" asChild>
               <Link href="/search" className="flex items-center gap-1">
                 View All <ArrowRight className="h-4 w-4" />
@@ -821,74 +652,134 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Explore All Services Section */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <h2 className="mb-2 text-center text-3xl font-bold dark:text-white">What Our Customers Say</h2>
-          <p className="mb-10 text-center text-gray-600 dark:text-gray-400">
-            Thousands of satisfied customers have found the perfect freelance services
-          </p>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            {testimonials.map((testimonial) => (
-              <div
-                key={testimonial.id}
-                className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+          <div className="mb-12">
+            <h2 className="text-3xl font-bold dark:text-white mb-6">Explore All Services</h2>
+            <div className="flex gap-2">
+              <Button 
+                variant="ghost"
+                className={`px-6 py-2 rounded-full transition-colors ${
+                  !showNewest ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'hover:bg-gray-100'
+                }`}
+                onClick={() => setShowNewest(false)}
               >
-                <div className="mb-4 flex items-center gap-4">
-                  <Image
-                    src={testimonial.avatar || "/placeholder.svg"}
-                    alt={testimonial.name}
-                    width={60}
-                    height={60}
-                    className="rounded-full"
-                  />
-                  <div>
-                    <h3 className="font-medium dark:text-white">{testimonial.name}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {testimonial.role}, {testimonial.company}
-                    </p>
-                  </div>
-                </div>
-                <div className="mb-4 flex">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <svg
-                      key={i}
-                      className={`h-5 w-5 ${
-                        i < testimonial.rating ? "text-yellow-400" : "text-gray-300 dark:text-gray-600"
-                      }`}
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="text-gray-700 dark:text-gray-300">{testimonial.content}</p>
-              </div>
+                All
+              </Button>
+              <Button 
+                variant="ghost"
+                className={`px-6 py-2 rounded-full transition-colors ${
+                  showNewest ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'hover:bg-gray-100'
+                }`}
+                onClick={() => setShowNewest(true)}
+              >
+                Newest
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+            {sortedGigs.map((gig) => (
+              <ServiceCard
+                key={gig.id}
+                service={mapGigToServiceCard(gig)}
+                showCategory
+              />
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      {isLoaded && !isSignedIn && (
-        <section className="bg-emerald-500 py-16 text-white">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="mb-4 text-3xl font-bold">Ready to start your project?</h2>
-            <p className="mb-8 text-lg opacity-90">
-              Join thousands of satisfied customers who have found the perfect freelance services
+      {/* Testimonials Section */}
+      {!isSignedIn && (
+        <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <h2 className="mb-2 text-center text-3xl font-bold dark:text-white">What Our Customers Say</h2>
+            <p className="mb-10 text-center text-gray-600 dark:text-gray-400">
+              Thousands of satisfied customers have found the perfect freelance services
             </p>
-            <SignInButton mode="modal">
-              <button className="bg-white text-emerald-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold text-lg transition">
-                Get Started
-              </button>
-            </SignInButton>
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+              {[
+                {
+                  id: 1,
+                  name: "John Doe",
+                  role: "CEO",
+                  company: "Tech Corp",
+                  avatar: "/testimonials/1.jpg",
+                  text: "Found amazing developers for our project. The quality of work exceeded our expectations."
+                },
+                {
+                  id: 2,
+                  name: "Sarah Smith",
+                  role: "Marketing Director",
+                  company: "Creative Agency",
+                  avatar: "/testimonials/2.jpg",
+                  text: "The designers here are incredibly talented. They helped us rebrand our entire company."
+                },
+                {
+                  id: 3,
+                  name: "Mike Johnson",
+                  role: "Founder",
+                  company: "Startup Inc",
+                  avatar: "/testimonials/3.jpg",
+                  text: "Great platform for finding reliable freelancers. Will definitely use again!"
+                }
+              ].map((testimonial) => (
+                <div
+                  key={testimonial.id}
+                  className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+                >
+                  <div className="mb-4 flex items-center gap-4">
+                    <Image
+                      src={testimonial.avatar}
+                      alt={testimonial.name}
+                      width={60}
+                      height={60}
+                      className="rounded-full"
+                    />
+                    <div>
+                      <h3 className="font-medium dark:text-white">{testimonial.name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {testimonial.role}, {testimonial.company}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400">{testimonial.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
 
-      
+      {/* CTA Section - Chỉ hiển thị khi chưa đăng nhập */}
+      {!isSignedIn && (
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 p-12 text-center text-white">
+              <h2 className="mb-4 text-3xl font-bold">Bắt đầu ngay hôm nay</h2>
+              <p className="mb-8 text-lg">
+                Tham gia cùng hàng nghìn freelancer và doanh nghiệp đang sử dụng nền tảng của chúng tôi
+              </p>
+              <div className="flex justify-center gap-4">
+                <SignInButton mode="modal">
+                  <Button size="lg" variant="secondary">
+                    Trở thành người bán
+                  </Button>
+                </SignInButton>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white hover:text-emerald-600"
+                  asChild
+                >
+                  <Link href="/search">Tìm dịch vụ</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
     </main>
   )
 }
