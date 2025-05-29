@@ -48,7 +48,7 @@ export default function ManageOrdersPage() {
     async function fetchOrders() {
       if (!userId) return;
       const token = await getToken();
-      const res = await fetch(`http://localhost:8800/api/orders/${userId}`, {
+      const res = await fetch(`http://localhost:8800/api/orders`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
