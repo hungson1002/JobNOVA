@@ -293,6 +293,8 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showNewest, setShowNewest] = useState(false);
   const slideInterval = useRef<NodeJS.Timeout | null>(null);
+  const [slides, setSlides] = useState<{ image: string; title: string; description: string; cta?: { text: string; link: string } }[]>([])
+
 
   // States cho thống kê người dùng
   const [statsLoading, setStatsLoading] = useState(true);
@@ -394,6 +396,29 @@ export default function Home() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    fetch("http://localhost:8800/api/bannerSlides")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.banners)) {
+          const formatted = data.banners.map((slide: any) => ({
+            image: slide.image,
+            title: slide.title || "",
+            description: slide.subtitle || "",
+            cta: {
+              text: "Xem thêm",
+              link: "/search"
+            }
+          }))
+          setSlides(formatted)
+        }
+      })
+      .catch(err => {
+        console.error("Không thể tải slide:", err)
+      })
+  }, [])
+  
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -609,7 +634,7 @@ export default function Home() {
           <div className="relative max-w-6xl mx-auto">
             <div className="overflow-hidden rounded-xl">
               <div className="relative flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-                {bannerSlides.map((slide, index) => (
+                {slides.map((slide, index) => (
                   <div key={index} className="w-full flex-shrink-0">
                     <div className="relative h-[400px] rounded-xl overflow-hidden">
                       <Image
@@ -623,7 +648,11 @@ export default function Home() {
                           <h3 className="text-4xl font-bold mb-4">{slide.title}</h3>
                           <p className="text-xl mb-6">{slide.description}</p>
                           <Button size="lg" asChild variant="secondary">
-                            <Link href={slide.cta.link}>{slide.cta.text}</Link>
+                          {slide.cta && (
+                            <Button size="lg" asChild variant="secondary">
+                              <Link href={slide.cta.link}>{slide.cta.text}</Link>
+                            </Button>
+                          )}
                           </Button>
                         </div>
                       </div>
