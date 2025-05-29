@@ -1,10 +1,7 @@
 import AdminLog from "./adminLog.model.js";
 import BannerSlide from "./bannerSlide.model.js";
 import Category from "./category.model.js";
-import Company from "./company.model.js";
-import CompanyImage from "./companyImage.model.js";
 import ContactForm from "./contactForm.model.js";
-import CVFile from "./cvFiles.model.js";
 import ExperienceDetail from "./experienceDetail.model.js";
 import Gig from "./gig.model.js";
 import GigFaq from "./gigFAQ.model.js";
@@ -28,6 +25,9 @@ import SeekerSkill from "./seekerSkill.model.js";
 import Skills from "./skills.model.js";
 import User from "./user.model.js";
 import UserSearchHistory from "./userSearchHistory.model.js";
+import GigExtra from "./gigExtra.model.js";
+import OrderExtra from "./orderExtra.model.js";
+import Portfolio from "./portfolio.model.js";
 
 
 export default {
@@ -35,8 +35,6 @@ export default {
   Category,
   Skills,
   User,
-  Company,
-  CompanyImage,
   SeekerProfile,
   ExperienceDetail,
   Gig,
@@ -53,14 +51,19 @@ export default {
   GigViewCount,
   UserSearchHistory,
   Notification,
-  CVFile,
   GigTranslation,
   GigFaq,
   GigRequirements,
   GigRequirementTemplate,
   ReviewHelpfulVote,
   BannerSlide,
+<<<<<<< HEAD
   Report,
+=======
+  GigExtra,
+  OrderExtra,
+  Portfolio,
+>>>>>>> c28dc1fb0c592eb53bf234169c3433a8448a3176
 };
 
 //index.js, init-db.js, mySQL-db.js dành cho việc khởi tạo database và models của MySQL 

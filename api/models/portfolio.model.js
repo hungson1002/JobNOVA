@@ -1,8 +1,8 @@
 import { DataTypes } from "sequelize";
 
-const CVFile = (sequelize) =>
+const Portfolio = (sequelize) =>
   sequelize.define(
-    "CVFile",
+    "Portfolio",
     {
       id: {
         type: DataTypes.INTEGER,
@@ -17,37 +17,38 @@ const CVFile = (sequelize) =>
             key: "clerk_id",
           },
       },
-      file_url: {
+      title: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+      },
+      description: {
+        type: DataTypes.TEXT,
+      },
+      portfolio_url: {
         type: DataTypes.TEXT,
         allowNull: false,
       },
-      file_name: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
+      portfolio_size: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
       },
-      uploaded_at: {
+      portfolio_type: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      created_at: {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: DataTypes.NOW,
       },
-      is_default: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: false,
-      },
-      file_size: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      },
-      file_type: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-      },
     },
     {
-      tableName: "cv_files",
+      tableName: "portfolio",
       timestamps: false,
+      indexes: [
+        { fields: ["clerk_id"]}
+      ],
     }
   );
 
-export default CVFile;
+export default Portfolio;

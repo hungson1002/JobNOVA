@@ -35,13 +35,6 @@ Object.values(initializedModels).forEach((model) => {
 
 // Định nghĩa quan hệ
 const defineRelations = (models) => {
-  // User-Company: 1-to-1 (one user can have one company)
-  models.User.hasOne(models.Company, { foreignKey: 'clerk_id', sourceKey: 'clerk_id', as: 'company' });
-  models.Company.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
-
-  // Company-CompanyImage: 1-to-many (one company can have multiple images)
-  models.Company.hasMany(models.CompanyImage, { foreignKey: 'company_id' });
-  models.CompanyImage.belongsTo(models.Company, { foreignKey: 'company_id' });
 
   // User-SeekerProfile: 1-to-1 (one user can have one seeker profile)
   models.User.hasOne(models.SeekerProfile, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
@@ -78,6 +71,20 @@ const defineRelations = (models) => {
   // Order-Review: 1-to-1 (one order can have one review)
   models.Order.hasOne(models.Review, { foreignKey: 'order_id' });
   models.Review.belongsTo(models.Order, { foreignKey: 'order_id', as: 'order' });
+
+  // Order-OrderExtras: 1-to-many (one order can have multiple extras)
+  models.Order.hasMany(models.OrderExtra, { foreignKey: "order_id" });
+  models.OrderExtra.belongsTo(models.Order, {
+    foreignKey: "order_id",
+    targetKey: "id",
+  });
+
+  // GigExtra-OrderExtra: 1-to-many (one gig extra can be selected in multiple orders)
+  models.GigExtra.hasMany(models.OrderExtra, { foreignKey: "gig_extra_id" });
+  models.OrderExtra.belongsTo(models.GigExtra, {
+    foreignKey: "gig_extra_id",
+  });
+
 
   // Gig-Review: 1-to-many (one gig can have multiple reviews)
   models.Gig.hasMany(models.Review, { foreignKey: 'gig_id', as: 'reviews' });
@@ -158,9 +165,16 @@ const defineRelations = (models) => {
   models.Notification.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
   models.Notification.belongsTo(models.Gig, { foreignKey: 'gig_id' });
 
-  // User-CVFile: 1-to-many (one user can upload multiple CV files)
-  models.User.hasMany(models.CVFile, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
-  models.CVFile.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
+  // User-Portfolio: 1-to-many (one user can upload multiple portfolio files)
+  models.User.hasMany(models.Portfolio, {
+    foreignKey: "clerk_id",
+    sourceKey: "clerk_id",
+  });
+  models.Portfolio.belongsTo(models.User, {
+    foreignKey: "clerk_id",
+    targetKey: "clerk_id",
+  });
+
 
   // Gig-GigTranslation: 1-to-many (one gig can have multiple translations)
   models.Gig.hasMany(models.GigTranslation, { foreignKey: 'gig_id' });
@@ -177,6 +191,10 @@ const defineRelations = (models) => {
   // Gig-gigrequirementTemplate: 1-to-many (one gig can have multiple requirement templates)
   models.Gig.hasMany(models.GigRequirementTemplate, { foreignKey: "gig_id" });
   models.GigRequirementTemplate.belongsTo(models.Gig, { foreignKey: "gig_id" });
+
+  // Gig-GigExtra: 1-to-many (one gig can have multiple extras)
+  models.Gig.hasMany(models.GigExtra, { foreignKey: "gig_id" });
+  models.GigExtra.belongsTo(models.Gig, { foreignKey: "gig_id" });
 
 };
 
