@@ -386,8 +386,9 @@ export default function Home() {
 
   // Auto-advance slides every 4 seconds
   useEffect(() => {
+    if (!slides.length) return;
     slideInterval.current = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % bannerSlides.length);
+      setCurrentSlide(prev => (slides.length > 0 ? (prev + 1) % slides.length : 0));
     }, 4000);
 
     return () => {
@@ -395,7 +396,7 @@ export default function Home() {
         clearInterval(slideInterval.current);
       }
     };
-  }, []);
+  }, [slides.length]);
 
   useEffect(() => {
     fetch("http://localhost:8800/api/bannerSlides")
@@ -647,13 +648,11 @@ export default function Home() {
                         <div className="text-white p-12">
                           <h3 className="text-4xl font-bold mb-4">{slide.title}</h3>
                           <p className="text-xl mb-6">{slide.description}</p>
-                          <Button size="lg" asChild variant="secondary">
                           {slide.cta && (
                             <Button size="lg" asChild variant="secondary">
                               <Link href={slide.cta.link}>{slide.cta.text}</Link>
                             </Button>
                           )}
-                          </Button>
                         </div>
                       </div>
                     </div>
@@ -661,14 +660,13 @@ export default function Home() {
                 ))}
               </div>
             </div>
-
             {/* Navigation Buttons */}
             <button
               onClick={() => {
                 if (slideInterval.current) {
                   clearInterval(slideInterval.current);
                 }
-                setCurrentSlide(prev => (prev - 1 + bannerSlides.length) % bannerSlides.length);
+                setCurrentSlide(prev => (slides.length > 0 ? (prev - 1 + slides.length) % slides.length : 0));
               }}
               className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all"
             >
@@ -679,16 +677,15 @@ export default function Home() {
                 if (slideInterval.current) {
                   clearInterval(slideInterval.current);
                 }
-                setCurrentSlide(prev => (prev + 1) % bannerSlides.length);
+                setCurrentSlide(prev => (slides.length > 0 ? (prev + 1) % slides.length : 0));
               }}
               className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all"
             >
               <ChevronRight className="h-8 w-8" />
             </button>
-
             {/* Slide Indicators */}
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2">
-              {bannerSlides.map((_, index) => (
+              {slides.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => {
