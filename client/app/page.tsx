@@ -278,6 +278,15 @@ export default function Home() {
   const [postedGigsCount, setPostedGigsCount] = useState(0);
   const savedGigs = useAllSavedGigs();
 
+  const startSlideAutoPlay = () => {
+    if (slideInterval.current) {
+      clearInterval(slideInterval.current);
+    }
+    slideInterval.current = setInterval(() => {
+      setCurrentSlide(prev => (slides.length > 0 ? (prev + 1) % slides.length : 0));
+    }, 4000);
+  };
+
   // Cập nhật số lượng dịch vụ đã lưu khi savedGigs thay đổi
   useEffect(() => {
     if (savedGigs) {
@@ -361,9 +370,7 @@ export default function Home() {
   // Auto-advance slides every 4 seconds
   useEffect(() => {
     if (!slides.length) return;
-    slideInterval.current = setInterval(() => {
-      setCurrentSlide(prev => (slides.length > 0 ? (prev + 1) % slides.length : 0));
-    }, 4000);
+    startSlideAutoPlay();
 
     return () => {
       if (slideInterval.current) {
@@ -649,6 +656,9 @@ export default function Home() {
                   clearInterval(slideInterval.current);
                 }
                 setCurrentSlide(prev => (slides.length > 0 ? (prev - 1 + slides.length) % slides.length : 0));
+                setTimeout(() => {
+                  startSlideAutoPlay();
+                }, 5000);
               }}
               className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100 duration-300"
             >
@@ -660,6 +670,9 @@ export default function Home() {
                   clearInterval(slideInterval.current);
                 }
                 setCurrentSlide(prev => (slides.length > 0 ? (prev + 1) % slides.length : 0));
+                setTimeout(() => {
+                  startSlideAutoPlay();
+                }, 5000);
               }}
               className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100 duration-300"
             >
