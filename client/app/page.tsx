@@ -300,6 +300,56 @@ export default function Home() {
   const [ordersCount, setOrdersCount] = useState(0);
   const [totalSpent, setTotalSpent] = useState(0);
   const [postedGigsCount, setPostedGigsCount] = useState(0);
+  const savedGigs = useAllSavedGigs();
+
+  // Cập nhật số lượng dịch vụ đã lưu khi savedGigs thay đổi
+  useEffect(() => {
+    if (savedGigs) {
+      setSavedGigsCount(savedGigs.length);
+    }
+  }, [savedGigs]);
+
+  // Fetch dữ liệu thống kê khi user đăng nhập
+  useEffect(() => {
+    if (isSignedIn && user?.id) {
+      const fetchStats = async () => {
+        setStatsLoading(true);
+        try {
+          const token = await getToken();
+          const headers = {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          };
+
+          // Fetch orders
+          const ordersRes = await fetch(`http://localhost:8800/api/orders`, { headers });
+          const ordersData = await ordersRes.json();
+          if (ordersData.success) {
+            setOrdersCount(ordersData.total || 0);
+            // Tính tổng chi tiêu từ các đơn hàng completed
+            const completedOrders = (ordersData.orders || []).filter((order: any) => order.order_status === 'completed');
+            const total = completedOrders.reduce((sum: number, order: any) => sum + Number(order.total_price || 0), 0);
+            setTotalSpent(total);
+          }
+
+          // Fetch posted gigs nếu là seller
+          if (user.publicMetadata?.isSeller) {
+            const gigsRes = await fetch(`http://localhost:8800/api/gigs?seller_clerk_id=${user.id}`, { headers });
+            const gigsData = await gigsRes.json();
+            if (gigsData.success) {
+              setPostedGigsCount(gigsData.total || 0);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching user stats:', error);
+        } finally {
+          setStatsLoading(false);
+        }
+      };
+
+      fetchStats();
+    }
+  }, [isSignedIn, user?.id, getToken]);
 
   useEffect(() => {
     setIsClient(true)
@@ -344,55 +394,6 @@ export default function Home() {
       }
     };
   }, []);
-
-  // Fetch dữ liệu thống kê khi user đăng nhập
-  useEffect(() => {
-    if (isSignedIn && user?.id) {
-      const fetchStats = async () => {
-        setStatsLoading(true);
-        try {
-          const token = await getToken();
-          const headers = {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          };
-
-          // Fetch saved gigs
-          const savedRes = await fetch(`http://localhost:8800/api/savedGigs`, { headers });
-          const savedData = await savedRes.json();
-          if (savedData.success) {
-            setSavedGigsCount(savedData.totalItems || 0);
-          }
-
-          // Fetch orders
-          const ordersRes = await fetch(`http://localhost:8800/api/orders`, { headers });
-          const ordersData = await ordersRes.json();
-          if (ordersData.success) {
-            setOrdersCount(ordersData.total || 0);
-            // Tính tổng chi tiêu từ các đơn hàng completed
-            const completedOrders = (ordersData.orders || []).filter((order: any) => order.order_status === 'completed');
-            const total = completedOrders.reduce((sum: number, order: any) => sum + Number(order.total_price || 0), 0);
-            setTotalSpent(total);
-          }
-
-          // Fetch posted gigs nếu là seller
-          if (user.publicMetadata?.isSeller) {
-            const gigsRes = await fetch(`http://localhost:8800/api/gigs?seller_clerk_id=${user.id}`, { headers });
-            const gigsData = await gigsRes.json();
-            if (gigsData.success) {
-              setPostedGigsCount(gigsData.total || 0);
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching user stats:', error);
-        } finally {
-          setStatsLoading(false);
-        }
-      };
-
-      fetchStats();
-    }
-  }, [isSignedIn, user?.id]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
