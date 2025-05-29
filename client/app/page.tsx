@@ -181,37 +181,6 @@ const categories = [
   },
 ]
 
-// Sample banner slides
-const bannerSlides = [
-  {
-    image: "/banner/banner1.jpg",
-    title: "Find Expert Freelancers",
-    description: "Get your projects done by skilled professionals",
-    cta: {
-      text: "Hire Now",
-      link: "/search"
-    }
-  },
-  {
-    image: "/banner/banner2.jpg",
-    title: "Become a Seller",
-    description: "Turn your skills into earnings",
-    cta: {
-      text: "Start Selling",
-      link: "/become-seller"
-    }
-  },
-  {
-    image: "/banner/banner3.jpg",
-    title: "Quality Work Guaranteed",
-    description: "100% satisfaction or money back",
-    cta: {
-      text: "Learn More",
-      link: "/about"
-    }
-  }
-];
-
 // AnimatedWords: Hiện từng từ một, gọi onDone khi xong
 function AnimatedWords({ text, className = "", onDone }: { text: string, className?: string, onDone?: () => void }) {
   const words = text.split(" ");
@@ -293,7 +262,12 @@ export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showNewest, setShowNewest] = useState(false);
   const slideInterval = useRef<NodeJS.Timeout | null>(null);
-  const [slides, setSlides] = useState<{ image: string; title: string; description: string; cta?: { text: string; link: string } }[]>([])
+  const [slides, setSlides] = useState<{ 
+    image: string; 
+    title: string; 
+    description: string; 
+    cta_link?: string;
+    }[]>([])
 
 
   // States cho thống kê người dùng
@@ -407,10 +381,7 @@ export default function Home() {
             image: slide.image,
             title: slide.title || "",
             description: slide.subtitle || "",
-            cta: {
-              text: "Xem thêm",
-              link: "/search"
-            }
+            cta_link: typeof slide?.cta_link === "string" ? slide.cta_link.trim() : "/search"
           }))
           setSlides(formatted)
         }
@@ -419,6 +390,7 @@ export default function Home() {
         console.error("Không thể tải slide:", err)
       })
   }, [])
+  
   
 
   const handleSearch = (e: React.FormEvent) => {
@@ -648,9 +620,9 @@ export default function Home() {
                         <div className="text-white p-12">
                           <h3 className="text-4xl font-bold mb-4">{slide.title}</h3>
                           <p className="text-xl mb-6">{slide.description}</p>
-                          {slide.cta && (
+                          {slide.cta_link && (
                             <Button size="lg" asChild variant="secondary">
-                              <Link href={slide.cta.link}>{slide.cta.text}</Link>
+                              <Link href={slide.cta_link}>Xem thêm</Link>
                             </Button>
                           )}
                         </div>

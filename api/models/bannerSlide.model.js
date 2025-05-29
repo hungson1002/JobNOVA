@@ -30,6 +30,10 @@ const BannerSlide = (sequelize) =>
         allowNull: false,
         defaultValue: 0
       },
+      cta_link: {
+        type: DataTypes.STRING(500),
+        allowNull: true,
+      },
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,

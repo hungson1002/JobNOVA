@@ -7,14 +7,15 @@ export const createBannerSlide = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing image file" });
     }
 
-    const { title, subtitle } = req.body;
+    const { title, subtitle, cta_link } = req.body;
 
     const banner = await models.BannerSlide.create({
       image_data: req.file.buffer,
       image_type: req.file.mimetype,
       title,
       subtitle,
-      position: await getNextPosition()
+      cta_link,
+      position: await getNextPosition(),
     });
 
     return res.status(201).json({ success: true, banner });
@@ -27,7 +28,7 @@ export const createBannerSlide = async (req, res) => {
 export const updateBannerSlide = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, subtitle } = req.body;
+    const { title, subtitle, cta_link } = req.body;
 
     const banner = await models.BannerSlide.findByPk(id);
 
@@ -35,11 +36,10 @@ export const updateBannerSlide = async (req, res) => {
       return res.status(404).json({ success: false, message: "Banner not found" });
     }
 
-    // Cập nhật title và subtitle
     banner.title = title;
     banner.subtitle = subtitle;
+    banner.cta_link = cta_link;
 
-    // Nếu có ảnh mới thì cập nhật ảnh
     if (req.file) {
       banner.image_data = req.file.buffer;
       banner.image_type = req.file.mimetype;
@@ -93,6 +93,7 @@ export const getAllBannerSlides = async (req, res) => {
       title: b.title,
       subtitle: b.subtitle,
       image: `data:${b.image_type};base64,${b.image_data.toString("base64")}`,
+      cta_link: b.cta_link || "/search"
     }));
 
     return res.status(200).json({ success: true, banners: formatted });

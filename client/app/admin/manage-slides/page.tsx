@@ -18,6 +18,7 @@ interface BannerSlide {
   title: string
   subtitle: string
   created_at: string
+  cta_link: string
 }
 
 export default function ManageSlidesPage() {
@@ -31,7 +32,8 @@ export default function ManageSlidesPage() {
     title: "",
     subtitle: "",
     image: null as File | null,
-    imagePreview: ""
+    imagePreview: "",
+    cta_link: ""
   })
   const { getToken } = useAuth()
 
@@ -87,7 +89,8 @@ export default function ManageSlidesPage() {
       title: "",
       subtitle: "",
       image: null,
-      imagePreview: ""
+      imagePreview: "",
+      cta_link: ""
     })
   }
 
@@ -99,7 +102,8 @@ export default function ManageSlidesPage() {
         title: "",
         subtitle: "",
         image: null,
-        imagePreview: ""
+        imagePreview: "",
+        cta_link: ""
       })
     }
   }
@@ -118,6 +122,7 @@ export default function ManageSlidesPage() {
       formDataToSend.append('title', formData.title)
       formDataToSend.append('subtitle', formData.subtitle)
       formDataToSend.append('image', formData.image)
+      formDataToSend.append('cta_link', formData.cta_link)
 
       const response = await fetch("http://localhost:8800/api/bannerSlides", {
         method: "POST",
@@ -150,6 +155,7 @@ export default function ManageSlidesPage() {
       const formDataToSend = new FormData()
       formDataToSend.append('title', formData.title)
       formDataToSend.append('subtitle', formData.subtitle)
+      formDataToSend.append('cta_link', formData.cta_link)
       if (formData.image) {
         formDataToSend.append('image', formData.image)
       }
@@ -293,7 +299,8 @@ export default function ManageSlidesPage() {
       title: slide.title,
       subtitle: slide.subtitle,
       image: null,
-      imagePreview: slide.image
+      imagePreview: slide.image,
+      cta_link: slide.cta_link || ""
     })
     setIsEditDialogOpen(true)
   }
@@ -335,6 +342,16 @@ export default function ManageSlidesPage() {
                       id="subtitle"
                       value={formData.subtitle}
                       onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cta_link">CTA Link</Label>
+                    <Input
+                      id="cta_link"
+                      value={formData.cta_link || ''}
+                      onChange={(e) => setFormData({ ...formData, cta_link: e.target.value })}
+                      placeholder="https://example.com"
+                      required
                     />
                   </div>
                   <div>
@@ -475,6 +492,16 @@ export default function ManageSlidesPage() {
                 id="edit-subtitle"
                 value={formData.subtitle}
                 onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-cta_link">CTA Link</Label>
+              <Input
+                id="edit-cta_link"
+                value={formData.cta_link || ''}
+                onChange={(e) => setFormData({ ...formData, cta_link: e.target.value })}
+                placeholder="https://example.com"
+                required
               />
             </div>
             <div>
