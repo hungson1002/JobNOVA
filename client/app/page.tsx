@@ -622,7 +622,13 @@ export default function Home() {
                           <p className="text-xl mb-6">{slide.description}</p>
                           {slide.cta_link && (
                             <Button size="lg" asChild variant="secondary">
-                              <Link href={slide.cta_link}>Xem thêm</Link>
+                              <Link 
+                                href={slide.cta_link}
+                                target={slide.cta_link.startsWith("http") ? "_blank" : "_self"}
+                                rel={slide.cta_link.startsWith("http") ? "noopener noreferrer" : undefined}
+                              >
+                                Xem thêm
+                              </Link>
                             </Button>
                           )}
                         </div>
