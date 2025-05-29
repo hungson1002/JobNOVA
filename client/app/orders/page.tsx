@@ -28,9 +28,10 @@ export default function OrdersPage() {
       try {
         const token = await getToken()
         console.log('Fetching orders for user:', user.id) // Debug log
-        const res = await fetch(`http://localhost:8800/api/orders/${user.id}`, {
+        const res = await fetch(`http://localhost:8800/api/orders`, {
           headers: {
             Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
         })
         if (!res.ok) {

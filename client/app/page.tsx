@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { ArrowRight, Search, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowRight, Search, ChevronLeft, ChevronRight, Bookmark, ShoppingBag, DollarSign, Store } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -517,42 +517,83 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent dark:from-gray-950"></div>
       </section>
 
-      {/* User Stats Section - Chỉ hiển thị khi đã đăng nhập */}
+      {/* User Stats Section */}
       {isSignedIn && (
-        <section className="bg-gray-50 py-12">
+        <section className="bg-gradient-to-b from-white to-gray-50 py-16">
           <div className="container mx-auto px-4">
-            <h2 className="text-2xl font-bold mb-8 text-center">Tổng quan hoạt động của bạn</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 text-center">
+            <h2 className="text-3xl font-bold mb-10 text-center bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent">
+              Your Activity Overview
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {statsLoading ? (
                 // Loading skeleton
                 <>
                   {[...Array(4)].map((_, i) => (
-                    <div key={i} className="bg-white p-6 rounded-xl shadow animate-pulse">
+                    <div key={i} className="bg-white p-6 rounded-2xl shadow-lg shadow-emerald-100/20 animate-pulse">
+                      <div className="h-12 w-12 rounded-full bg-gray-200 mb-4"></div>
                       <div className="h-8 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-2/3 mx-auto"></div>
+                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
                     </div>
                   ))}
                 </>
               ) : (
                 <>
-                  <div className="bg-white p-6 rounded-xl shadow">
-                    <h3 className="text-3xl font-bold text-emerald-600">{savedGigsCount}</h3>
-                    <p className="text-gray-600">Dịch vụ đã lưu</p>
+                  <div className="bg-white p-8 rounded-2xl shadow-lg shadow-emerald-100/20 hover:shadow-emerald-100/40 transition-all duration-300 transform hover:-translate-y-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 bg-emerald-50 rounded-xl">
+                        <Bookmark className="h-6 w-6 text-emerald-600" />
+                      </div>
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                        Saved
+                      </span>
+                    </div>
+                    <h3 className="text-4xl font-bold text-gray-900 mb-2">{savedGigsCount}</h3>
+                    <p className="text-gray-500">Saved Services</p>
                   </div>
-                  <div className="bg-white p-6 rounded-xl shadow">
-                    <h3 className="text-3xl font-bold text-emerald-600">{ordersCount}</h3>
-                    <p className="text-gray-600">Đơn hàng đã đặt</p>
+
+                  <div className="bg-white p-8 rounded-2xl shadow-lg shadow-emerald-100/20 hover:shadow-emerald-100/40 transition-all duration-300 transform hover:-translate-y-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 bg-emerald-50 rounded-xl">
+                        <ShoppingBag className="h-6 w-6 text-emerald-600" />
+                      </div>
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                        Orders
+                      </span>
+                    </div>
+                    <h3 className="text-4xl font-bold text-gray-900 mb-2">{ordersCount}</h3>
+                    <p className="text-gray-500">Orders Placed</p>
                   </div>
-                  <div className="bg-white p-6 rounded-xl shadow">
-                    <h3 className="text-3xl font-bold text-emerald-600">
-                      <PriceDisplay priceUSD={totalSpent} size="large" />
+
+                  <div className="bg-white p-8 rounded-2xl shadow-lg shadow-emerald-100/20 hover:shadow-emerald-100/40 transition-all duration-300 transform hover:-translate-y-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="p-3 bg-emerald-50 rounded-xl">
+                        <DollarSign className="h-6 w-6 text-emerald-600" />
+                      </div>
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                        Spent
+                      </span>
+                    </div>
+                    <h3 className="text-4xl font-bold text-gray-900 mb-2">
+                      <PriceDisplay 
+                        priceUSD={totalSpent} 
+                        className="text-4xl font-bold text-gray-900" 
+                      />
                     </h3>
-                    <p className="text-gray-600">Tổng chi tiêu</p>
+                    <p className="text-gray-500">Total Spent</p>
                   </div>
+
                   {(user?.publicMetadata as { isSeller?: boolean })?.isSeller && (
-                    <div className="bg-white p-6 rounded-xl shadow">
-                      <h3 className="text-3xl font-bold text-emerald-600">{postedGigsCount}</h3>
-                      <p className="text-gray-600">Dịch vụ đã đăng</p>
+                    <div className="bg-white p-8 rounded-2xl shadow-lg shadow-emerald-100/20 hover:shadow-emerald-100/40 transition-all duration-300 transform hover:-translate-y-1">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-emerald-50 rounded-xl">
+                          <Store className="h-6 w-6 text-emerald-600" />
+                        </div>
+                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                          Posted
+                        </span>
+                      </div>
+                      <h3 className="text-4xl font-bold text-gray-900 mb-2">{postedGigsCount}</h3>
+                      <p className="text-gray-500">Services Posted</p>
                     </div>
                   )}
                 </>
@@ -611,7 +652,7 @@ export default function Home() {
       {!isSignedIn && (
         <section className="py-16">
           <div className="container mx-auto px-4">
-            <h2 className="mb-8 text-center text-3xl font-bold dark:text-white">Danh Mục Phổ Biến</h2>
+            <h2 className="mb-8 text-center text-3xl font-bold dark:text-white">Popular Categories</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
               {categories.map((category) => (
                 <Link
@@ -657,7 +698,7 @@ export default function Home() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="mb-12">
-            <h2 className="text-3xl font-bold dark:text-white mb-6">Explore All Services</h2>
+            <h2 className="text-3xl font-bold dark:text-white">Explore All Services</h2>
             <div className="flex gap-2">
               <Button 
                 variant="ghost"
@@ -758,14 +799,14 @@ export default function Home() {
         <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 p-12 text-center text-white">
-              <h2 className="mb-4 text-3xl font-bold">Bắt đầu ngay hôm nay</h2>
+              <h2 className="mb-4 text-3xl font-bold">Start Today</h2>
               <p className="mb-8 text-lg">
-                Tham gia cùng hàng nghìn freelancer và doanh nghiệp đang sử dụng nền tảng của chúng tôi
+                Join thousands of freelancers and businesses using our platform
               </p>
               <div className="flex justify-center gap-4">
                 <SignInButton mode="modal">
                   <Button size="lg" variant="secondary">
-                    Trở thành người bán
+                    Become a Seller
                   </Button>
                 </SignInButton>
                 <Button
@@ -774,7 +815,7 @@ export default function Home() {
                   className="border-white text-white hover:bg-white hover:text-emerald-600"
                   asChild
                 >
-                  <Link href="/search">Tìm dịch vụ</Link>
+                  <Link href="/search">Find Services</Link>
                 </Button>
               </div>
             </div>
