@@ -604,7 +604,7 @@ export default function Home() {
       {/* Banner Slider Section */}
       <section className="py-12">
         <div className="container mx-auto px-4">
-          <div className="relative max-w-6xl mx-auto">
+          <div className="relative max-w-6xl mx-auto group">
             <div className="overflow-hidden rounded-xl">
               <div className="relative flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
                 {slides.map((slide, index) => (
@@ -650,7 +650,7 @@ export default function Home() {
                 }
                 setCurrentSlide(prev => (slides.length > 0 ? (prev - 1 + slides.length) % slides.length : 0));
               }}
-              className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all"
+              className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100 duration-300"
             >
               <ChevronLeft className="h-8 w-8" />
             </button>
@@ -661,7 +661,7 @@ export default function Home() {
                 }
                 setCurrentSlide(prev => (slides.length > 0 ? (prev + 1) % slides.length : 0));
               }}
-              className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all"
+              className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all opacity-0 group-hover:opacity-100 duration-300"
             >
               <ChevronRight className="h-8 w-8" />
             </button>
