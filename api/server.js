@@ -11,10 +11,7 @@ import adminLogRoute from "./routes/adminLog.route.js";
 import bannerSlide from "./routes/bannerSlide.route.js";
 import categoryRoute from "./routes/category.route.js";
 import cloudinaryRoute from "./routes/cloudinary.route.js";
-import companyRoute from "./routes/company.route.js";
-import companyImageRoute from "./routes/companyImage.route.js";
 import contactFormRoute from "./routes/contactForm.route.js";
-import cvFilesRoute from "./routes/cvFiles.route.js";
 import dashboardRoute from "./routes/dashboard.route.js";
 import experienceDetailRoute from "./routes/experienceDetail.route.js";
 import gigRoute from "./routes/gig.route.js";
@@ -37,6 +34,9 @@ import skillsRoute from "./routes/skills.route.js";
 import userRoute from "./routes/user.route.js";
 import userSearchHistoryRoute from "./routes/userSearchHistory.route.js";
 import messageSocketHandler from "./socket/messageSocket.js";
+import portfolioRoute from "./routes/portfolio.route.js";
+import orderExtraRoute from "./routes/orderExtra.route.js";
+import gigExtraRoute from "./routes/gigExtra.route.js";
 
 // .env
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
@@ -74,10 +74,7 @@ app.get('/payment-failed', (req, res) => {
 });
 app.use("/api/adminLog", adminLogRoute);
 app.use("/api/categories", categoryRoute);
-app.use("/api/companies", companyRoute);
-app.use("/api/companyImages", companyImageRoute);
 app.use("/api/contactForms", contactFormRoute);
-app.use("/api/cvFiles", cvFilesRoute);
 app.use("/api/experienceDetails", experienceDetailRoute);
 app.use("/api/gigs", gigRoute);
 app.use("/api/gigFaqs", gigFAQRoute);
@@ -100,6 +97,9 @@ app.use("/api/userSearchHistory", userSearchHistoryRoute);
 app.use("/api/cloudinary", cloudinaryRoute);
 app.use("/api/dashboard", dashboardRoute);
 app.use("/api/bannerSlides", bannerSlide);
+app.use("/api/portfolios", portfolioRoute);
+app.use("/api/orderExtras", orderExtraRoute);
+app.use("/api/gigExtras", gigExtraRoute);
 
 // Error middleware (luôn trả về JSON)
 app.use((err, req, res, next) => {

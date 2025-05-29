@@ -185,49 +185,6 @@ async function initDb() {
       { clerk_id: users[2].clerk_id, skill_id: 2 }, // user_3 with Graphic Design skill
     ]);
 
-    // Tạo companies
-    const companies = await models.Company.bulkCreate([
-      {
-        clerk_id: users[0].clerk_id, // Associated with user_1
-        company_name: "TechCorp VN",
-        profile_description: "A leading tech company in Vietnam",
-        establishment_date: "2020-01-01",
-        company_website_url: "https://techcorp.vn",
-        company_email: "contact@techcorp.vn",
-        verified_at: "2020-02-01",
-        location: "Hanoi, Vietnam",
-      },
-      {
-        clerk_id: users[1].clerk_id, // Associated with user_2
-        company_name: "DesignWorks USA",
-        profile_description: "Creative design agency in the USA",
-        establishment_date: "2018-05-15",
-        company_website_url: "https://designworks.com",
-        company_email: "info@designworks.com",
-        verified_at: "2018-06-01",
-        location: "New York, USA",
-      },
-    ]);
-
-    // Tạo company_images
-    await models.CompanyImage.bulkCreate([
-      {
-        company_id: companies[0].id, // Associated with TechCorp VN
-        company_image: "https://example.com/techcorp_logo.jpg",
-      },
-      {
-        company_id: companies[0].id, // Associated with TechCorp VN
-        company_image: "https://example.com/techcorp_icon.jpg",
-      },
-      {
-        company_id: companies[0].id, // Associated with TechCorp VN
-        company_image: "https://example.com/techcorp_frame.jpg",
-      },
-      {
-        company_id: companies[1].id, // Associated with DesignWorks USA
-        company_image: "https://example.com/designworks_logo.jpg",
-      },
-    ]);
 
     // Tạo contact_forms
     await models.ContactForm.bulkCreate([
@@ -280,14 +237,20 @@ async function initDb() {
     // Tạo banner slide
     await models.BannerSlide.bulkCreate([
     {
-      image_url: "https://example.com/banner1.jpg",
+      image_data: Buffer.from('Sample image data 1'), // Dữ liệu ảnh mẫu
+      image_type: 'image/jpeg',
       title: "Welcome to JobNOVA",
       subtitle: "Find your perfect freelancer today",
+      position: 1,
+      cta_link: "https://example.com/register"
     },
     {
-      image_url: "https://example.com/banner2.jpg",
+      image_data: Buffer.from('Sample image data 2'), // Dữ liệu ảnh mẫu
+      image_type: 'image/jpeg',
       title: "Trusted by Thousands",
       subtitle: "Grow your business with ease",
+      position: 2,
+      cta_link: "https://example.com/about"
     },
   ]);
 
