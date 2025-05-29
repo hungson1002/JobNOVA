@@ -632,18 +632,51 @@ export default function Home() {
                 ))}
               </div>
             </div>
+
+            {/* Navigation Buttons */}
             <button
-              onClick={() => setCurrentSlide(prev => (prev - 1 + bannerSlides.length) % bannerSlides.length)}
+              onClick={() => {
+                if (slideInterval.current) {
+                  clearInterval(slideInterval.current);
+                }
+                setCurrentSlide(prev => (prev - 1 + bannerSlides.length) % bannerSlides.length);
+              }}
               className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all"
             >
               <ChevronLeft className="h-8 w-8" />
             </button>
             <button
-              onClick={() => setCurrentSlide(prev => (prev + 1) % bannerSlides.length)}
+              onClick={() => {
+                if (slideInterval.current) {
+                  clearInterval(slideInterval.current);
+                }
+                setCurrentSlide(prev => (prev + 1) % bannerSlides.length);
+              }}
               className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-3 rounded-full shadow-lg transition-all"
             >
               <ChevronRight className="h-8 w-8" />
             </button>
+
+            {/* Slide Indicators */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2">
+              {bannerSlides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    if (slideInterval.current) {
+                      clearInterval(slideInterval.current);
+                    }
+                    setCurrentSlide(index);
+                  }}
+                  className={`h-1.5 rounded-sm transition-all duration-300 ${
+                    currentSlide === index 
+                      ? "w-8 bg-white" 
+                      : "w-4 bg-white/50 hover:bg-white/70"
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>
