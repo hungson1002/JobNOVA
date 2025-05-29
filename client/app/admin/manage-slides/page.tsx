@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Pencil, Trash2, MoveUp, MoveDown, Upload, X } from "lucide-react"
 import Image from "next/image"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
+import { useAuth } from "@clerk/nextjs"
 
 interface BannerSlide {
   id: number
-  image_url: string
+  image: string  // base64 image data from API
   title: string
   subtitle: string
   created_at: string
@@ -24,6 +25,7 @@ export default function ManageSlidesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedSlide, setSelectedSlide] = useState<BannerSlide | null>(null)
   const [formData, setFormData] = useState({
     title: "",
@@ -31,6 +33,7 @@ export default function ManageSlidesPage() {
     image: null as File | null,
     imagePreview: ""
   })
+  const { getToken } = useAuth()
 
   // Fetch slides
   useEffect(() => {
@@ -39,18 +42,14 @@ export default function ManageSlidesPage() {
 
   const fetchSlides = async () => {
     try {
-      const response = await fetch("/api/bannerSlides")
+      const response = await fetch("http://localhost:8800/api/bannerSlides")
       const data = await response.json()
       if (data.success) {
         setSlides(data.banners)
       }
     } catch (error) {
       console.error("Error fetching slides:", error)
-      toast({
-        title: "Lỗi",
-        description: "Không thể tải danh sách slides",
-        variant: "destructive"
-      })
+      toast.error("Không thể tải danh sách slides")
     } finally {
       setIsLoading(false)
     }
@@ -61,21 +60,13 @@ export default function ManageSlidesPage() {
     if (file) {
       // Kiểm tra kích thước file (giới hạn 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Lỗi",
-          description: "Kích thước ảnh không được vượt quá 5MB",
-          variant: "destructive"
-        })
+        toast.error("Kích thước ảnh không được vượt quá 5MB")
         return
       }
 
       // Kiểm tra loại file
       if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Lỗi",
-          description: "Vui lòng chọn file ảnh",
-          variant: "destructive"
-        })
+        toast.error("Vui lòng chọn file ảnh")
         return
       }
 
@@ -91,44 +82,62 @@ export default function ManageSlidesPage() {
     }
   }
 
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      subtitle: "",
+      image: null,
+      imagePreview: ""
+    })
+  }
+
+  const handleAddDialogOpen = (open: boolean) => {
+    setIsAddDialogOpen(open)
+    if (!open) {
+      resetForm()
+      setFormData({
+        title: "",
+        subtitle: "",
+        image: null,
+        imagePreview: ""
+      })
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.image) {
-      toast({
-        title: "Lỗi",
-        description: "Vui lòng chọn ảnh",
-        variant: "destructive"
-      })
+      toast.error("Vui lòng chọn ảnh")
       return
     }
 
     try {
+      const token = await getToken()
+
       const formDataToSend = new FormData()
       formDataToSend.append('title', formData.title)
       formDataToSend.append('subtitle', formData.subtitle)
       formDataToSend.append('image', formData.image)
 
-      const response = await fetch("/api/bannerSlides", {
+      const response = await fetch("http://localhost:8800/api/bannerSlides", {
         method: "POST",
+        credentials: 'include',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formDataToSend
       })
       const data = await response.json()
       if (data.success) {
-        toast({
-          title: "Thành công",
-          description: "Đã thêm slide mới"
-        })
-        fetchSlides()
-        setIsAddDialogOpen(false)
-        setFormData({ title: "", subtitle: "", image: null, imagePreview: "" })
+        toast.success("Slide mới đã được thêm vào danh sách")
+        await fetchSlides() // Wait for slides to be fetched
+        handleAddDialogOpen(false) // Close dialog and reset form
+      } else {
+        toast.error(data.message || "Không thể thêm slide")
       }
     } catch (error) {
       console.error("Error adding slide:", error)
-      toast({
-        title: "Lỗi",
-        description: "Không thể thêm slide",
-        variant: "destructive"
-      })
+      toast.error("Không thể thêm slide")
     }
   }
 
@@ -137,6 +146,7 @@ export default function ManageSlidesPage() {
     if (!selectedSlide) return
 
     try {
+      const token = await getToken()
       const formDataToSend = new FormData()
       formDataToSend.append('title', formData.title)
       formDataToSend.append('subtitle', formData.subtitle)
@@ -144,53 +154,113 @@ export default function ManageSlidesPage() {
         formDataToSend.append('image', formData.image)
       }
 
-      const response = await fetch(`/api/bannerSlides/${selectedSlide.id}`, {
+      const response = await fetch(`http://localhost:8800/api/bannerSlides/${selectedSlide.id}`, {
         method: "PUT",
+        credentials: 'include',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formDataToSend
       })
       const data = await response.json()
       if (data.success) {
-        toast({
-          title: "Thành công",
-          description: "Đã cập nhật slide"
-        })
-        fetchSlides()
+        toast.success("Thông tin slide đã được cập nhật")
+        await fetchSlides() // Wait for slides to be fetched
         setIsEditDialogOpen(false)
         setSelectedSlide(null)
-        setFormData({ title: "", subtitle: "", image: null, imagePreview: "" })
+        resetForm()
+      } else {
+        toast.error(data.message || "Không thể cập nhật slide")
       }
     } catch (error) {
       console.error("Error updating slide:", error)
-      toast({
-        title: "Lỗi",
-        description: "Không thể cập nhật slide",
-        variant: "destructive"
-      })
+      toast.error("Không thể cập nhật slide")
     }
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa slide này?")) return
+    setSelectedSlide(slides.find(slide => slide.id === id) || null)
+    setIsDeleteDialogOpen(true)
+  }
 
+  const performDelete = async (slideId: number) => {
     try {
-      const response = await fetch(`/api/bannerSlides/${id}`, {
-        method: "DELETE"
+      const token = await getToken()
+      const response = await fetch(`http://localhost:8800/api/bannerSlides/${slideId}`, {
+        method: "DELETE",
+        credentials: 'include',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       })
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok')
+      }
+
       const data = await response.json()
       if (data.success) {
-        toast({
-          title: "Thành công",
-          description: "Đã xóa slide"
-        })
-        fetchSlides()
+        toast.success(data.message || "Đã xóa slide")
+        await fetchSlides() // Refresh danh sách sau khi xóa
+        setIsDeleteDialogOpen(false)
+        setSelectedSlide(null)
+      } else {
+        toast.error(data.message || "Không thể xóa slide")
       }
     } catch (error) {
       console.error("Error deleting slide:", error)
-      toast({
-        title: "Lỗi",
-        description: "Không thể xóa slide",
-        variant: "destructive"
+      toast.error("Không thể xóa slide")
+    }
+  }
+
+  const handleMoveUp = async (id: number) => {
+    try {
+      const token = await getToken()
+      const response = await fetch(`http://localhost:8800/api/bannerSlides/${id}/position`, {
+        method: "PUT",
+        credentials: 'include',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ direction: 'up' })
       })
+      const data = await response.json()
+      if (data.success) {
+        toast.success("Đã di chuyển slide lên trên")
+        await fetchSlides()
+      } else {
+        toast.error(data.message || "Không thể di chuyển slide")
+      }
+    } catch (error) {
+      console.error("Error moving slide up:", error)
+      toast.error("Không thể di chuyển slide")
+    }
+  }
+
+  const handleMoveDown = async (id: number) => {
+    try {
+      const token = await getToken()
+      const response = await fetch(`http://localhost:8800/api/bannerSlides/${id}/position`, {
+        method: "PUT",
+        credentials: 'include',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ direction: 'down' })
+      })
+      const data = await response.json()
+      if (data.success) {
+        toast.success("Đã di chuyển slide xuống dưới")
+        await fetchSlides()
+      } else {
+        toast.error(data.message || "Không thể di chuyển slide")
+      }
+    } catch (error) {
+      console.error("Error moving slide down:", error)
+      toast.error("Không thể di chuyển slide")
     }
   }
 
@@ -200,7 +270,7 @@ export default function ManageSlidesPage() {
       title: slide.title,
       subtitle: slide.subtitle,
       image: null,
-      imagePreview: slide.image_url
+      imagePreview: slide.image
     })
     setIsEditDialogOpen(true)
   }
@@ -216,7 +286,7 @@ export default function ManageSlidesPage() {
                 Thêm, sửa, xóa và sắp xếp các banner slides trên trang chủ
               </CardDescription>
             </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <Dialog open={isAddDialogOpen} onOpenChange={handleAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
@@ -287,7 +357,7 @@ export default function ManageSlidesPage() {
                     </div>
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                    <Button type="button" variant="outline" onClick={() => handleAddDialogOpen(false)}>
                       Hủy
                     </Button>
                     <Button type="submit">Thêm</Button>
@@ -327,7 +397,7 @@ export default function ManageSlidesPage() {
                     <TableCell>
                       <div className="relative h-16 w-24 overflow-hidden rounded">
                         <Image
-                          src={slide.image_url}
+                          src={slide.image}
                           alt={slide.title}
                           fill
                           className="object-cover"
@@ -345,10 +415,10 @@ export default function ManageSlidesPage() {
                         <Button variant="outline" size="icon" onClick={() => handleDelete(slide.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="icon">
+                        <Button variant="outline" size="icon" onClick={() => handleMoveUp(slide.id)}>
                           <MoveUp className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="icon">
+                        <Button variant="outline" size="icon" onClick={() => handleMoveDown(slide.id)}>
                           <MoveDown className="h-4 w-4" />
                         </Button>
                       </div>
@@ -419,7 +489,7 @@ export default function ManageSlidesPage() {
                         variant="destructive"
                         size="icon"
                         className="absolute -right-2 -top-2 h-6 w-6"
-                        onClick={() => setFormData({ ...formData, image: null, imagePreview: selectedSlide?.image_url || "" })}
+                        onClick={() => setFormData({ ...formData, image: null, imagePreview: selectedSlide?.image || "" })}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -435,6 +505,41 @@ export default function ManageSlidesPage() {
               <Button type="submit">Lưu thay đổi</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Bạn có chắc chắn muốn xóa slide này?</p>
+            {selectedSlide && (
+              <div className="mt-4">
+                <p className="font-medium">Tiêu đề: {selectedSlide.title}</p>
+                <p className="text-sm text-gray-500">Ngày tạo: {new Date(selectedSlide.created_at).toLocaleDateString("vi-VN")}</p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false)
+                setSelectedSlide(null)
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => selectedSlide && performDelete(selectedSlide.id)}
+            >
+              Xóa
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

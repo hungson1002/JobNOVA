@@ -25,6 +25,11 @@ const BannerSlide = (sequelize) =>
         type: DataTypes.STRING(500),
         allowNull: true,
       },
+      position: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+      },
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,

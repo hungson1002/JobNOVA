@@ -14,6 +14,7 @@ export const createBannerSlide = async (req, res) => {
       image_type: req.file.mimetype,
       title,
       subtitle,
+      position: await getNextPosition()
     });
 
     return res.status(201).json({ success: true, banner });
@@ -22,20 +23,62 @@ export const createBannerSlide = async (req, res) => {
   }
 };
 
-// Xoá banner
-export const deleteBannerSlide = async (req, res) => {
+// Cập nhật banner
+export const updateBannerSlide = async (req, res) => {
   try {
     const { id } = req.params;
+    const { title, subtitle } = req.body;
+
     const banner = await models.BannerSlide.findByPk(id);
 
     if (!banner) {
       return res.status(404).json({ success: false, message: "Banner not found" });
     }
 
-    await banner.destroy();
-    return res.status(200).json({ success: true, message: "Banner deleted" });
+    // Cập nhật title và subtitle
+    banner.title = title;
+    banner.subtitle = subtitle;
+
+    // Nếu có ảnh mới thì cập nhật ảnh
+    if (req.file) {
+      banner.image_data = req.file.buffer;
+      banner.image_type = req.file.mimetype;
+    }
+
+    await banner.save();
+
+    return res.status(200).json({ success: true, message: "Banner updated successfully", banner });
   } catch (error) {
+    console.error("Lỗi khi cập nhật banner:", error);
     return res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// Xoá banner
+export const deleteBannerSlide = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const banner = await models.BannerSlide.findByPk(id);
+    if (!banner) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy slide để xóa",
+      });
+    }
+
+    await banner.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: "Xóa slide thành công",
+    });
+  } catch (error) {
+    console.error("Lỗi khi xóa slide:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server khi xóa slide",
+    });
   }
 };
 
@@ -55,4 +98,57 @@ export const getAllBannerSlides = async (req, res) => {
   } catch (error) {
     return res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
+};
+
+// Cập nhật vị trí banner
+export const updatePosition = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { direction } = req.body;
+
+    const banner = await models.BannerSlide.findByPk(id);
+    if (!banner) {
+      return res.status(404).json({ success: false, message: "Banner not found" });
+    }
+
+    const banners = await models.BannerSlide.findAll({
+      order: [['position', 'ASC']]
+    });
+
+    const currentIndex = banners.findIndex(b => b.id === banner.id);
+    
+    if (direction === 'up' && currentIndex > 0) {
+      // Swap positions with the banner above
+      const temp = banners[currentIndex - 1].position;
+      banners[currentIndex - 1].position = banner.position;
+      banner.position = temp;
+      
+      await banners[currentIndex - 1].save();
+      await banner.save();
+    } else if (direction === 'down' && currentIndex < banners.length - 1) {
+      // Swap positions with the banner below
+      const temp = banners[currentIndex + 1].position;
+      banners[currentIndex + 1].position = banner.position;
+      banner.position = temp;
+      
+      await banners[currentIndex + 1].save();
+      await banner.save();
+    } else {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot move ${direction}, banner is at the ${direction === 'up' ? 'top' : 'bottom'}`
+      });
+    }
+
+    return res.status(200).json({ success: true, message: "Position updated successfully" });
+  } catch (error) {
+    console.error("Error updating position:", error);
+    return res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// Helper function to get next position value
+const getNextPosition = async () => {
+  const maxPosition = await models.BannerSlide.max('position') || 0;
+  return maxPosition + 1;
 };
