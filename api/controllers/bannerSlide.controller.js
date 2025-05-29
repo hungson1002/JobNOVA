@@ -85,7 +85,8 @@ export const deleteBannerSlide = async (req, res) => {
 // Lấy tất cả banner
 export const getAllBannerSlides = async (req, res) => {
   try {
-    const banners = await models.BannerSlide.findAll({ order: [["created_at", "DESC"]] });
+    const banners = await models.BannerSlide.findAll({ order: [["position", "ASC"]] });
+
 
     const formatted = banners.map(b => ({
       id: b.id,
