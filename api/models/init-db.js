@@ -277,6 +277,21 @@ async function initDb() {
       },
     ]);
 
+    // Tạo banner slide
+    await models.BannerSlide.bulkCreate([
+    {
+      image_url: "https://example.com/banner1.jpg",
+      title: "Welcome to JobNOVA",
+      subtitle: "Find your perfect freelancer today",
+    },
+    {
+      image_url: "https://example.com/banner2.jpg",
+      title: "Trusted by Thousands",
+      subtitle: "Grow your business with ease",
+    },
+  ]);
+
+
     console.log("Thêm dữ liệu mẫu thành công");
   } catch (err) {
     console.error("Lỗi khi khởi tạo database:", err.message);

@@ -8,6 +8,7 @@ import { Server } from "socket.io";
 import { initSocket } from "./controllers/message.controller.js";
 import { sequelize } from "./models/Sequelize-mysql.js";
 import adminLogRoute from "./routes/adminLog.route.js";
+import bannerSlide from "./routes/bannerSlide.route.js";
 import categoryRoute from "./routes/category.route.js";
 import cloudinaryRoute from "./routes/cloudinary.route.js";
 import companyRoute from "./routes/company.route.js";
@@ -36,6 +37,7 @@ import skillsRoute from "./routes/skills.route.js";
 import userRoute from "./routes/user.route.js";
 import userSearchHistoryRoute from "./routes/userSearchHistory.route.js";
 import messageSocketHandler from "./socket/messageSocket.js";
+
 // .env
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
@@ -97,6 +99,7 @@ app.use("/api/skills", skillsRoute);
 app.use("/api/userSearchHistory", userSearchHistoryRoute);
 app.use("/api/cloudinary", cloudinaryRoute);
 app.use("/api/dashboard", dashboardRoute);
+app.use("/api/bannerSlides", bannerSlide);
 
 // Error middleware (luôn trả về JSON)
 app.use((err, req, res, next) => {
