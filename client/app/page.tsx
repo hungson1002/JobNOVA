@@ -616,20 +616,24 @@ export default function Home() {
                         fill
                         className="object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center">
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center ">
                         <div className="text-white p-12">
-                          <h3 className="text-4xl font-bold mb-4">{slide.title}</h3>
-                          <p className="text-xl mb-6">{slide.description}</p>
+                          <div className="absolute top-4">
+                            <h3 className="text-4xl font-bold mb-4">{slide.title}</h3>
+                            <p className="text-xl mb-6">{slide.description}</p>
+                          </div>
                           {slide.cta_link && (
-                            <Button size="lg" asChild variant="secondary">
-                              <Link 
-                                href={slide.cta_link}
-                                target={slide.cta_link.startsWith("http") ? "_blank" : "_self"}
-                                rel={slide.cta_link.startsWith("http") ? "noopener noreferrer" : undefined}
-                              >
-                                Xem thêm
-                              </Link>
-                            </Button>
+                            <div className="absolute bottom-6 right-6">
+                              <Button size="lg" asChild variant="secondary">
+                                <Link 
+                                  href={slide.cta_link}
+                                  target={slide.cta_link.startsWith("http") ? "_blank" : "_self"}
+                                  rel={slide.cta_link.startsWith("http") ? "noopener noreferrer" : undefined}
+                                >
+                                  Xem thêm
+                                </Link>
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </div>
