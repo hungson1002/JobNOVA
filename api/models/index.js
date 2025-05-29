@@ -19,6 +19,7 @@ import Message from "./message.model.js";
 import Notification from "./notification.model.js";
 import Order from "./order.model.js";
 import Payment from "./payment.model.js";
+import Report from "./report.model.js";
 import Review from "./review.model.js";
 import ReviewHelpfulVote from "./reviewHelpfulVote.model.js";
 import SavedGig from "./savedGigs.model.js";
@@ -59,6 +60,7 @@ export default {
   GigRequirementTemplate,
   ReviewHelpfulVote,
   BannerSlide,
+  Report,
 };
 
 //index.js, init-db.js, mySQL-db.js dành cho việc khởi tạo database và models của MySQL 

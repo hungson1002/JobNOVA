@@ -28,6 +28,7 @@ import messageRoute from "./routes/message.route.js";
 import notificationRoute from "./routes/notification.route.js";
 import orderRoute from "./routes/order.route.js";
 import paymentRoute from "./routes/payment.route.js";
+import reportRoute from "./routes/report.route.js";
 import reviewRoute from "./routes/review.route.js";
 import roleRoute from "./routes/role.route.js";
 import savedGigsRoute from "./routes/savedGigs.route.js";
@@ -100,6 +101,7 @@ app.use("/api/userSearchHistory", userSearchHistoryRoute);
 app.use("/api/cloudinary", cloudinaryRoute);
 app.use("/api/dashboard", dashboardRoute);
 app.use("/api/bannerSlides", bannerSlide);
+app.use("/api/reports", reportRoute);
 
 // Error middleware (luôn trả về JSON)
 app.use((err, req, res, next) => {
