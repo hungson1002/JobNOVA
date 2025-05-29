@@ -215,6 +215,16 @@ export default function ManageSlidesPage() {
   }
 
   const handleMoveUp = async (id: number) => {
+    const index = slides.findIndex(slide => slide.id === id)
+    if (index <= 0) return // đã ở đầu
+  
+    // Cập nhật UI trước
+    const updatedSlides = [...slides]
+    const temp = updatedSlides[index]
+    updatedSlides[index] = updatedSlides[index - 1]
+    updatedSlides[index - 1] = temp
+    setSlides(updatedSlides)
+  
     try {
       const token = await getToken()
       const response = await fetch(`http://localhost:8800/api/bannerSlides/${id}/position`, {
@@ -227,19 +237,30 @@ export default function ManageSlidesPage() {
         body: JSON.stringify({ direction: 'up' })
       })
       const data = await response.json()
-      if (data.success) {
-        toast.success("Đã di chuyển slide lên trên")
-        await fetchSlides()
+      if (!data.success) {
+        toast.error(data.message || "Không thể di chuyển slide lên")
+        await fetchSlides() // fallback nếu lỗi
       } else {
-        toast.error(data.message || "Không thể di chuyển slide")
+        toast.success("Đã di chuyển slide lên")
       }
     } catch (error) {
       console.error("Error moving slide up:", error)
       toast.error("Không thể di chuyển slide")
+      await fetchSlides()
     }
   }
-
+  
   const handleMoveDown = async (id: number) => {
+    const index = slides.findIndex(slide => slide.id === id)
+    if (index === -1 || index >= slides.length - 1) return // đã ở cuối
+  
+    // Cập nhật UI trước
+    const updatedSlides = [...slides]
+    const temp = updatedSlides[index]
+    updatedSlides[index] = updatedSlides[index + 1]
+    updatedSlides[index + 1] = temp
+    setSlides(updatedSlides)
+  
     try {
       const token = await getToken()
       const response = await fetch(`http://localhost:8800/api/bannerSlides/${id}/position`, {
@@ -252,17 +273,19 @@ export default function ManageSlidesPage() {
         body: JSON.stringify({ direction: 'down' })
       })
       const data = await response.json()
-      if (data.success) {
-        toast.success("Đã di chuyển slide xuống dưới")
-        await fetchSlides()
+      if (!data.success) {
+        toast.error(data.message || "Không thể di chuyển slide xuống")
+        await fetchSlides() // fallback nếu lỗi
       } else {
-        toast.error(data.message || "Không thể di chuyển slide")
+        toast.success("Đã di chuyển slide xuống")
       }
     } catch (error) {
       console.error("Error moving slide down:", error)
       toast.error("Không thể di chuyển slide")
+      await fetchSlides()
     }
   }
+  
 
   const openEditDialog = (slide: BannerSlide) => {
     setSelectedSlide(slide)
