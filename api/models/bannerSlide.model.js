@@ -9,8 +9,12 @@ const BannerSlide = (sequelize) =>
         autoIncrement: true,
         primaryKey: true,
       },
-      image_url: {
-        type: DataTypes.STRING(1000),
+      image_data: {
+        type: DataTypes.BLOB("long"), // lưu ảnh nhị phân
+        allowNull: false,
+      },
+      image_type: {
+        type: DataTypes.STRING(50), // ví dụ "image/jpeg"
         allowNull: false,
       },
       title: {

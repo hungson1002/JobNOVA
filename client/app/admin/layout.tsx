@@ -14,7 +14,8 @@ import {
   FileBarChart, 
   LogOut,
   Menu,
-  X
+  X,
+  Images
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -43,6 +44,11 @@ const sidebarItems = [
     label: "Category Management", 
     href: "/admin/manage-categories",
     icon: <FolderKanban className="h-5 w-5" />
+  },
+  {
+    label: "Banner Slides",
+    href: "/admin/manage-slides",
+    icon: <Images className="h-5 w-5" />
   },
   { 
     label: "Report Management", 
