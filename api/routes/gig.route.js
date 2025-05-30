@@ -6,6 +6,7 @@ import {
   getGigById,
   searchGigs,
   updateGig,
+  // getGigsBySeller,
 } from "../controllers/gig.controller.js";
 import { authenticateAndLoadUser, isSellerOrAdmin } from "../middleware/getAuth.js";
 import requireAuth from "../middleware/requireAuth.js";
@@ -18,5 +19,6 @@ router.post("/", requireAuth, authenticateAndLoadUser, isSellerOrAdmin, createGi
 router.delete("/:id", requireAuth, authenticateAndLoadUser, isSellerOrAdmin, deleteGig);
 router.put("/:id",requireAuth, authenticateAndLoadUser, isSellerOrAdmin, updateGig);
 router.get("/search", searchGigs);
+// router.get("/user/:clerk_id", getGigsBySeller);
 
 export default router;

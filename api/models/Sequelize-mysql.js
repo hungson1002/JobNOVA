@@ -167,12 +167,32 @@ const defineRelations = (models) => {
 
   // User-Portfolio: 1-to-many (one user can upload multiple portfolio files)
   models.User.hasMany(models.Portfolio, {
-    foreignKey: "clerk_id",
+    foreignKey: "seller_clerk_id",
     sourceKey: "clerk_id",
   });
   models.Portfolio.belongsTo(models.User, {
-    foreignKey: "clerk_id",
+    foreignKey: "seller_clerk_id",
     targetKey: "clerk_id",
+  });
+
+  // Gig-Portfolio: 1-to-many (one gig can have multiple portfolio files)
+  models.Gig.hasMany(models.Portfolio, {
+    foreignKey: "gig_id",
+    sourceKey: "id",
+  });
+  models.Portfolio.belongsTo(models.Gig, {
+    foreignKey: "gig_id",
+    targetKey: "id",
+  });
+
+  // Category-Portfolio: 1-to-many (one category can have multiple portfolio files)
+  models.Category.hasMany(models.Portfolio, {
+    foreignKey: "category_id",
+    sourceKey: "id",
+  });
+  models.Portfolio.belongsTo(models.Category, {
+    foreignKey: "category_id",
+    targetKey: "id",
   });
 
 
@@ -195,6 +215,11 @@ const defineRelations = (models) => {
   // Gig-GigExtra: 1-to-many (one gig can have multiple extras)
   models.Gig.hasMany(models.GigExtra, { foreignKey: "gig_id" });
   models.GigExtra.belongsTo(models.Gig, { foreignKey: "gig_id" });
+
+  // Review-ReviewHelpfulVote: 1-to-many (one review can have multiple helpful votes)
+  models.Review.hasMany(models.ReviewHelpfulVote, { foreignKey: "review_id" });
+  models.ReviewHelpfulVote.belongsTo(models.Review, { foreignKey: "review_id" });
+  
 
 };
 

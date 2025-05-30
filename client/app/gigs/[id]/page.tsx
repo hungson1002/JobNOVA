@@ -45,6 +45,8 @@ import { fetchUser } from "@/lib/api";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { ReviewForm } from "@/components/review-form";
 import { PortfolioSection } from "@/components/portfolio-section";
+import { PortfolioForm } from "@/components/portfolio-form";
+import { PortfolioGrid } from "@/components/portfolio-grid";
 
 interface PageParams {
   id: string;
@@ -53,7 +55,7 @@ interface PageParams {
 export default function GigDetailPage({ params }: { params: Promise<PageParams> }) {
   const resolvedParams = use(params);
   const router = useRouter();
-  const gigId = resolvedParams.id;
+  const gigId = Number(resolvedParams.id);
   const { isSaved, isLoading: isSaving, error: saveError, toggleSave } = useSavedGigs(gigId);
   const { user, isSignedIn } = useUser();
   const { userId, isLoaded, getToken } = useAuth();
@@ -78,6 +80,37 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   const [userReview, setUserReview] = useState<any>(null);
   const [visibleReviews, setVisibleReviews] = useState<any[]>([]);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [portfolios, setPortfolios] = useState<any[]>([]);
+  const [loadingPortfolio, setLoadingPortfolio] = useState(true);
+
+  const fetchPortfoliosByGigId = async (gigId: number) => {
+    if (!gigId) return [];
+    const url = `http://localhost:8800/api/portfolios?gig_id=${gigId}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      const data = await res.json();
+      let portfolios: any[] = [];
+      if (Array.isArray(data.portfolios)) {
+        portfolios = data.portfolios;
+      } else if (Array.isArray(data.data)) {
+        portfolios = data.data;
+      } else if (Array.isArray(data)) {
+        portfolios = data;
+      }
+      return portfolios.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        portfolio_images: Array.isArray(p.portfolio_images) ? p.portfolio_images : [],
+        category: p.Category ? { id: p.Category.id, name: p.Category.name } : undefined,
+        gig: p.Gig ? { id: p.Gig.id, title: p.Gig.title } : undefined,
+      }));
+    } catch (err) {
+      console.error("Fetch portfolio error:", err);
+      return [];
+    }
+  };
 
   const fetchReviews = async () => {
     const query = `gig_id=${gigId}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${reviewSort ? `&sort=${reviewSort}` : ""}`;
@@ -121,7 +154,32 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
       .catch((err) => console.error("Fetch gig error:", err))
       .finally(() => setLoadingGig(false));
   }, [gigId]);
-  
+
+  // Fetch portfolio
+  useEffect(() => {
+    if (!gig || !gig.id) return;
+    setLoadingPortfolio(true);
+    fetchPortfoliosByGigId(gig.id)
+      .then((data) => {
+        console.log("[DEBUG] Portfolios fetched for gig:", gig.id, data);
+        setPortfolios(data);
+      })
+      .catch(err => {
+        console.error("Fetch portfolio error:", err);
+        setPortfolios([]);
+      })
+      .finally(() => setLoadingPortfolio(false));
+  }, [gig]);
+
+  // Fetch portfolio by seller clerk id
+  // useEffect(() => {
+  //   if (!gig?.seller_clerk_id) return;
+  //   setLoadingPortfolio(true);
+  //   fetchPortfolios(gig.seller_clerk_id, "clerk")
+  //     .then(setPortfolios)
+  //     .catch(err => console.error("Fetch portfolio error:", err))
+  //     .finally(() => setLoadingPortfolio(false));
+  // }, [gig?.seller_clerk_id]);
 
   const refetchReviews = async () => {
     await fetchReviews();
@@ -591,11 +649,12 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             {/* Portfolio Section */}
             <div className="mb-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-xl font-semibold">My Portfolio</h2>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {gig.seller_clerk_id && (
-                  <PortfolioSection clerkId={gig.seller_clerk_id} />
-                )}
-              </div>
+              <PortfolioGrid
+                portfolios={portfolios}
+                clerkId={gig?.seller_clerk_id}
+                isOwner={userId === gig?.seller_clerk_id}
+                isSeller={userId === gig?.seller_clerk_id}
+              />
             </div>
 
             {/* About The Seller */}

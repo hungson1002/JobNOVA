@@ -297,3 +297,13 @@ export const searchGigs = async (req, res, next) => {
     return res.status(500).json({ success: false, message: 'Error searching gigs', error: error.message });
   }
 };
+
+// export const getGigsBySeller = async (req, res) => {
+//   try {
+//     const { clerk_id } = req.params;
+//     const gigs = await models.Gig.findAll({ where: { clerk_id } });
+//     res.json(Array.isArray(gigs) ? gigs : []);
+//   } catch (error) {
+//     res.status(500).json({ message: "Error fetching gigs by seller", error: error.message });
+//   }
+// };

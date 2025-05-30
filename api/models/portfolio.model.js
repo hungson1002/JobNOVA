@@ -9,13 +9,13 @@ const Portfolio = (sequelize) =>
         autoIncrement: true,
         primaryKey: true,
       },
-      clerk_id: {
+      seller_clerk_id: {
         type: DataTypes.STRING(255),
         allowNull: false,
         references: {
-            model: "user_account",
-            key: "clerk_id",
-          },
+          model: "user_account",
+          key: "clerk_id",
+        },
       },
       title: {
         type: DataTypes.STRING(100),
@@ -24,17 +24,26 @@ const Portfolio = (sequelize) =>
       description: {
         type: DataTypes.TEXT,
       },
-      portfolio_url: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-      },
-      portfolio_size: {
+      category_id: {
         type: DataTypes.INTEGER,
         allowNull: true,
+        references: {
+          model: "category",
+          key: "id",
+        },
       },
-      portfolio_type: {
-        type: DataTypes.STRING(50),
+      gig_id: {
+        type: DataTypes.INTEGER,
         allowNull: true,
+        references: {
+          model: "gigs",
+          key: "id",
+        },
+      },
+      portfolio_images: {
+        type: DataTypes.JSON,
+        allowNull: false,
+        defaultValue: [],
       },
       created_at: {
         type: DataTypes.DATE,
@@ -46,7 +55,9 @@ const Portfolio = (sequelize) =>
       tableName: "portfolio",
       timestamps: false,
       indexes: [
-        { fields: ["clerk_id"]}
+        { fields: ["seller_clerk_id"] },
+        { fields: ["category_id"] },
+        { fields: ["gig_id"] }
       ],
     }
   );
