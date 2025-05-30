@@ -57,10 +57,10 @@ export default {
   GigRequirementTemplate,
   ReviewHelpfulVote,
   BannerSlide,
-  Report,
   GigExtra,
   OrderExtra,
   Portfolio,
+  Report,
 }
 
 //index.js, init-db.js, mySQL-db.js dành cho việc khởi tạo database và models của MySQL 

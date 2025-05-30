@@ -28,10 +28,39 @@ export const createReport = async (req, res) => {
 export const getAllReports = async (req, res) => {
   try {
     const reports = await models.Report.findAll({
+      where: {
+        target_type: "service", // lọc chỉ report gig
+      },
       order: [["created_at", "DESC"]],
+      include: [
+        {
+          model: models.Gig,
+          as: "gig",
+          attributes: ["title", "seller_clerk_id"],
+          required: false,
+        },
+        {
+          model: models.User,
+          as: "reporter",
+          attributes: ["firstname", "lastname"], // thay vì name
+        },
+      ],
     });
 
-    return res.status(200).json({ success: true, reports });
+    const formatted = reports.map((r) => ({
+      id: r.id,
+      gig_title: r.gig?.title || "N/A",
+      seller: r.gig?.seller_clerk_id || "Unknown",
+      report_reason: r.reason,
+      description: r.description,
+      reported_by: r.reporter
+        ? `${r.reporter.firstname ?? ""} ${r.reporter.lastname ?? ""}`.trim()
+        : r.reporter_clerk_id,
+      report_date: r.created_at,
+      status: "pending", // có thể đổi sau nếu có cột status
+    }));
+
+    return res.status(200).json({ success: true, reports: formatted });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Server error", error: error.message });
   }

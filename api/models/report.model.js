@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
 
-const Report = (sequelize) =>
-  sequelize.define(
+const defineReportModel = (sequelize) => {
+  const Report = sequelize.define(
     "Report",
     {
       id: {
@@ -18,7 +18,7 @@ const Report = (sequelize) =>
         allowNull: false,
       },
       target_id: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.INTEGER,
         allowNull: false,
       },
       reason: {
@@ -41,4 +41,24 @@ const Report = (sequelize) =>
     }
   );
 
-export default Report;
+  // ✅ GẮN associate trực tiếp vào instance
+  Report.associate = (models) => {
+    Report.belongsTo(models.Gig, {
+      foreignKey: "target_id",
+      targetKey: "id",
+      as: "gig",
+      constraints: false,
+    });
+
+    Report.belongsTo(models.User, {
+      foreignKey: "reporter_clerk_id",
+      targetKey: "clerk_id",
+      as: "reporter",
+      constraints: false,
+    });
+  };
+
+  return Report;
+};
+
+export default defineReportModel;
