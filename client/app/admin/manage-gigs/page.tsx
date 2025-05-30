@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { CheckCircle, XCircle, Search, Filter, Eye, MoreVertical } from "lucide-react"
+import { CheckCircle, XCircle, Search, Filter, Eye, MoreVertical, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useAuth } from "@clerk/nextjs"
@@ -263,458 +263,459 @@ export default function ManageGigsPage() {
   }
 
   return (
-    <div className="container px-4 py-8">
-      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Manage Gigs</h1>
-          <p className="text-muted-foreground">Review, approve, and manage gigs on the platform</p>
+    <div className="container max-w-7xl mx-auto px-4 py-10">
+      <div className="mb-6">
+        <h1 className="text-4xl font-extrabold text-emerald-700 tracking-tight mb-2">Service Management</h1>
+        <p className="text-lg text-gray-500">Review, approve, and manage all gigs/services on the platform</p>
+      </div>
+      {/* Search & Filter Bar */}
+      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white/80 rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="relative flex-1 w-full sm:w-64">
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by title or seller..."
+            className="pl-8 rounded-lg"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full md:w-auto">
-          <div className="relative flex-1 w-full sm:w-64">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by title or seller..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[180px] rounded-lg">
+              <SelectValue placeholder="Filter by category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
-      <Card>
-        <CardContent>
-          <Tabs value={tab} onValueChange={handleTabChange} defaultValue="pending">
-            <TabsList className="mb-4 mt-6 flex justify-around w-full">
-              <TabsTrigger value="pending" className="w-full justify-center">
-                Pending
-                <Badge variant="secondary" className="ml-2">
-                  {counts.pending}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="approved" className="w-full justify-center">
-                Approved
-                <Badge variant="secondary" className="ml-2">
-                  {counts.approved}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="rejected" className="w-full justify-center">
-                Rejected
-                <Badge variant="secondary" className="ml-2">
-                  {counts.rejected}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
+      <Card className="rounded-2xl border-2 border-gray-100">
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex justify-center items-center py-16">
+              <Loader2 className="animate-spin h-8 w-8 text-emerald-500 mr-2" />
+              <span className="text-lg text-gray-500">Loading gigs...</span>
+            </div>
+          ) : (
+            <Tabs value={tab} onValueChange={handleTabChange} defaultValue="pending">
+              <TabsList className="mb-4 mt-6 flex justify-around w-full">
+                <TabsTrigger value="pending" className="w-full justify-center">
+                  Pending
+                  <Badge variant="secondary" className="ml-2">
+                    {counts.pending}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="approved" className="w-full justify-center">
+                  Approved
+                  <Badge variant="secondary" className="ml-2">
+                    {counts.approved}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="rejected" className="w-full justify-center">
+                  Rejected
+                  <Badge variant="secondary" className="ml-2">
+                    {counts.rejected}
+                  </Badge>
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="pending">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Image</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Seller</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Approved Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tab === "pending" && displayedGigs.length > 0 ? (
-                    displayedGigs.map((gig) => (
-                      <TableRow key={gig.id}>
-                        <TableCell>
-                          {gig.gig_images && gig.gig_images.length > 0 ? (
-                            <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
-                          ) : gig.gig_image ? (
-                            <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
-                          ) : (
-                            <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="block max-w-[200px] truncate cursor-pointer">
-                                  {gig.title}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <span className="select-all break-all">{gig.title}</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="block max-w-[120px] truncate cursor-pointer">
-                                  {(() => {
+              <TabsContent value="pending">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Seller</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Approved Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tab === "pending" && displayedGigs.length > 0 ? (
+                      displayedGigs.map((gig) => (
+                        <TableRow key={gig.id}>
+                          <TableCell>
+                            {gig.gig_images && gig.gig_images.length > 0 ? (
+                              <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : gig.gig_image ? (
+                              <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : (
+                              <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[200px] truncate cursor-pointer">
+                                    {gig.title}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{gig.title}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[120px] truncate cursor-pointer">
+                                    {(() => {
+                                      const sellerName = gig.seller
+                                        ? gig.seller.firstname && gig.seller.lastname
+                                          ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                          : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                        : gig.seller_clerk_id || "N/A";
+                                      if (sellerName.length > 16) {
+                                        return sellerName;
+                                      }
+                                      return sellerName;
+                                    })()}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{(() => {
                                     const sellerName = gig.seller
                                       ? gig.seller.firstname && gig.seller.lastname
                                         ? `${gig.seller.firstname} ${gig.seller.lastname}`
                                         : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
                                       : gig.seller_clerk_id || "N/A";
-                                    if (sellerName.length > 16) {
-                                      return sellerName;
-                                    }
                                     return sellerName;
-                                  })()}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <span className="select-all break-all">{(() => {
-                                  const sellerName = gig.seller
-                                    ? gig.seller.firstname && gig.seller.lastname
-                                      ? `${gig.seller.firstname} ${gig.seller.lastname}`
-                                      : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
-                                    : gig.seller_clerk_id || "N/A";
-                                  return sellerName;
-                                })()}</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>{gig.category?.name}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            gig.status === "pending"
-                              ? "bg-gray-200 text-gray-700"
-                              : gig.status === "active"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-red-100 text-red-700"
-                          }>
-                            {gig.status === "pending"
-                              ? "Pending"
-                              : gig.status === "active"
-                              ? "Active"
-                              : "Rejected"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="outline" className="h-8 w-8 p-0 flex items-center justify-center">
-                                <MoreVertical className="h-5 w-5" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="rounded-xl shadow-lg py-2 min-w-[180px]">
-                              <DropdownMenuItem onClick={() => handleView(gig)} className="gap-2 hover:bg-emerald-50">
-                                <Eye className="h-4 w-4 text-emerald-500" />
-                                <span>View detail</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="gap-2 text-emerald-700 font-medium hover:bg-emerald-50"
-                                onClick={async () => {
-                                  await handleApprove(gig.id);
-                                }}
-                              >
-                                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                <span>Approve</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="gap-2 text-red-600 font-medium hover:bg-red-50"
-                                onClick={async () => {
-                                  await handleReject(gig.id);
-                                }}
-                              >
-                                <XCircle className="h-4 w-4 text-red-500" />
-                                <span>Reject</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="gap-2 text-red-700 font-bold hover:bg-red-100"
-                                onClick={() => {
-                                  setGigToDelete(gig);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <XCircle className="h-4 w-4 text-red-700" />
-                                <span>Delete</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                  })()}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>{gig.category?.name}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              gig.status === "pending"
+                                ? "bg-gray-200 text-gray-700"
+                                : gig.status === "active"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-red-100 text-red-700"
+                            }>
+                              {gig.status === "pending"
+                                ? "Pending"
+                                : gig.status === "active"
+                                ? "Active"
+                                : "Rejected"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-8 w-8 p-0 flex items-center justify-center">
+                                  <MoreVertical className="h-5 w-5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-2xl shadow-xl py-2 min-w-[200px] border border-gray-100 bg-white">
+                                <DropdownMenuItem onClick={() => handleView(gig)} className="gap-2 px-4 py-2 hover:bg-emerald-50 rounded-xl font-medium text-gray-800">
+                                  <Eye className="h-4 w-4 text-emerald-500" />
+                                  <span>View detail</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {tab === "pending" && (
+                                  <>
+                                    <DropdownMenuItem
+                                      className="gap-2 px-4 py-2 text-emerald-700 font-semibold hover:bg-emerald-50 rounded-xl"
+                                      onClick={async () => { await handleApprove(gig.id); }}
+                                    >
+                                      <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                      <span>Approve</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="gap-2 px-4 py-2 text-red-600 font-semibold hover:bg-red-50 rounded-xl"
+                                      onClick={async () => { await handleReject(gig.id); }}
+                                    >
+                                      <XCircle className="h-4 w-4 text-red-500" />
+                                      <span>Reject</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
+                                <DropdownMenuItem
+                                  className="gap-2 px-4 py-2 text-red-700 font-bold hover:bg-red-100 rounded-xl"
+                                  onClick={() => { setGigToDelete(gig); setDeleteDialogOpen(true); }}
+                                >
+                                  <XCircle className="h-4 w-4 text-red-700" />
+                                  <span>Delete</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">
+                          No pending gigs found
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center">
-                        No pending gigs found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TabsContent>
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
 
-            <TabsContent value="approved">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Image</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Seller</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Approved Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tab === "approved" && displayedGigs.length > 0 ? (
-                    displayedGigs.map((gig) => (
-                      <TableRow key={gig.id}>
-                        <TableCell>
-                          {gig.gig_images && gig.gig_images.length > 0 ? (
-                            <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
-                          ) : gig.gig_image ? (
-                            <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
-                          ) : (
-                            <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="block max-w-[200px] truncate cursor-pointer">
-                                  {gig.title}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <span className="select-all break-all">{gig.title}</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="block max-w-[120px] truncate cursor-pointer">
-                                  {(() => {
+              <TabsContent value="approved">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Seller</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Approved Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tab === "approved" && displayedGigs.length > 0 ? (
+                      displayedGigs.map((gig) => (
+                        <TableRow key={gig.id}>
+                          <TableCell>
+                            {gig.gig_images && gig.gig_images.length > 0 ? (
+                              <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : gig.gig_image ? (
+                              <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : (
+                              <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[200px] truncate cursor-pointer">
+                                    {gig.title}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{gig.title}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[120px] truncate cursor-pointer">
+                                    {(() => {
+                                      const sellerName = gig.seller
+                                        ? gig.seller.firstname && gig.seller.lastname
+                                          ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                          : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                        : gig.seller_clerk_id || "N/A";
+                                      if (sellerName.length > 16) {
+                                        return sellerName;
+                                      }
+                                      return sellerName;
+                                    })()}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{(() => {
                                     const sellerName = gig.seller
                                       ? gig.seller.firstname && gig.seller.lastname
                                         ? `${gig.seller.firstname} ${gig.seller.lastname}`
                                         : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
                                       : gig.seller_clerk_id || "N/A";
-                                    if (sellerName.length > 16) {
-                                      return sellerName;
-                                    }
                                     return sellerName;
-                                  })()}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <span className="select-all break-all">{(() => {
-                                  const sellerName = gig.seller
-                                    ? gig.seller.firstname && gig.seller.lastname
-                                      ? `${gig.seller.firstname} ${gig.seller.lastname}`
-                                      : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
-                                    : gig.seller_clerk_id || "N/A";
-                                  return sellerName;
-                                })()}</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>{gig.category?.name}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            gig.status === "pending"
-                              ? "bg-gray-200 text-gray-700"
-                              : gig.status === "active"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-red-100 text-red-700"
-                          }>
-                            {gig.status === "pending"
-                              ? "Pending"
-                              : gig.status === "active"
-                              ? "Active"
-                              : "Rejected"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleView(gig)}>
-                                View detail
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => {
-                                  setGigToDelete(gig);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                  })()}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>{gig.category?.name}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              gig.status === "pending"
+                                ? "bg-gray-200 text-gray-700"
+                                : gig.status === "active"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-red-100 text-red-700"
+                            }>
+                              {gig.status === "pending"
+                                ? "Pending"
+                                : gig.status === "active"
+                                ? "Active"
+                                : "Rejected"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-2xl shadow-xl py-2 min-w-[200px] border border-gray-100 bg-white">
+                                <DropdownMenuItem onClick={() => handleView(gig)} className="gap-2 px-4 py-2 hover:bg-emerald-50 rounded-xl font-medium text-gray-800">
+                                  <Eye className="h-4 w-4 text-emerald-500" />
+                                  <span>View detail</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="gap-2 px-4 py-2 text-red-700 font-bold hover:bg-red-100 rounded-xl"
+                                  onClick={() => { setGigToDelete(gig); setDeleteDialogOpen(true); }}
+                                >
+                                  <XCircle className="h-4 w-4 text-red-700" />
+                                  <span>Delete</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">
+                          No approved gigs found
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center">
-                        No approved gigs found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TabsContent>
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
 
-            <TabsContent value="rejected">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Image</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Seller</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Approved Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tab === "rejected" && displayedGigs.length > 0 ? (
-                    displayedGigs.map((gig) => (
-                      <TableRow key={gig.id}>
-                        <TableCell>
-                          {gig.gig_images && gig.gig_images.length > 0 ? (
-                            <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
-                          ) : gig.gig_image ? (
-                            <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
-                          ) : (
-                            <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="block max-w-[200px] truncate cursor-pointer">
-                                  {gig.title}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <span className="select-all break-all">{gig.title}</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="block max-w-[120px] truncate cursor-pointer">
-                                  {(() => {
+              <TabsContent value="rejected">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Seller</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Approved Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tab === "rejected" && displayedGigs.length > 0 ? (
+                      displayedGigs.map((gig) => (
+                        <TableRow key={gig.id}>
+                          <TableCell>
+                            {gig.gig_images && gig.gig_images.length > 0 ? (
+                              <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : gig.gig_image ? (
+                              <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : (
+                              <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[200px] truncate cursor-pointer">
+                                    {gig.title}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{gig.title}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[120px] truncate cursor-pointer">
+                                    {(() => {
+                                      const sellerName = gig.seller
+                                        ? gig.seller.firstname && gig.seller.lastname
+                                          ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                          : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                        : gig.seller_clerk_id || "N/A";
+                                      if (sellerName.length > 16) {
+                                        return sellerName;
+                                      }
+                                      return sellerName;
+                                    })()}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{(() => {
                                     const sellerName = gig.seller
                                       ? gig.seller.firstname && gig.seller.lastname
                                         ? `${gig.seller.firstname} ${gig.seller.lastname}`
                                         : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
                                       : gig.seller_clerk_id || "N/A";
-                                    if (sellerName.length > 16) {
-                                      return sellerName;
-                                    }
                                     return sellerName;
-                                  })()}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <span className="select-all break-all">{(() => {
-                                  const sellerName = gig.seller
-                                    ? gig.seller.firstname && gig.seller.lastname
-                                      ? `${gig.seller.firstname} ${gig.seller.lastname}`
-                                      : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
-                                    : gig.seller_clerk_id || "N/A";
-                                  return sellerName;
-                                })()}</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </TableCell>
-                        <TableCell>{gig.category?.name}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            gig.status === "pending"
-                              ? "bg-gray-200 text-gray-700"
-                              : gig.status === "active"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-red-100 text-red-700"
-                          }>
-                            {gig.status === "pending"
-                              ? "Pending"
-                              : gig.status === "active"
-                              ? "Active"
-                              : "Rejected"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleView(gig)}>
-                                View detail
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => {
-                                  setGigToDelete(gig);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                  })()}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>{gig.category?.name}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              gig.status === "pending"
+                                ? "bg-gray-200 text-gray-700"
+                                : gig.status === "active"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-red-100 text-red-700"
+                            }>
+                              {gig.status === "pending"
+                                ? "Pending"
+                                : gig.status === "active"
+                                ? "Active"
+                                : "Rejected"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-2xl shadow-xl py-2 min-w-[200px] border border-gray-100 bg-white">
+                                <DropdownMenuItem onClick={() => handleView(gig)} className="gap-2 px-4 py-2 hover:bg-emerald-50 rounded-xl font-medium text-gray-800">
+                                  <Eye className="h-4 w-4 text-emerald-500" />
+                                  <span>View detail</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="gap-2 px-4 py-2 text-red-700 font-bold hover:bg-red-100 rounded-xl"
+                                  onClick={() => { setGigToDelete(gig); setDeleteDialogOpen(true); }}
+                                >
+                                  <XCircle className="h-4 w-4 text-red-700" />
+                                  <span>Delete</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">
+                          No rejected gigs found
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center">
-                        No rejected gigs found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TabsContent>
-          </Tabs>
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+            </Tabs>
+          )}
         </CardContent>
       </Card>
 

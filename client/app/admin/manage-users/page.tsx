@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
+import { Loader2 } from "lucide-react"
 
 interface User {
   id: number;
@@ -167,241 +168,229 @@ export default function ManageUsers() {
   const paginatedUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize)
 
   return (
-    <div className="container px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Manage Users</h1>
-        <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by ID, username or country..."
-              className="pl-9 pr-4 h-10 bg-white"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[130px] h-10 bg-white">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admins</SelectItem>
-                <SelectItem value="employer">Employers</SelectItem>
-                <SelectItem value="seeker">Seekers</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px] h-10 bg-white">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="banned">Banned</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(Number(value))}>
-              <SelectTrigger className="w-[130px] h-10 bg-white">
-                <SelectValue placeholder="10 per page" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5 per page</SelectItem>
-                <SelectItem value="10">10 per page</SelectItem>
-                <SelectItem value="20">20 per page</SelectItem>
-                <SelectItem value="50">50 per page</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="container max-w-6xl mx-auto px-4 py-10">
+      <div className="mb-6">
+        <h1 className="text-4xl font-extrabold text-emerald-700 tracking-tight mb-2">User Management</h1>
+        <p className="text-lg text-gray-500">View, search, and manage all users on the platform</p>
+      </div>
+      {/* Search & Filter Bar */}
+      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white/80 rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by ID, username or country..."
+            className="pl-9 pr-4 h-10 bg-white rounded-lg"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-[130px] h-10 bg-white rounded-lg">
+              <SelectValue placeholder="All Roles" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="admin">Admins</SelectItem>
+              <SelectItem value="employer">Employers</SelectItem>
+              <SelectItem value="seeker">Seekers</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[130px] h-10 bg-white rounded-lg">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="banned">Banned</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(Number(value))}>
+            <SelectTrigger className="w-[130px] h-10 bg-white rounded-lg">
+              <SelectValue placeholder="10 per page" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5 per page</SelectItem>
+              <SelectItem value="10">10 per page</SelectItem>
+              <SelectItem value="20">20 per page</SelectItem>
+              <SelectItem value="50">50 per page</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
-
-      <Card className="border-border/40">
-        <CardContent className="p-6">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[180px]">User ID</TableHead>
-                <TableHead className="w-[150px]">Username</TableHead>
-                <TableHead className="w-[200px]">Roles</TableHead>
-                <TableHead>Country</TableHead>
-                <TableHead className="w-[150px]">Registration Date</TableHead>
-                <TableHead className="w-[100px]">Status</TableHead>
-                <TableHead className="w-[100px] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                // Loading skeleton
-                Array.from({ length: pageSize }).map((_, idx) => (
-                  <TableRow key={idx} className="hover:bg-muted/50">
-                    <TableCell>
-                      <div className="h-5 w-32 animate-pulse rounded bg-muted"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-5 w-24 animate-pulse rounded bg-muted"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-5 w-32 animate-pulse rounded bg-muted"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-5 w-24 animate-pulse rounded bg-muted"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-5 w-28 animate-pulse rounded bg-muted"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="h-5 w-16 animate-pulse rounded bg-muted"></div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
-                        <div className="h-8 w-8 animate-pulse rounded bg-muted"></div>
-                      </div>
-                    </TableCell>
+      {/* Data Table */}
+      <Card className="rounded-2xl border-2 border-gray-100">
+        <CardContent className="p-0">
+          <div className="p-6">
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow className="bg-gray-50 dark:bg-gray-900">
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[180px]">User ID</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[150px]">Username</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[200px]">Roles</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Country</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[150px]">Registration Date</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[100px]">Status</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[100px] text-right">Actions</TableHead>
                   </TableRow>
-                ))
-              ) : paginatedUsers.length > 0 ? (
-                paginatedUsers.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">{user.clerk_id}</TableCell>
-                    <TableCell>
-                      <span className="font-medium text-emerald-600">
-                        {user.username || "N/A"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1 items-center">
-                        {user.user_roles.map((role) => (
-                          <Badge
-                            key={role}
-                            variant={role === "admin" ? "default" : role === "employer" ? "outline" : "secondary"}
-                            className="px-2 py-0.5"
-                          >
-                            {role === "admin" ? (
-                              <span>Admin</span>
-                            ) : role === "employer" ? (
-                              <span>Employer</span>
-                            ) : (
-                              <span>Seeker</span>
-                            )}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>{user.country}</TableCell>
-                    <TableCell>{new Date(user.registration_date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      {user.is_banned ? (
-                        <Badge variant="destructive" className="px-2 py-0.5">Banned</Badge>
-                      ) : (
-                        <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600 px-2 py-0.5">Active</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[160px]">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleViewDetails(user.id)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className={user.is_banned ? "text-emerald-600" : "text-red-600"}
-                            onClick={() => handleBanUser(user.clerk_id)}
-                          >
-                            {user.is_banned ? (
-                              <>
-                                <CheckCircle2 className="mr-2 h-4 w-4" />
-                                Unban User
-                              </>
-                            ) : (
-                              <>
-                                <Ban className="mr-2 h-4 w-4" />
-                                Ban User
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDelete(user.id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center">
-                    <div className="flex flex-col items-center justify-center text-muted-foreground">
-                      <User className="h-8 w-8 mb-2" />
-                      <p>No users found</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          {/* Pagination */}
-          {!isLoading && filteredUsers.length > 0 && (
-            <div className="mt-6 space-y-4">
-              <div className="text-sm text-center text-muted-foreground">
-                Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredUsers.length)} of {filteredUsers.length} users
-              </div>
-              <div className="flex items-center justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page - 1)}
-                  disabled={page === 1}
-                  className="h-8 w-24"
-                >
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
-                    <Button
-                      key={pageNumber}
-                      variant={pageNumber === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setPage(pageNumber)}
-                      className="h-8 w-8"
-                    >
-                      {pageNumber}
-                    </Button>
-                  ))}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page + 1)}
-                  disabled={page === totalPages}
-                  className="h-8 w-24"
-                >
-                  Next
-                </Button>
-              </div>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    Array.from({ length: pageSize }).map((_, idx) => (
+                      <TableRow key={idx} className="hover:bg-muted/50">
+                        <TableCell><div className="h-5 w-32 animate-pulse rounded bg-muted"></div></TableCell>
+                        <TableCell><div className="h-5 w-24 animate-pulse rounded bg-muted"></div></TableCell>
+                        <TableCell><div className="h-5 w-32 animate-pulse rounded bg-muted"></div></TableCell>
+                        <TableCell><div className="h-5 w-24 animate-pulse rounded bg-muted"></div></TableCell>
+                        <TableCell><div className="h-5 w-28 animate-pulse rounded bg-muted"></div></TableCell>
+                        <TableCell><div className="h-5 w-16 animate-pulse rounded bg-muted"></div></TableCell>
+                        <TableCell><div className="flex justify-end"><div className="h-8 w-8 animate-pulse rounded bg-muted"></div></div></TableCell>
+                      </TableRow>
+                    ))
+                  ) : paginatedUsers.length > 0 ? (
+                    paginatedUsers.map((user) => (
+                      <TableRow key={user.id} className="hover:bg-emerald-50 transition-all">
+                        <TableCell className="py-3 px-6 font-medium">{user.clerk_id}</TableCell>
+                        <TableCell className="py-3 px-6">
+                          <span className="font-medium text-emerald-600">{user.username || "N/A"}</span>
+                        </TableCell>
+                        <TableCell className="py-3 px-6">
+                          <div className="flex flex-wrap gap-1 items-center">
+                            {user.user_roles.map((role) => (
+                              <Badge
+                                key={role}
+                                className={
+                                  role === "admin"
+                                    ? "bg-emerald-600 text-white px-2 py-0.5"
+                                    : role === "employer"
+                                    ? "bg-blue-100 text-blue-700 px-2 py-0.5"
+                                    : "bg-gray-200 text-gray-700 px-2 py-0.5"
+                                }
+                              >
+                                {role === "admin"
+                                  ? "Admin"
+                                  : role === "employer"
+                                  ? "Employer"
+                                  : "Seeker"}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3 px-6">{user.country}</TableCell>
+                        <TableCell className="py-3 px-6">{new Date(user.registration_date).toLocaleDateString()}</TableCell>
+                        <TableCell className="py-3 px-6">
+                          {user.is_banned ? (
+                            <Badge className="bg-red-100 text-red-700 px-2 py-0.5">Banned</Badge>
+                          ) : (
+                            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-0.5">Active</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-3 px-6 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted rounded-full">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-[180px] rounded-xl">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleViewDetails(user.id)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className={user.is_banned ? "text-emerald-600" : "text-red-600"}
+                                onClick={() => handleBanUser(user.clerk_id)}
+                              >
+                                {user.is_banned ? (
+                                  <>
+                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                    Unban User
+                                  </>
+                                ) : (
+                                  <>
+                                    <Ban className="mr-2 h-4 w-4" />
+                                    Ban User
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => handleDelete(user.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete User
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-32 text-center py-8 text-gray-400 text-lg">
+                        <div className="flex flex-col items-center justify-center">
+                          <User className="h-8 w-8 mb-2" />
+                          <p>No users found</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
-          )}
+            {/* Pagination */}
+            {!isLoading && filteredUsers.length > 0 && (
+              <div className="mt-6 space-y-4">
+                <div className="text-sm text-center text-muted-foreground">
+                  Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, filteredUsers.length)} of {filteredUsers.length} users
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(page - 1)}
+                    disabled={page === 1}
+                    className="h-8 w-24"
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
+                      <Button
+                        key={pageNumber}
+                        variant={pageNumber === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPage(pageNumber)}
+                        className="h-8 w-8"
+                      >
+                        {pageNumber}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(page + 1)}
+                    disabled={page === totalPages}
+                    className="h-8 w-24"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
-
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl rounded-2xl border-2 border-emerald-100">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
+            <DialogTitle className="text-2xl font-bold text-emerald-700 flex items-center justify-between">
               <span>User Details</span>
               <Button variant="ghost" size="icon" onClick={() => setIsViewDialogOpen(false)}>
                 <X className="h-4 w-4" />
@@ -409,55 +398,54 @@ export default function ManageUsers() {
             </DialogTitle>
           </DialogHeader>
           {selectedUser && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-6 mt-2">
               <div>
-                <h3 className="font-semibold text-sm text-muted-foreground">Clerk ID</h3>
-                <p className="mt-1">{selectedUser.clerk_id}</p>
+                <h3 className="font-semibold text-sm text-gray-500">Clerk ID</h3>
+                <p className="mt-1 text-base">{selectedUser.clerk_id}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-sm text-muted-foreground">Roles</h3>
+                <h3 className="font-semibold text-sm text-gray-500">Roles</h3>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {selectedUser.user_roles.map((role) => (
-                    <Badge key={role} variant="outline">
-                      {role}
+                    <Badge key={role} className={
+                      role === "admin"
+                        ? "bg-emerald-600 text-white px-2 py-0.5"
+                        : role === "employer"
+                        ? "bg-blue-100 text-blue-700 px-2 py-0.5"
+                        : "bg-gray-200 text-gray-700 px-2 py-0.5"
+                    }>
+                      {role === "admin"
+                        ? "Admin"
+                        : role === "employer"
+                        ? "Employer"
+                        : "Seeker"}
                     </Badge>
                   ))}
                 </div>
               </div>
               <div>
-                <h3 className="font-semibold text-sm text-muted-foreground">Country</h3>
-                <p className="mt-1">{selectedUser.country}</p>
+                <h3 className="font-semibold text-sm text-gray-500">Country</h3>
+                <p className="mt-1 text-base">{selectedUser.country}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-sm text-muted-foreground">Registration Date</h3>
-                <p className="mt-1">{new Date(selectedUser.registration_date).toLocaleDateString()}</p>
+                <h3 className="font-semibold text-sm text-gray-500">Registration Date</h3>
+                <p className="mt-1 text-base">{new Date(selectedUser.registration_date).toLocaleDateString()}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-sm text-muted-foreground">Date of Birth</h3>
-                <p className="mt-1">{selectedUser.date_of_birth ? new Date(selectedUser.date_of_birth).toLocaleDateString() : "Not provided"}</p>
+                <h3 className="font-semibold text-sm text-gray-500">Date of Birth</h3>
+                <p className="mt-1 text-base">{selectedUser.date_of_birth ? new Date(selectedUser.date_of_birth).toLocaleDateString() : "Not provided"}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-sm text-muted-foreground">Gender</h3>
-                <p className="mt-1">{getGenderText(selectedUser.gender)}</p>
+                <h3 className="font-semibold text-sm text-gray-500">Gender</h3>
+                <p className="mt-1 text-base">{getGenderText(selectedUser.gender)}</p>
               </div>
               <div className="col-span-2">
-                <h3 className="font-semibold text-sm text-muted-foreground">Description</h3>
-                <p className="mt-1">{selectedUser.description || "No description"}</p>
+                <h3 className="font-semibold text-sm text-gray-500">Description</h3>
+                <p className="mt-1 text-base">{selectedUser.description || "No description"}</p>
               </div>
               <div className="col-span-2">
-                <h3 className="font-semibold text-sm text-muted-foreground">Contact Number</h3>
-                <p className="mt-1">{selectedUser.contact_number || "Not provided"}</p>
-              </div>
-              <div className="col-span-2 flex justify-end gap-2 mt-4">
-                <Button
-                  variant={selectedUser.is_banned ? "default" : "destructive"}
-                  onClick={() => {
-                    handleBanUser(selectedUser.clerk_id)
-                    setIsViewDialogOpen(false)
-                  }}
-                >
-                  {selectedUser.is_banned ? "Unban User" : "Ban User"}
-                </Button>
+                <h3 className="font-semibold text-sm text-gray-500">Contact Number</h3>
+                <p className="mt-1 text-base">{selectedUser.contact_number || "Not provided"}</p>
               </div>
             </div>
           )}

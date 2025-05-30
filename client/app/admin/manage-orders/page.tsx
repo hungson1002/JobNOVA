@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Search, X } from "lucide-react";
+import { Eye, Search, X, Loader2 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
+import { toast } from "react-hot-toast";
 
 interface Order {
   id: number;
@@ -43,31 +44,39 @@ export default function ManageOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [userCache, setUserCache] = useState<Record<string, UserInfo>>({});
   const { getToken, userId } = useAuth();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchOrders() {
       if (!userId) return;
-      const token = await getToken();
-      const res = await fetch(`http://localhost:8800/api/orders`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json();
-      if (Array.isArray(data.orders)) {
-        const mapped = data.orders.map((order: any) => ({
-          id: order.id,
-          buyer: order.buyer_clerk_id,
-          seller: order.seller_clerk_id,
-          total: order.total_price,
-          status: order.order_status,
-          created_at: order.order_date,
-        }));
-        setOrders(mapped);
-        setFilteredOrders(mapped);
-      } else {
-        setOrders([]);
-        setFilteredOrders([]);
+      setLoading(true);
+      try {
+        const token = await getToken();
+        const res = await fetch(`http://localhost:8800/api/orders`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (Array.isArray(data.orders)) {
+          const mapped = data.orders.map((order: any) => ({
+            id: order.id,
+            buyer: order.buyer_clerk_id,
+            seller: order.seller_clerk_id,
+            total: order.total_price,
+            status: order.order_status,
+            created_at: order.order_date,
+          }));
+          setOrders(mapped);
+          setFilteredOrders(mapped);
+        } else {
+          setOrders([]);
+          setFilteredOrders([]);
+        }
+      } catch (error) {
+        toast.error("Failed to fetch orders");
+      } finally {
+        setLoading(false);
       }
     }
     fetchOrders();
@@ -142,15 +151,15 @@ export default function ManageOrdersPage() {
   }
 
   return (
-    <div className="container px-4 py-8">
-      <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+    <div className="container max-w-7xl mx-auto px-4 py-10">
+      <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Order Management</h1>
-          <p className="text-muted-foreground">View and manage all orders on the platform</p>
+          <h1 className="text-4xl font-extrabold text-emerald-700 tracking-tight mb-2">Order Management</h1>
+          <p className="text-lg text-gray-500">View and manage all orders on the platform</p>
         </div>
         <div className="flex gap-2 items-center">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[140px] rounded-lg">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -166,80 +175,116 @@ export default function ManageOrdersPage() {
             <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search buyer or seller..."
-              className="pl-8 w-56"
+              className="pl-8 w-56 rounded-lg"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Orders</CardTitle>
-          <CardDescription>List of all platform orders</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Buyer</TableHead>
-                <TableHead>Seller</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrders.length > 0 ? filteredOrders.map(order => (
-                <TableRow
-                  key={order.id}
-                  className="transition hover:bg-emerald-50 cursor-pointer"
-                >
-                  <TableCell>{order.id}</TableCell>
-                  <TableCell>{renderUserInfo(order.buyer)}</TableCell>
-                  <TableCell>{renderUserInfo(order.seller)}</TableCell>
-                  <TableCell>${order.total.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${statusColors[order.status] || "bg-gray-100 text-gray-700"}`}>
-                      {order.status}
-                    </span>
-                  </TableCell>
-                  <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" variant="ghost" onClick={() => setSelectedOrder(order)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center">No orders found</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+      <Card className="rounded-2xl border-2 border-gray-100">
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex justify-center items-center py-16">
+              <Loader2 className="animate-spin h-8 w-8 text-emerald-500 mr-2" />
+              <span className="text-lg text-gray-500">Loading orders...</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow className="bg-gray-50 dark:bg-gray-900">
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Order ID</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Buyer</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Seller</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Total</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Status</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Date</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.length > 0 ? filteredOrders.map(order => (
+                    <TableRow
+                      key={order.id}
+                      className="hover:bg-emerald-50 transition-all"
+                    >
+                      <TableCell className="py-3 px-6 text-base">{order.id}</TableCell>
+                      <TableCell className="py-3 px-6">{renderUserInfo(order.buyer)}</TableCell>
+                      <TableCell className="py-3 px-6">{renderUserInfo(order.seller)}</TableCell>
+                      <TableCell className="py-3 px-6 text-base font-semibold">${order.total.toLocaleString()}</TableCell>
+                      <TableCell className="py-3 px-6">
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${statusColors[order.status] || "bg-gray-100 text-gray-700"}`}>
+                          {order.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3 px-6 text-base">{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="py-3 px-6 text-right">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => setSelectedOrder(order)}
+                          className="rounded-full border-emerald-200 hover:bg-emerald-100"
+                          aria-label="View Details"
+                        >
+                          <Eye className="h-5 w-5 text-emerald-600" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-400 text-lg">
+                        No orders found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Modal xem chi tiết đơn hàng */}
+      {/* Order Details Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative animate-fade-in">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setSelectedOrder(null)}
+        >
+          <div
+            className="bg-white rounded-2xl border-2 border-emerald-100 max-w-lg w-full p-6 relative animate-fade-in"
+            onClick={e => e.stopPropagation()}
+          >
             <button
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
               onClick={() => setSelectedOrder(null)}
             >
               <X className="w-5 h-5" />
             </button>
-            <h2 className="text-2xl font-bold mb-4">Order #{selectedOrder.id}</h2>
-            <div className="space-y-2">
-              <div><b>Buyer:</b> {renderUserInfo(selectedOrder.buyer)}</div>
-              <div><b>Seller:</b> {renderUserInfo(selectedOrder.seller)}</div>
-              <div><b>Total:</b> ${selectedOrder.total.toLocaleString()}</div>
-              <div><b>Status:</b> <span className={`px-2 py-1 rounded text-xs font-semibold ${statusColors[selectedOrder.status] || "bg-gray-100 text-gray-700"}`}>{selectedOrder.status}</span></div>
-              <div><b>Date:</b> {new Date(selectedOrder.created_at).toLocaleDateString()}</div>
+            <h2 className="text-2xl font-bold text-emerald-700 mb-4">Order #{selectedOrder.id}</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Buyer:</span>
+                <div>{renderUserInfo(selectedOrder.buyer)}</div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Seller:</span>
+                <div>{renderUserInfo(selectedOrder.seller)}</div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Total:</span>
+                <span className="font-semibold">${selectedOrder.total.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Status:</span>
+                <span className={`px-2 py-1 rounded text-xs font-semibold ${statusColors[selectedOrder.status] || "bg-gray-100 text-gray-700"}`}>
+                  {selectedOrder.status}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Date:</span>
+                <span>{new Date(selectedOrder.created_at).toLocaleDateString()}</span>
+              </div>
             </div>
           </div>
         </div>

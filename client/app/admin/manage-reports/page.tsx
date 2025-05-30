@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -24,9 +24,11 @@ export default function ManageReportsPage() {
   const { getToken } = useAuth()
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     async function fetchReports() {
       try {
+        setLoading(true);
         const token = await getToken()
         const res = await fetch("http://localhost:8800/api/reports", {
           headers: {
@@ -36,78 +38,138 @@ export default function ManageReportsPage() {
         const data = await res.json()
         setReports(Array.isArray(data.reports) ? data.reports : [])
       } catch (err) {
-        console.error("Lỗi fetch report:", err)
+        console.error("Failed to fetch reports:", err)
+      } finally {
+        setLoading(false);
       }
     }
-
     fetchReports()
   }, [getToken])
 
   return (
-    <div className="container px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Report Management</h1>
-        <p className="text-muted-foreground">View and manage all reported gigs/services</p>
+    <div className="container max-w-5xl mx-auto px-4 py-10">
+      <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-extrabold text-emerald-700 tracking-tight mb-2">Report Management</h1>
+          <p className="text-lg text-gray-500">View and manage all reported gigs/services</p>
+        </div>
       </div>
-      <Card>
-        <CardHeader>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Gig/Service</TableHead>
-                <TableHead>Seller</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Reporter</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reports.length > 0 ? reports.map(report => (
-                <TableRow key={report.id}>
-                  <TableCell>{report.id}</TableCell>
-                  <TableCell>{report.gig_title}</TableCell>
-                  <TableCell>{report.seller}</TableCell>
-                  <TableCell>{report.report_reason}</TableCell>
-                  <TableCell>{report.reported_by}</TableCell>
-                  <TableCell>{new Date(report.report_date).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" variant="ghost" onClick={() => { setSelectedReport(report); setShowDetail(true); }}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center">No reports found</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+      <Card className="rounded-2xl border-2 border-gray-100">
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex justify-center items-center py-16">
+              <Loader2 className="animate-spin h-8 w-8 text-emerald-500 mr-2" />
+              <span className="text-lg text-gray-500">Loading reports...</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table className="min-w-full">
+                <TableHeader>
+                  <TableRow className="bg-gray-50 dark:bg-gray-900">
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">ID</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Gig/Service</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Seller</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Reason</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Reporter</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Date</TableHead>
+                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reports.length > 0 ? reports.map(report => (
+                    <TableRow key={report.id} className="hover:bg-emerald-50 transition-all">
+                      <TableCell className="py-3 px-6 text-base">{report.id}</TableCell>
+                      <TableCell className="py-3 px-6">
+                        {report.gig_title === 'N/A' ? (
+                          <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Deleted</span>
+                        ) : report.gig_title}
+                      </TableCell>
+                      <TableCell className="py-3 px-6">
+                        {report.seller === 'Unknown' ? (
+                          <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Unknown</span>
+                        ) : report.seller}
+                      </TableCell>
+                      <TableCell className="py-3 px-6">
+                        <span className="inline-block px-2 py-0.5 text-xs rounded bg-amber-100 text-amber-700 font-semibold capitalize">
+                          {report.report_reason}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3 px-6">{report.reported_by}</TableCell>
+                      <TableCell className="py-3 px-6">{new Date(report.report_date).toLocaleDateString()}</TableCell>
+                      <TableCell className="py-3 px-6 text-right">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => { setSelectedReport(report); setShowDetail(true); }}
+                          className="rounded-full border-emerald-200 hover:bg-emerald-100"
+                          aria-label="View Details"
+                        >
+                          <Eye className="h-5 w-5 text-emerald-600" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-400 text-lg">
+                        No reports found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
       <Dialog open={showDetail} onOpenChange={setShowDetail}>
-        <DialogContent>
+        <DialogContent className="max-w-md rounded-2xl border-2 border-emerald-100">
           <DialogHeader>
-            <DialogTitle>Report Detail</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-emerald-700">Report Detail</DialogTitle>
             <DialogDescription>
               {selectedReport ? "Detailed information about this report:" : ""}
             </DialogDescription>
           </DialogHeader>
           {selectedReport && (
-            <div className="space-y-2 mt-2">
-              <div><b>ID:</b> {selectedReport.id}</div>
-              <div><b>Gig/Service:</b> {selectedReport.gig_title}</div>
-              <div><b>Seller:</b> {selectedReport.seller}</div>
-              <div><b>Reason:</b> {selectedReport.report_reason}</div>
-              <div><b>Reporter:</b> {selectedReport.reported_by}</div>
-              <div><b>Date:</b> {new Date(selectedReport.report_date).toLocaleDateString()}</div>
-              <div><b>Description:</b></div>
-              <div className="whitespace-pre-line text-gray-700 bg-gray-50 rounded p-2 border border-gray-200 min-h-[32px]">
-                {selectedReport.description ? selectedReport.description : <span className="text-gray-400">N/A</span>}
+            <div className="space-y-4 mt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">ID:</span>
+                <span>{selectedReport.id}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Gig/Service:</span>
+                <span>
+                  {selectedReport.gig_title === 'N/A' ? (
+                    <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Deleted</span>
+                  ) : selectedReport.gig_title}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Seller:</span>
+                <span>
+                  {selectedReport.seller === 'Unknown' ? (
+                    <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Unknown</span>
+                  ) : selectedReport.seller}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Reason:</span>
+                <span className="inline-block px-2 py-0.5 text-xs rounded bg-amber-100 text-amber-700 font-semibold capitalize">
+                  {selectedReport.report_reason}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Reporter:</span>
+                <span>{selectedReport.reported_by}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Date:</span>
+                <span>{new Date(selectedReport.report_date).toLocaleDateString()}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 font-medium">Description:</span>
+                <div className="whitespace-pre-line text-gray-700 bg-gray-50 rounded p-2 border border-gray-200 min-h-[32px] mt-1">
+                  {selectedReport.description ? selectedReport.description : <span className="text-gray-400">N/A</span>}
+                </div>
               </div>
             </div>
           )}

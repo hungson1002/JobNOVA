@@ -153,234 +153,236 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="container px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Quản lý hệ thống và người dùng</p>
+    <div className="container max-w-6xl mx-auto px-4 py-12">
+      <div className="mb-10 text-center">
+        <h1 className="text-5xl font-extrabold text-emerald-700 tracking-tight mb-3 drop-shadow-lg">Admin Dashboard</h1>
+        <p className="text-xl text-gray-500">Quick access to manage gigs, users, reports and more</p>
       </div>
+      <div className="container px-4 py-8">
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-500">+12.5%</span> from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Gigs</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalGigs.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-500">+5.2%</span> from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingApprovals}</div>
-            <p className="text-xs text-muted-foreground">Requires your attention</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <p className="text-xs text-muted-foreground">
-              Tổng doanh thu các đơn đã thanh toán thành công
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                <span className="text-green-500">+12.5%</span> from last month
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Gigs</CardTitle>
+              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalGigs.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                <span className="text-green-500">+5.2%</span> from last month
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{pendingApprovals}</div>
+              <p className="text-xs text-muted-foreground">Requires your attention</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <p className="text-xs text-muted-foreground">
+                Tổng doanh thu các đơn đã thanh toán thành công
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue Overview</CardTitle>
-            <CardDescription>Monthly revenue for the current year</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                revenue: {
-                  label: "Revenue",
-                  color: "hsl(var(--chart-1))",
-                },
-              }}
-              className="h-[300px]"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={mockRevenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="revenue" fill="var(--color-revenue)" name="Revenue" />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue Overview</CardTitle>
+              <CardDescription>Monthly revenue for the current year</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  revenue: {
+                    label: "Revenue",
+                    color: "hsl(var(--chart-1))",
+                  },
+                }}
+                className="h-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={mockRevenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="revenue" fill="var(--color-revenue)" name="Revenue" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>User Growth</CardTitle>
-            <CardDescription>Monthly user growth for the current year</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                users: {
-                  label: "Users",
-                  color: "hsl(var(--chart-2))",
-                },
-              }}
-              className="h-[300px]"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={mockUserData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line type="monotone" dataKey="users" stroke="var(--color-users)" name="Users" />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>User Growth</CardTitle>
+              <CardDescription>Monthly user growth for the current year</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  users: {
+                    label: "Users",
+                    color: "hsl(var(--chart-2))",
+                  },
+                }}
+                className="h-[300px]"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={mockUserData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line type="monotone" dataKey="users" stroke="var(--color-users)" name="Users" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle>Gigs by Category</CardTitle>
-            <CardDescription>Distribution of gigs across categories</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={mockCategoryData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {mockCategoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mt-8 grid gap-6 md:grid-cols-3">
+          <Card className="md:col-span-1">
+            <CardHeader>
+              <CardTitle>Gigs by Category</CardTitle>
+              <CardDescription>Distribution of gigs across categories</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={mockCategoryData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {mockCategoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest platform activities</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="pending">
-              <TabsList className="mb-4">
-                <TabsTrigger value="pending">Pending Approvals</TabsTrigger>
-                <TabsTrigger value="reported">Reported Gigs</TabsTrigger>
-              </TabsList>
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>Latest platform activities</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="pending">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="pending">Pending Approvals</TabsTrigger>
+                  <TabsTrigger value="reported">Reported Gigs</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="pending" className="space-y-4">
-                {mockPendingGigs.map((gig) => (
-                  <div
-                    key={gig.id}
-                    className="flex flex-col justify-between rounded-lg border p-4 md:flex-row md:items-center"
-                  >
-                    <div>
-                      <h3 className="font-medium">{gig.title}</h3>
-                      <div className="mt-1 flex flex-wrap gap-2 text-sm text-muted-foreground">
-                        <span>Seller: {gig.seller}</span>
-                        <span>•</span>
-                        <span>Category: {gig.category}</span>
-                        <span>•</span>
-                        <span>Submitted: {new Date(gig.submittedDate).toLocaleDateString()}</span>
+                <TabsContent value="pending" className="space-y-4">
+                  {mockPendingGigs.map((gig) => (
+                    <div
+                      key={gig.id}
+                      className="flex flex-col justify-between rounded-lg border p-4 md:flex-row md:items-center"
+                    >
+                      <div>
+                        <h3 className="font-medium">{gig.title}</h3>
+                        <div className="mt-1 flex flex-wrap gap-2 text-sm text-muted-foreground">
+                          <span>Seller: {gig.seller}</span>
+                          <span>•</span>
+                          <span>Category: {gig.category}</span>
+                          <span>•</span>
+                          <span>Submitted: {new Date(gig.submittedDate).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2 md:mt-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-green-500 hover:bg-green-50 hover:text-green-600"
+                        >
+                          <CheckCircle className="mr-1 h-4 w-4" />
+                          Approve
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-red-500 hover:bg-red-50 hover:text-red-600">
+                          <XCircle className="mr-1 h-4 w-4" />
+                          Reject
+                        </Button>
                       </div>
                     </div>
-                    <div className="mt-4 flex gap-2 md:mt-0">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-500 hover:bg-green-50 hover:text-green-600"
-                      >
-                        <CheckCircle className="mr-1 h-4 w-4" />
-                        Approve
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-red-500 hover:bg-red-50 hover:text-red-600">
-                        <XCircle className="mr-1 h-4 w-4" />
-                        Reject
-                      </Button>
-                    </div>
+                  ))}
+                  <div className="flex justify-end">
+                    <Button variant="outline" asChild>
+                      <Link href="/admin/manage-gigs">View All Pending Gigs</Link>
+                    </Button>
                   </div>
-                ))}
-                <div className="flex justify-end">
-                  <Button variant="outline" asChild>
-                    <Link href="/admin/manage-gigs">View All Pending Gigs</Link>
-                  </Button>
-                </div>
-              </TabsContent>
+                </TabsContent>
 
-              <TabsContent value="reported" className="space-y-4">
-                {mockReportedGigs.map((gig) => (
-                  <div
-                    key={gig.id}
-                    className="flex flex-col justify-between rounded-lg border p-4 md:flex-row md:items-center"
-                  >
-                    <div>
-                      <h3 className="font-medium">{gig.title}</h3>
-                      <div className="mt-1 flex flex-wrap gap-2 text-sm text-muted-foreground">
-                        <span>Seller: {gig.seller}</span>
-                        <span>•</span>
-                        <span>Reported by: {gig.reportedBy}</span>
-                        <span>•</span>
-                        <span>Reason: {gig.reportReason}</span>
+                <TabsContent value="reported" className="space-y-4">
+                  {mockReportedGigs.map((gig) => (
+                    <div
+                      key={gig.id}
+                      className="flex flex-col justify-between rounded-lg border p-4 md:flex-row md:items-center"
+                    >
+                      <div>
+                        <h3 className="font-medium">{gig.title}</h3>
+                        <div className="mt-1 flex flex-wrap gap-2 text-sm text-muted-foreground">
+                          <span>Seller: {gig.seller}</span>
+                          <span>•</span>
+                          <span>Reported by: {gig.reportedBy}</span>
+                          <span>•</span>
+                          <span>Reason: {gig.reportReason}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2 md:mt-0">
+                        <Button size="sm" variant="outline">
+                          <Clock className="mr-1 h-4 w-4" />
+                          Review
+                        </Button>
                       </div>
                     </div>
-                    <div className="mt-4 flex gap-2 md:mt-0">
-                      <Button size="sm" variant="outline">
-                        <Clock className="mr-1 h-4 w-4" />
-                        Review
-                      </Button>
-                    </div>
+                  ))}
+                  <div className="flex justify-end">
+                    <Button variant="outline" asChild>
+                      <Link href="/admin/reported-gigs">View All Reported Gigs</Link>
+                    </Button>
                   </div>
-                ))}
-                <div className="flex justify-end">
-                  <Button variant="outline" asChild>
-                    <Link href="/admin/reported-gigs">View All Reported Gigs</Link>
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
