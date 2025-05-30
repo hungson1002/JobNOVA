@@ -139,26 +139,28 @@ export default function ManageTopRatePage() {
   }
 
   return (
-    <div className="container px-4 py-8">
-      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="container px-4 py-10 max-w-7xl mx-auto">
+      <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Manage Top Rate Gigs</h1>
-          <p className="text-muted-foreground">Manage which gigs appear in the top rate section</p>
+          <h1 className="text-4xl font-extrabold text-emerald-700 tracking-tight flex items-center gap-2">
+            Manage Top Rate Gigs
+          </h1>
+          <p className="text-lg text-gray-500 mt-2">Easily control which gigs appear in the <span className='font-semibold text-amber-500'>Top Picks</span> section</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full md:w-auto">
           <div className="relative flex-1 w-full sm:w-64">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-2 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by title or seller..."
-              className="pl-8"
+              className="pl-10 rounded-xl shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Filter className="h-5 w-5 text-muted-foreground" />
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] rounded-xl shadow-sm">
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
               <SelectContent>
@@ -171,38 +173,41 @@ export default function ManageTopRatePage() {
           </div>
         </div>
       </div>
-      <Card>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Seller</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Top Rate</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredGigs.length > 0 ? (
-                filteredGigs.map((gig) => (
-                  <TableRow key={gig.id}>
-                    <TableCell>
-                      {gig.gig_images && gig.gig_images.length > 0 ? (
-                        <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
-                      ) : gig.gig_image ? (
-                        <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
-                      ) : (
-                        <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+      <div className="rounded-2xl bg-white dark:bg-gray-950 overflow-x-auto border border-gray-100">
+        <Table>
+          <TableHeader className="bg-emerald-50/60 dark:bg-gray-900">
+            <TableRow>
+              <TableHead className="text-lg font-semibold text-gray-700">Image</TableHead>
+              <TableHead className="text-lg font-semibold text-gray-700">Title</TableHead>
+              <TableHead className="text-lg font-semibold text-gray-700">Seller</TableHead>
+              <TableHead className="text-lg font-semibold text-gray-700">Category</TableHead>
+              <TableHead className="text-lg font-semibold text-gray-700">Status</TableHead>
+              <TableHead className="text-lg font-semibold text-gray-700">Top Rate</TableHead>
+              <TableHead className="text-lg font-semibold text-gray-700 text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredGigs.length > 0 ? (
+              filteredGigs.map((gig) => (
+                <TableRow key={gig.id} className="hover:bg-amber-50/40 transition group">
+                  <TableCell>
+                    {gig.gig_images && gig.gig_images.length > 0 ? (
+                      <img src={gig.gig_images[0]} alt="Gig" className="w-20 h-20 object-cover rounded-xl border" />
+                    ) : gig.gig_image ? (
+                      <img src={gig.gig_image} alt="Gig" className="w-20 h-20 object-cover rounded-xl border" />
+                    ) : (
+                      <div className="w-20 h-20 bg-gray-100 rounded-xl flex items-center justify-center text-xs text-gray-400 border">No Image</div>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-bold text-lg text-gray-800 group-hover:text-amber-600 max-w-[220px] truncate">
+                    <div className="flex items-center gap-2">
+                      {gig.is_top_rate && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full">🔥 Top Rated</span>
                       )}
-                    </TableCell>
-                    <TableCell className="font-medium">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="block max-w-[200px] truncate cursor-pointer">
+                            <span className="block truncate cursor-pointer">
                               {gig.title}
                             </span>
                           </TooltipTrigger>
@@ -211,87 +216,93 @@ export default function ManageTopRatePage() {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    </TableCell>
-                    <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="block max-w-[120px] truncate cursor-pointer">
-                              {(() => {
-                                const sellerName = gig.seller
-                                  ? gig.seller.firstname && gig.seller.lastname
-                                    ? `${gig.seller.firstname} ${gig.seller.lastname}`
-                                    : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
-                                  : gig.seller_clerk_id || "N/A";
-                                if (sellerName.length > 16) {
-                                  return sellerName;
-                                }
-                                return sellerName;
-                              })()}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <span className="select-all break-all">{(() => {
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="block max-w-[120px] truncate cursor-pointer font-medium text-gray-700">
+                            {(() => {
                               const sellerName = gig.seller
                                 ? gig.seller.firstname && gig.seller.lastname
                                   ? `${gig.seller.firstname} ${gig.seller.lastname}`
                                   : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
                                 : gig.seller_clerk_id || "N/A";
                               return sellerName;
-                            })()}</span>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell>{gig.category?.name}</TableCell>
-                    <TableCell>
-                      <Badge className={
-                        gig.status === "pending"
-                          ? "bg-gray-200 text-gray-700"
-                          : gig.status === "active"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-red-100 text-red-700"
-                      }>
-                        {gig.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
+                            })()}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <span className="select-all break-all">{(() => {
+                            const sellerName = gig.seller
+                              ? gig.seller.firstname && gig.seller.lastname
+                                ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                              : gig.seller_clerk_id || "N/A";
+                            return sellerName;
+                          })()}</span>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                  <TableCell className="font-medium text-gray-600">{gig.category?.name}</TableCell>
+                  <TableCell>
+                    <Badge className={
+                      gig.status === "pending"
+                        ? "bg-gray-200 text-gray-700"
+                        : gig.status === "active"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                    }>
+                      {gig.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
                       <Switch
                         checked={gig.is_top_rate}
                         onCheckedChange={() => handleToggleTopRate(gig)}
+                        id={`toprate-switch-${gig.id}`}
                       />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleView(gig)}
-                      >
-                        View Details
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    No gigs found
+                      <label htmlFor={`toprate-switch-${gig.id}`} className="text-xs font-semibold text-gray-700">
+                        {gig.is_top_rate ? "On" : "Off"}
+                      </label>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-emerald-700 hover:text-amber-500 font-semibold"
+                      onClick={() => handleView(gig)}
+                    >
+                      View Details
+                    </Button>
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-12 text-gray-400 text-lg">
+                  No gigs found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Gig Detail Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl rounded-2xl border-2 border-amber-100">
           <DialogHeader>
-            <DialogTitle>Gig Details</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-emerald-700">
+              Gig Details
+            </DialogTitle>
           </DialogHeader>
           {selectedGig && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   {selectedGig.gig_images && selectedGig.gig_images.length > 0 ? (
@@ -300,52 +311,50 @@ export default function ManageTopRatePage() {
                         key={index}
                         src={image}
                         alt={`Gig ${index + 1}`}
-                        className="w-full h-48 object-cover rounded-lg"
+                        className="w-full h-48 object-cover rounded-xl border"
                       />
                     ))
                   ) : selectedGig.gig_image ? (
                     <img
                       src={selectedGig.gig_image}
                       alt="Gig"
-                      className="w-full h-48 object-cover rounded-lg"
+                      className="w-full h-48 object-cover rounded-xl border"
                     />
                   ) : (
-                    <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center">
-                      No Image
-                    </div>
+                    <div className="w-full h-48 bg-gray-100 rounded-xl flex items-center justify-center border">No Image</div>
                   )}
                 </div>
               </div>
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold mb-2">Title</h3>
-                  <p className="text-muted-foreground">{selectedGig.title}</p>
+                  <h3 className="font-semibold mb-2 text-gray-700">Title</h3>
+                  <p className="text-lg text-gray-800 font-bold">{selectedGig.title}</p>
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Description</h3>
-                  <p className="text-muted-foreground whitespace-pre-wrap">{selectedGig.description}</p>
+                  <h3 className="font-semibold mb-2 text-gray-700">Description</h3>
+                  <p className="text-gray-600 whitespace-pre-wrap">{selectedGig.description}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h3 className="font-semibold mb-2">Category</h3>
-                    <p className="text-muted-foreground">{selectedGig.category?.name}</p>
+                    <h3 className="font-semibold mb-2 text-gray-700">Category</h3>
+                    <p className="text-gray-600">{selectedGig.category?.name}</p>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-2">Job Type</h3>
-                    <p className="text-muted-foreground">{selectedGig.job_type?.job_type}</p>
+                    <h3 className="font-semibold mb-2 text-gray-700">Job Type</h3>
+                    <p className="text-gray-600">{selectedGig.job_type?.job_type}</p>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-2">Starting Price</h3>
-                    <p className="text-muted-foreground">${selectedGig.starting_price}</p>
+                    <h3 className="font-semibold mb-2 text-gray-700">Starting Price</h3>
+                    <p className="text-gray-800 font-semibold">${selectedGig.starting_price}</p>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-2">Delivery Time</h3>
-                    <p className="text-muted-foreground">{selectedGig.delivery_time} days</p>
+                    <h3 className="font-semibold mb-2 text-gray-700">Delivery Time</h3>
+                    <p className="text-gray-600">{selectedGig.delivery_time} days</p>
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Location</h3>
-                  <p className="text-muted-foreground">
+                  <h3 className="font-semibold mb-2 text-gray-700">Location</h3>
+                  <p className="text-gray-600">
                     {selectedGig.city}, {selectedGig.country}
                   </p>
                 </div>
@@ -353,7 +362,7 @@ export default function ManageTopRatePage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={handleCloseModal}>
+            <Button variant="outline" onClick={handleCloseModal} className="rounded-xl">
               Close
             </Button>
           </DialogFooter>
