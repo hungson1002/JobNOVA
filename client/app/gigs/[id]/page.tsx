@@ -938,7 +938,13 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                         appropriate action.
                       </DialogDescription>
                     </DialogHeader>
-                    <ReportModal type="service" id={resolvedParams.id} name={gig.title} />
+                    <ReportModal 
+                      type="service" 
+                      id={resolvedParams.id} 
+                      name={gig.title} 
+                      ownerId={gig.seller_clerk_id}
+                      currentUserId={user?.id}
+                      />
                   </DialogContent>
                 </Dialog>
               </div>

@@ -15,6 +15,7 @@ import contactFormRoute from "./routes/contactForm.route.js";
 import dashboardRoute from "./routes/dashboard.route.js";
 import experienceDetailRoute from "./routes/experienceDetail.route.js";
 import gigRoute from "./routes/gig.route.js";
+import gigExtraRoute from "./routes/gigExtra.route.js";
 import gigFAQRoute from "./routes/gigFAQ.route.js";
 import gigSkillsRoute from "./routes/gigSkills.route.js";
 import gigTranslationRoute from "./routes/gigTranslation.route.js";
@@ -24,7 +25,9 @@ import jobTypeRoute from "./routes/jobType.route.js";
 import messageRoute from "./routes/message.route.js";
 import notificationRoute from "./routes/notification.route.js";
 import orderRoute from "./routes/order.route.js";
+import orderExtraRoute from "./routes/orderExtra.route.js";
 import paymentRoute from "./routes/payment.route.js";
+import portfolioRoute from "./routes/portfolio.route.js";
 import reportRoute from "./routes/report.route.js";
 import reviewRoute from "./routes/review.route.js";
 import roleRoute from "./routes/role.route.js";
@@ -35,9 +38,6 @@ import skillsRoute from "./routes/skills.route.js";
 import userRoute from "./routes/user.route.js";
 import userSearchHistoryRoute from "./routes/userSearchHistory.route.js";
 import messageSocketHandler from "./socket/messageSocket.js";
-import portfolioRoute from "./routes/portfolio.route.js";
-import orderExtraRoute from "./routes/orderExtra.route.js";
-import gigExtraRoute from "./routes/gigExtra.route.js";
 
 // .env
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
@@ -98,13 +98,11 @@ app.use("/api/userSearchHistory", userSearchHistoryRoute);
 app.use("/api/cloudinary", cloudinaryRoute);
 app.use("/api/dashboard", dashboardRoute);
 app.use("/api/bannerSlides", bannerSlide);
-<<<<<<< HEAD
 app.use("/api/reports", reportRoute);
-=======
 app.use("/api/portfolios", portfolioRoute);
 app.use("/api/orderExtras", orderExtraRoute);
 app.use("/api/gigExtras", gigExtraRoute);
->>>>>>> c28dc1fb0c592eb53bf234169c3433a8448a3176
+
 
 // Error middleware (luôn trả về JSON)
 app.use((err, req, res, next) => {
