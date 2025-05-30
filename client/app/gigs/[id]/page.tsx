@@ -161,7 +161,6 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     setLoadingPortfolio(true);
     fetchPortfoliosByGigId(gig.id)
       .then((data) => {
-        console.log("[DEBUG] Portfolios fetched for gig:", gig.id, data);
         setPortfolios(data);
       })
       .catch(err => {
@@ -371,32 +370,54 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   };
 
   useEffect(() => {
-    // Nếu là seller, tự động khởi tạo chat window với các buyer đã từng nhắn tin
-    if (!userId || !gig?.seller_clerk_id || userId !== gig.seller_clerk_id) return;
-    // Lấy tất cả messages đã nhận (direct message)
-    fetch(`http://localhost:8800/api/messages/direct?sellerId=${userId}`)
-      .then(res => res.json())
-      .then(data => {
+    const fetchDirectMessages = async () => {
+      if (!userId || !gig?.seller_clerk_id || userId !== gig.seller_clerk_id) return;
+  
+      try {
+        const token = await getToken();
+        const res = await fetch(`http://localhost:8800/api/messages/direct?clerk_id=${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+  
         if (data.success && Array.isArray(data.messages)) {
-          // Lấy danh sách buyer đã từng nhắn tin
-          const buyers = Array.from(new Set(data.messages.map((msg: any) => msg.sender_clerk_id)));
-          buyers.forEach(buyerId => {
-            if (!chatWindows.find(w => w.userId === buyerId)) {
-              setChatWindows(prev => [
-                ...prev,
-                {
-                  userId: String(buyerId),
-                  messages: data.messages.filter((msg: any) => msg.sender_clerk_id === buyerId || msg.receiver_clerk_id === buyerId),
-                  unreadCount: 0,
-                  avatar: "/placeholder.svg",
-                  name: "User",
-                } as any,
-              ]);
+          // Tạo một Map để lưu trữ các buyer duy nhất
+          const uniqueBuyers = new Map();
+          
+          data.messages.forEach((msg: any) => {
+            const buyerId = msg.sender_clerk_id !== userId ? msg.sender_clerk_id : msg.receiver_clerk_id;
+            if (!uniqueBuyers.has(buyerId)) {
+              uniqueBuyers.set(buyerId, {
+                userId: String(buyerId),
+                messages: data.messages.filter((m: any) => 
+                  m.sender_clerk_id === buyerId || m.receiver_clerk_id === buyerId
+                ),
+                unreadCount: 0,
+                avatar: "/placeholder.svg",
+                name: "User",
+              });
             }
           });
+
+          // Chuyển Map thành mảng và cập nhật chatWindows
+          const newChatWindows = Array.from(uniqueBuyers.values());
+          setChatWindows(prev => {
+            // Lọc ra các chat window hiện tại không có trong newChatWindows
+            const existingWindows = prev.filter(w => 
+              !newChatWindows.some(nw => nw.userId === w.userId)
+            );
+            return [...existingWindows, ...newChatWindows];
+          });
         }
-      });
-  }, [userId, gig, setChatWindows, chatWindows]);
+      } catch (error) {
+        console.error("❌ Error fetching direct messages:", error);
+      }
+    };
+  
+    fetchDirectMessages();
+  }, [userId, gig?.seller_clerk_id, getToken, setChatWindows]);
 
   if (loadingGig) return <div>Loading...</div>;
   if (!gig) return <div>Gig not found</div>;
@@ -576,7 +597,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                   <video
                     src={images[selectedImageIndex]}
                     controls
-                    className="w-full h-full object-cover rounded-lg cursor-pointer"
+                    className="w-full h-full object-cover rounded-lg"
                     onClick={() => openLightbox(selectedImageIndex)}
                   />
                 ) : (
@@ -584,7 +605,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     src={images[selectedImageIndex]}
                     alt={gig.title}
                     fill
-                    className="object-cover cursor-pointer"
+                    className="w-full h-auto object-contain rounded-lg cursor-pointer"
                     onClick={() => openLightbox(selectedImageIndex)}
                   />
                 )}
