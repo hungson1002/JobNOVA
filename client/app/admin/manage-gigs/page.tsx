@@ -12,6 +12,7 @@ import { CheckCircle, XCircle, Search, Filter, Eye } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useAuth } from "@clerk/nextjs"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 
 interface Gig {
   id: number;
@@ -54,6 +55,7 @@ export default function ManageGigsPage() {
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
   const [showModal, setShowModal] = useState(false);
   const { getToken } = useAuth();
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
 
   const statusMap: Record<string, string> = {
     pending: "pending",
@@ -101,6 +103,22 @@ export default function ManageGigsPage() {
       // Không cần toast lỗi ở đây
     }
   };
+
+  // Fetch categories for filter
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("http://localhost:8800/api/categories");
+        const data = await response.json();
+        if (data.success && Array.isArray(data.categories)) {
+          setCategories(data.categories);
+        }
+      } catch (error) {
+        // Không cần toast lỗi ở đây
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     setIsClient(true);
@@ -227,11 +245,9 @@ export default function ManageGigsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Graphics & Design">Graphics & Design</SelectItem>
-                <SelectItem value="Digital Marketing">Digital Marketing</SelectItem>
-                <SelectItem value="Writing & Translation">Writing & Translation</SelectItem>
-                <SelectItem value="Video & Animation">Video & Animation</SelectItem>
-                <SelectItem value="Programming & Tech">Programming & Tech</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -265,14 +281,12 @@ export default function ManageGigsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Image</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Seller</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Job Type</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Delivery</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Submitted Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Approved Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -280,21 +294,64 @@ export default function ManageGigsPage() {
                   {tab === "pending" && displayedGigs.length > 0 ? (
                     displayedGigs.map((gig) => (
                       <TableRow key={gig.id}>
-                        <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{
-                          gig.seller?.firstname && gig.seller?.lastname
-                            ? gig.seller.firstname + ' ' + gig.seller.lastname
-                            : gig.seller?.firstname
-                            ? gig.seller.firstname
-                            : gig.seller?.username
-                            ? gig.seller.username
-                            : ''
-                        }</TableCell>
+                        <TableCell>
+                          {gig.gig_images && gig.gig_images.length > 0 ? (
+                            <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                          ) : gig.gig_image ? (
+                            <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                          ) : (
+                            <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="block max-w-[200px] truncate cursor-pointer">
+                                  {gig.title}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span className="select-all break-all">{gig.title}</span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="block max-w-[120px] truncate cursor-pointer">
+                                  {(() => {
+                                    const sellerName = gig.seller
+                                      ? gig.seller.firstname && gig.seller.lastname
+                                        ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                        : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                      : gig.seller_clerk_id || "N/A";
+                                    if (sellerName.length > 16) {
+                                      return sellerName;
+                                    }
+                                    return sellerName;
+                                  })()}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span className="select-all break-all">{(() => {
+                                  const sellerName = gig.seller
+                                    ? gig.seller.firstname && gig.seller.lastname
+                                      ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                      : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                    : gig.seller_clerk_id || "N/A";
+                                  return sellerName;
+                                })()}</span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
                         <TableCell>{gig.category?.name}</TableCell>
-                        <TableCell>{gig.job_type?.job_type}</TableCell>
-                        <TableCell>${gig.starting_price}</TableCell>
-                        <TableCell>{gig.delivery_time} days</TableCell>
-                        <TableCell>{gig.city}, {gig.country}</TableCell>
+                        <TableCell>
+                          <Badge variant="default">Pending</Badge>
+                        </TableCell>
                         <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
@@ -326,7 +383,7 @@ export default function ManageGigsPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center">
+                      <TableCell colSpan={7} className="text-center">
                         No pending gigs found
                       </TableCell>
                     </TableRow>
@@ -339,13 +396,10 @@ export default function ManageGigsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Image</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Seller</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Job Type</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Delivery</TableHead>
-                    <TableHead>Location</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Approved Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -355,21 +409,61 @@ export default function ManageGigsPage() {
                   {tab === "approved" && displayedGigs.length > 0 ? (
                     displayedGigs.map((gig) => (
                       <TableRow key={gig.id}>
-                        <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{
-                          gig.seller?.firstname && gig.seller?.lastname
-                            ? gig.seller.firstname + ' ' + gig.seller.lastname
-                            : gig.seller?.firstname
-                            ? gig.seller.firstname
-                            : gig.seller?.username
-                            ? gig.seller.username
-                            : ''
-                        }</TableCell>
+                        <TableCell>
+                          {gig.gig_images && gig.gig_images.length > 0 ? (
+                            <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                          ) : gig.gig_image ? (
+                            <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                          ) : (
+                            <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="block max-w-[200px] truncate cursor-pointer">
+                                  {gig.title}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span className="select-all break-all">{gig.title}</span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="block max-w-[120px] truncate cursor-pointer">
+                                  {(() => {
+                                    const sellerName = gig.seller
+                                      ? gig.seller.firstname && gig.seller.lastname
+                                        ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                        : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                      : gig.seller_clerk_id || "N/A";
+                                    if (sellerName.length > 16) {
+                                      return sellerName;
+                                    }
+                                    return sellerName;
+                                  })()}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span className="select-all break-all">{(() => {
+                                  const sellerName = gig.seller
+                                    ? gig.seller.firstname && gig.seller.lastname
+                                      ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                      : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                    : gig.seller_clerk_id || "N/A";
+                                  return sellerName;
+                                })()}</span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
                         <TableCell>{gig.category?.name}</TableCell>
-                        <TableCell>{gig.job_type?.job_type}</TableCell>
-                        <TableCell>${gig.starting_price}</TableCell>
-                        <TableCell>{gig.delivery_time} days</TableCell>
-                        <TableCell>{gig.city}, {gig.country}</TableCell>
                         <TableCell>
                           <Badge variant="default">Active</Badge>
                         </TableCell>
@@ -384,7 +478,7 @@ export default function ManageGigsPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center">
+                      <TableCell colSpan={7} className="text-center">
                         No approved gigs found
                       </TableCell>
                     </TableRow>
@@ -397,14 +491,12 @@ export default function ManageGigsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Image</TableHead>
                     <TableHead>Title</TableHead>
                     <TableHead>Seller</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Job Type</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Delivery</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Rejected Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Approved Date</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -412,21 +504,64 @@ export default function ManageGigsPage() {
                   {tab === "rejected" && displayedGigs.length > 0 ? (
                     displayedGigs.map((gig) => (
                       <TableRow key={gig.id}>
-                        <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{
-                          gig.seller?.firstname && gig.seller?.lastname
-                            ? gig.seller.firstname + ' ' + gig.seller.lastname
-                            : gig.seller?.firstname
-                            ? gig.seller.firstname
-                            : gig.seller?.username
-                            ? gig.seller.username
-                            : ''
-                        }</TableCell>
+                        <TableCell>
+                          {gig.gig_images && gig.gig_images.length > 0 ? (
+                            <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                          ) : gig.gig_image ? (
+                            <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                          ) : (
+                            <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="block max-w-[200px] truncate cursor-pointer">
+                                  {gig.title}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span className="select-all break-all">{gig.title}</span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="block max-w-[120px] truncate cursor-pointer">
+                                  {(() => {
+                                    const sellerName = gig.seller
+                                      ? gig.seller.firstname && gig.seller.lastname
+                                        ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                        : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                      : gig.seller_clerk_id || "N/A";
+                                    if (sellerName.length > 16) {
+                                      return sellerName;
+                                    }
+                                    return sellerName;
+                                  })()}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span className="select-all break-all">{(() => {
+                                  const sellerName = gig.seller
+                                    ? gig.seller.firstname && gig.seller.lastname
+                                      ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                      : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                    : gig.seller_clerk_id || "N/A";
+                                  return sellerName;
+                                })()}</span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
                         <TableCell>{gig.category?.name}</TableCell>
-                        <TableCell>{gig.job_type?.job_type}</TableCell>
-                        <TableCell>${gig.starting_price}</TableCell>
-                        <TableCell>{gig.delivery_time} days</TableCell>
-                        <TableCell>{gig.city}, {gig.country}</TableCell>
+                        <TableCell>
+                          <Badge variant="default">Rejected</Badge>
+                        </TableCell>
                         <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
                           <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleView(gig)}>
@@ -438,7 +573,7 @@ export default function ManageGigsPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center">
+                      <TableCell colSpan={7} className="text-center">
                         No rejected gigs found
                       </TableCell>
                     </TableRow>
@@ -451,59 +586,138 @@ export default function ManageGigsPage() {
       </Card>
 
       {/* Modal xem chi tiết gig */}
+      <style>{`
+        [data-radix-dialog-close], button[aria-label="Close"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+        .dialog-content::-webkit-scrollbar { width: 8px; }
+        .dialog-content::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 8px; }
+        .dialog-content::-webkit-scrollbar-track { background: #fff; }
+      `}</style>
       <Dialog open={showModal} onOpenChange={handleCloseModal}>
-        <DialogContent className="max-w-4xl w-[66vw] max-h-[75vh] overflow-y-auto p-0 rounded-2xl border border-gray-100 shadow-2xl scrollbar-thin scrollbar-thumb-gray-200">
-          <DialogHeader className="bg-emerald-600 px-10 py-6">
-            <DialogTitle className="text-white text-2xl">Gig Details</DialogTitle>
-            <DialogDescription className="text-emerald-100">Thông tin chi tiết dịch vụ</DialogDescription>
+        <DialogContent 
+          className="dialog-content max-w-2xl w-full max-h-[80vh] overflow-y-auto p-0 rounded-2xl border border-gray-200 shadow-xl bg-white"
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>Gig Details</DialogTitle>
+            <DialogDescription>Detailed information about the gig</DialogDescription>
           </DialogHeader>
           {selectedGig && (
-            <div className="p-10 bg-white dark:bg-gray-900">
-              {/* Thông tin gig chia 2 cột */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 mb-8">
-                <div className="flex flex-col gap-3">
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Tiêu đề:</span> <span className="text-emerald-700 font-bold">{selectedGig.title}</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Người bán:</span> <span className="text-emerald-700 font-medium">{
-                    selectedGig.seller?.firstname && selectedGig.seller?.lastname
-                      ? selectedGig.seller.firstname + ' ' + selectedGig.seller.lastname
-                      : selectedGig.seller?.firstname
-                      ? selectedGig.seller.firstname
-                      : selectedGig.seller?.username
-                      ? selectedGig.seller.username
-                      : ''
-                  }</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Danh mục:</span> <span className="text-blue-700 font-medium">{selectedGig.category?.name}</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Loại công việc:</span> <span className="text-indigo-700 font-medium">{selectedGig.job_type?.job_type}</span></div>
+            <div className="">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 bg-white rounded-t-2xl relative">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-lg font-bold text-emerald-600 border border-emerald-200">
+                    {selectedGig.seller?.firstname?.[0] || selectedGig.seller?.username?.[0] || 'U'}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-bold text-gray-900">{selectedGig.title}</h2>
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${selectedGig.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : selectedGig.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{selectedGig.status.charAt(0).toUpperCase() + selectedGig.status.slice(1)}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 font-medium">Seller: <span className="text-gray-700 font-semibold">{selectedGig.seller?.firstname && selectedGig.seller?.lastname ? `${selectedGig.seller.firstname} ${selectedGig.seller.lastname}` : selectedGig.seller?.firstname || selectedGig.seller?.username || selectedGig.seller_clerk_id || 'N/A'}</span></div>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-3">
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Giá:</span> <span className="text-pink-600 font-semibold">${selectedGig.starting_price}</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Thời gian giao:</span> <span className="text-orange-600 font-semibold">{selectedGig.delivery_time} ngày</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Vị trí:</span> <span className="text-gray-800 dark:text-gray-100">{selectedGig.city}, {selectedGig.country}</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Trạng thái:</span> <span className={`font-semibold ${selectedGig.status === 'pending' ? 'text-yellow-600' : selectedGig.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>{selectedGig.status}</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Ngày tạo:</span> <span className="text-gray-500">{new Date(selectedGig.created_at).toLocaleDateString()}</span></div>
-                </div>
+                <button onClick={handleCloseModal} className="absolute top-4 right-4 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 rounded-full p-2 shadow-sm border border-gray-200 transition-all">
+                  <span className="sr-only">Close</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
               </div>
-              {/* Ảnh/video preview ở dưới */}
-              <div className="flex flex-wrap gap-4 justify-center items-center border-t border-gray-100 pt-6">
-                {selectedGig.gig_images && Array.isArray(selectedGig.gig_images) && selectedGig.gig_images.length > 0 ? (
-                  selectedGig.gig_images.map((url: string, idx: number) =>
-                    url.match(/\.(mp4|mov|avi|wmv)$/i) ? (
-                      <video key={idx} src={url} controls className="rounded-2xl border border-emerald-100 shadow-md w-48 h-32 object-cover hover:scale-105 transition-transform duration-200" />
+
+              {/* Image(s) */}
+              {selectedGig.gig_images && selectedGig.gig_images.length > 0 ? (
+                <div className={`w-full px-6 pt-6 pb-2 ${selectedGig.gig_images.length === 1 ? 'flex justify-center items-center' : ''}`}>
+                  {selectedGig.gig_images.length === 1 ? (
+                    selectedGig.gig_images[0].match(/\.(mp4|mov|avi|wmv)$/i) ? (
+                      <video src={selectedGig.gig_images[0]} controls className="rounded-xl border border-gray-200 shadow w-full max-w-lg h-56 object-cover bg-black" />
                     ) : (
-                      <img key={idx} src={url} alt={`Gig media ${idx + 1}`} className="rounded-2xl border border-emerald-100 shadow-md w-48 h-32 object-cover hover:scale-105 transition-transform duration-200" />
+                      <img src={selectedGig.gig_images[0]} alt="Gig" className="rounded-xl border border-gray-200 shadow w-full max-w-lg h-56 object-cover" />
                     )
-                  )
-                ) : (
-                  selectedGig.gig_image && (
-                    <img src={selectedGig.gig_image} alt="Gig" className="rounded-2xl border border-emerald-100 shadow-md w-48 h-32 object-cover" />
-                    )
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
+                      {selectedGig.gig_images.map((url: string, idx: number) =>
+                        url.match(/\.(mp4|mov|avi|wmv)$/i) ? (
+                          <video key={idx} src={url} controls className="rounded-xl border border-gray-200 shadow w-full h-40 object-cover bg-black hover:scale-105 transition-transform duration-200" />
+                        ) : (
+                          <img key={idx} src={url} alt={`Gig media ${idx + 1}`} className="rounded-xl border border-gray-200 shadow w-full h-40 object-cover hover:scale-105 transition-transform duration-200" />
+                        )
+                      )}
+                    </div>
                   )}
                 </div>
+              ) : selectedGig.gig_image ? (
+                <div className="flex justify-center items-center px-6 pt-6 pb-2">
+                  <img src={selectedGig.gig_image} alt="Gig" className="rounded-xl border border-gray-200 shadow w-full max-w-lg h-56 object-cover" />
+                </div>
+              ) : (
+                <div className="flex justify-center items-center px-6 pt-6 pb-2">
+                  <div className="w-full max-w-lg h-56 flex items-center justify-center bg-gray-50 rounded-xl border border-gray-200 text-gray-400">No Image</div>
+                </div>
+              )}
+
+              {/* Info grid */}
+              <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Title</span>
+                    <span className="text-base font-bold text-emerald-700">{selectedGig.title}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Seller</span>
+                    <span className="text-sm font-medium text-gray-800">{selectedGig.seller?.firstname && selectedGig.seller?.lastname ? `${selectedGig.seller.firstname} ${selectedGig.seller.lastname}` : selectedGig.seller?.firstname || selectedGig.seller?.username || selectedGig.seller_clerk_id || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Category</span>
+                    <span className="text-sm font-medium text-blue-700">{selectedGig.category?.name}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Job Type</span>
+                    <span className="text-sm font-medium text-indigo-700">{selectedGig.job_type?.job_type}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Price</span>
+                    <span className="text-base font-bold text-pink-600">${selectedGig.starting_price}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Delivery Time</span>
+                    <span className="text-sm font-semibold text-orange-600">{selectedGig.delivery_time} days</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Location</span>
+                    <span className="text-sm font-medium text-gray-800">{selectedGig.city}, {selectedGig.country}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Status</span>
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${selectedGig.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : selectedGig.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{selectedGig.status.charAt(0).toUpperCase() + selectedGig.status.slice(1)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Created At</span>
+                    <span className="text-sm text-gray-500">{new Date(selectedGig.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="px-6 pb-6">
+                <div className="mt-2">
+                  <span className="block text-xs font-semibold text-gray-400 mb-1">Description</span>
+                  <div className="whitespace-pre-line text-gray-700 bg-gray-50 rounded-lg p-4 border border-gray-100 min-h-[48px] text-sm">
+                    {selectedGig.description || <span className="text-gray-400">N/A</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-end px-6 pb-6">
+                <Button onClick={handleCloseModal} variant="outline" className="rounded-full px-6 py-2 text-base font-semibold shadow-sm hover:bg-gray-100 hover:text-emerald-700 transition-all">Close</Button>
+              </div>
             </div>
           )}
-          <DialogFooter className="bg-gray-50 dark:bg-gray-800 px-10 py-4 flex justify-end">
-            <Button onClick={handleCloseModal} variant="outline">Đóng</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
