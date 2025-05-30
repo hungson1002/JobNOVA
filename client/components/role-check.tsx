@@ -1,26 +1,28 @@
 "use client"
 
-import { usePathname, useRouter } from "next/navigation"
-import { useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
-export function RoleCheck() {
-  const { isSignedIn, user } = useUser()
+interface RoleCheckProps {
+  children: React.ReactNode;
+}
+
+export function RoleCheck({ children }: RoleCheckProps) {
+  const { isLoaded, isSignedIn, user } = useUser()
   const router = useRouter()
-  const pathname = usePathname()
 
   useEffect(() => {
-    // Chỉ chuyển hướng khi đã đăng nhập và publicMetadata trống
-    if (isSignedIn && user) {
-      const publicMetadata = user.publicMetadata || {}
-      const hasRole = publicMetadata.isAdmin || publicMetadata.isSeller || publicMetadata.isBuyer
-      
-      // Nếu không có role và không phải đang ở trang select-role thì chuyển hướng
-      if (!hasRole && pathname !== "/select-role") {
+    if (isLoaded && isSignedIn) {
+      const isAdmin = user?.publicMetadata?.isAdmin
+      const isSeller = user?.publicMetadata?.isSeller
+      const isBuyer = user?.publicMetadata?.isBuyer
+
+      if (!isAdmin && !isSeller && !isBuyer) {
         router.push("/select-role")
       }
     }
-  }, [user, pathname, router, isSignedIn])
+  }, [isLoaded, isSignedIn, user, router])
 
-  return null
+  return <>{children}</>
 }

@@ -196,7 +196,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     }
     try {
       const token = await getToken();
-      const res = await fetch(`http://localhost:8800/api/orders/${user.id}?gig_id=${gigId}&order_status=completed`, {
+      const res = await fetch(`http://localhost:8800/api/orders?gig_id=${gigId}&order_status=completed`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -855,100 +855,34 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
           {/* Right Column - Packages */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-              <Tabs value={selectedPackage} onValueChange={setSelectedPackage} className="w-full">
-                <TabsList className="mb-6 grid w-full grid-cols-3">
-                  <TabsTrigger value="basic">Basic</TabsTrigger>
-                  <TabsTrigger value="standard">Standard</TabsTrigger>
-                  <TabsTrigger value="premium">Premium</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="basic" className="space-y-6">
-                  <div className="flex items-baseline justify-between">
-                    <h3 className="text-2xl font-bold">
-                      <PriceDisplay priceUSD={packages.basic.price} />
-                    </h3>
-                    <span className="text-sm text-gray-500">{packages.basic.deliveryTime} days delivery</span>
-                  </div>
-                  <ul className="space-y-3">
-                    {packages.basic.features.map((feature: string, index: number) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <Check className="h-5 w-5 flex-shrink-0 text-emerald-500" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {isSignedIn ? (
-                    <Button
-                      onClick={handleContinue}
-                      className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
-                    >
-                      Continue
-                    </Button>
-                  ) : (
-                    <SignInButton mode="modal">
-                      <button className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors rounded-md py-2 font-semibold text-white text-lg">Continue</button>
-                    </SignInButton>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="standard" className="space-y-6">
-                  <div className="flex items-baseline justify-between">
-                    <h3 className="text-2xl font-bold">
-                      <PriceDisplay priceUSD={packages.standard.price} />
-                    </h3>
-                    <span className="text-sm text-gray-500">{packages.standard.deliveryTime} days delivery</span>
-                  </div>
-                  <ul className="space-y-3">
-                    {packages.standard.features.map((feature: string, index: number) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <Check className="h-5 w-5 flex-shrink-0 text-emerald-500" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {isSignedIn ? (
-                    <Button
-                      onClick={handleContinue}
-                      className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
-                    >
-                      Continue
-                    </Button>
-                  ) : (
-                    <SignInButton mode="modal">
-                      <button className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors rounded-md py-2 font-semibold text-white text-lg">Continue</button>
-                    </SignInButton>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="premium" className="space-y-6">
-                  <div className="flex items-baseline justify-between">
-                    <h3 className="text-2xl font-bold">
-                      <PriceDisplay priceUSD={packages.premium.price} />
-                    </h3>
-                    <span className="text-sm text-gray-500">{packages.premium.deliveryTime} days delivery</span>
-                  </div>
-                  <ul className="space-y-3">
-                    {packages.premium.features.map((feature: string, index: number) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <Check className="h-5 w-5 flex-shrink-0 text-emerald-500" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {isSignedIn ? (
-                    <Button
-                      onClick={handleContinue}
-                      className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors"
-                    >
-                      Continue
-                    </Button>
-                  ) : (
-                    <SignInButton mode="modal">
-                      <button className="w-full bg-emerald-500 hover:bg-emerald-600 transition-colors rounded-md py-2 font-semibold text-white text-lg">Continue</button>
-                    </SignInButton>
-                  )}
-                </TabsContent>
-              </Tabs>
+              <div className="flex flex-col items-center space-y-4">
+                <div className="w-full flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-6 py-4 mb-2">
+                  <span className="text-2xl font-bold text-gray-900">
+                    <PriceDisplay priceUSD={packages.basic.price} />
+                  </span>
+                  <span className="text-sm text-gray-500">{packages.basic.deliveryTime} days delivery</span>
+                </div>
+                <ul className="space-y-3 w-full">
+                  {packages.basic.features.map((feature: string, index: number) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <Check className="h-5 w-5 flex-shrink-0 text-emerald-500" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                {isSignedIn ? (
+                  <Button
+                    onClick={handleContinue}
+                    className="w-full rounded-full bg-emerald-500 hover:bg-emerald-600 transition-colors mt-4"
+                  >
+                    Continue
+                  </Button>
+                ) : (
+                  <SignInButton mode="modal">
+                    <button className="w-full rounded-full bg-emerald-500 hover:bg-emerald-600 transition-colors py-2 font-semibold text-white text-lg mt-4">Continue</button>
+                  </SignInButton>
+                )}
+              </div>
 
               <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-6">
                 {isSignedIn ? (

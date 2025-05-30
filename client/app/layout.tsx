@@ -5,6 +5,7 @@ import { Inter } from "next/font/google"
 import type React from "react"
 import "./globals.css"
 import { Toaster } from 'sonner'
+import { cn } from "@/lib/utils"
 
 import { BannedOverlay } from "@/components/BannedOverlay"
 import { Footer } from "@/components/footer"
@@ -51,16 +52,17 @@ export default function RootLayout({
   return (
     <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
       <html lang="en">
-        <body className={inter.className} suppressHydrationWarning>
+        <body className={cn("min-h-screen bg-background font-sans antialiased", inter.className)} suppressHydrationWarning>
           <Toaster richColors position="top-center" />
           <NotificationProvider>
             <CurrencyProvider>
-              <RoleCheck />
-              {!isAdminRoute && <Navbar />}
-              <BannedLayout>
-                {children}
-              </BannedLayout>
-              {!isAdminRoute && <Footer />}
+              <RoleCheck>
+                {!isAdminRoute && <Navbar />}
+                <BannedLayout>
+                  {children}
+                </BannedLayout>
+                {!isAdminRoute && <Footer />}
+              </RoleCheck>
             </CurrencyProvider>
           </NotificationProvider>
         </body>

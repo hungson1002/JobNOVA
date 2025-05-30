@@ -740,13 +740,19 @@ export default function Home() {
             </Button>
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-            {topRateServiceCards.slice(0, 5).map((service) => (
-              <ServiceCard
-                key={service.id}
-                service={service}
-                showCategory
-              />
-            ))}
+            {topRateServiceCards.length > 0 ? (
+              topRateServiceCards.slice(0, 5).map((service) => (
+                <ServiceCard
+                  key={service.id}
+                  service={service}
+                  showCategory
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <p className="text-lg text-gray-500">No services available</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -756,21 +762,25 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="mb-12">
             <h2 className="text-3xl font-bold dark:text-white">Explore All Services</h2>
-            <div className="flex gap-2">
-              <Button 
+            <div className="flex gap-2 mt-6">
+              <Button
                 variant="ghost"
-                className={`px-6 py-2 rounded-full transition-colors ${
-                  !showNewest ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'hover:bg-gray-100'
-                }`}
+                className={`px-8 py-2 rounded-full font-semibold transition-all duration-200 shadow-sm border
+                  ${!showNewest
+                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200 shadow-emerald-100'
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
                 onClick={() => setShowNewest(false)}
               >
                 All
               </Button>
-              <Button 
+              <Button
                 variant="ghost"
-                className={`px-6 py-2 rounded-full transition-colors ${
-                  showNewest ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'hover:bg-gray-100'
-                }`}
+                className={`px-8 py-2 rounded-full font-semibold transition-all duration-200 shadow-sm border
+                  ${showNewest
+                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200 shadow-emerald-100'
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                  }`}
                 onClick={() => setShowNewest(true)}
               >
                 Newest

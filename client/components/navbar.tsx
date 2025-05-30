@@ -295,15 +295,15 @@ useEffect(() => {
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center">
-          <div className="mr-4 flex">
+        <div className="container flex h-16 items-center" suppressHydrationWarning>
+          <div className="mr-4 flex" suppressHydrationWarning>
             <Link href="/" prefetch className="mr-6 flex items-center space-x-2">
               <Image src="/logo.png" alt="Logo" width={32} height={32} />
               <span className="hidden font-bold sm:inline-block">JobNOVA</span>
             </Link>
           </div>
 
-          <div className="flex flex-1 items-center gap-4">
+          <div className="flex flex-1 items-center gap-4" suppressHydrationWarning>
             <form onSubmit={handleSearch} className="relative flex-1 mx-4 flex">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
@@ -370,9 +370,9 @@ useEffect(() => {
                 <Search className="h-4 w-4" />
               </Button>
             </form>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0" suppressHydrationWarning>
               {!isLoaded ? (
-                <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" suppressHydrationWarning />
               ) : isSignedIn ? (
                 <>
                   <LanguageCurrencySwitcher />
@@ -502,7 +502,7 @@ useEffect(() => {
                   <UserButton />
                 </>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" suppressHydrationWarning>
                   <SignInButton mode="modal">
                     <Button variant="ghost">Đăng nhập</Button>
                   </SignInButton>

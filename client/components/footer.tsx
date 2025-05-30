@@ -4,9 +4,9 @@ import { Facebook, Twitter, Instagram, Linkedin, Youtube } from "lucide-react"
 
 export function Footer() {
   return (
-    <footer className="border-t bg-white">
-      <div className="container px-4 py-12">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-5">
+    <footer className="border-t bg-background">
+      <div className="container px-4 py-12" suppressHydrationWarning>
+        <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-5" suppressHydrationWarning>
           {/* Categories */}
           <div>
             <h3 className="mb-4 text-sm font-semibold uppercase text-gray-900">Categories</h3>
@@ -153,15 +153,21 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-6 border-t border-gray-200 pt-8 md:flex-row">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="hover:opacity-80 transition-opacity duration-200">
-              <Image src="/logo.png?height=32&width=100" alt="Freelance Logo" width={100} height={32} />
+        <div className="mt-12 flex flex-col items-center justify-between gap-6 border-t border-gray-200 pt-8" suppressHydrationWarning>
+          <div className="flex items-center gap-4" suppressHydrationWarning>
+            <Link href="/" className="hover:opacity-80 transition-opacity duration-200" suppressHydrationWarning>
+              <Image 
+                src="/logo.png" 
+                alt="Freelance Logo" 
+                width={100} 
+                height={32}
+                suppressHydrationWarning
+              />
             </Link>
-            <span className="text-sm text-gray-500">© 2025 JobNOVA Inc.</span>
+            <span className="text-sm text-gray-500" suppressHydrationWarning>© 2025 JobNOVA Inc.</span>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-4" suppressHydrationWarning>
             <Link href="#" className="text-gray-500 hover:text-emerald-600 transition-colors duration-200">
               <Facebook className="h-5 w-5" />
               <span className="sr-only">Facebook</span>
