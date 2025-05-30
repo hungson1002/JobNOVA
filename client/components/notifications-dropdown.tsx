@@ -15,27 +15,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { useNotification } from "@/context/notification-context"
 
 export function NotificationsDropdown() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
+  const { notifications, markAllAsRead, markAsRead } = useNotification()
   const [isOpen, setIsOpen] = useState(false)
 
   const unreadCount = notifications.filter((notification) => !notification.read).length
-
-  const handleMarkAllAsRead = () => {
-    const updatedNotifications = notifications.map((notification) => ({
-      ...notification,
-      read: true,
-    }))
-    setNotifications(updatedNotifications)
-  }
-
-  const handleMarkAsRead = (id: string) => {
-    const updatedNotifications = notifications.map((notification) =>
-      notification.id === id ? { ...notification, read: true } : notification,
-    )
-    setNotifications(updatedNotifications)
-  }
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -56,7 +42,7 @@ export function NotificationsDropdown() {
         <div className="flex items-center justify-between p-4">
           <DropdownMenuLabel className="p-0 text-base">Notifications</DropdownMenuLabel>
           {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" className="h-auto p-0 text-xs" onClick={handleMarkAllAsRead}>
+            <Button variant="ghost" size="sm" className="h-auto p-0 text-xs" onClick={markAllAsRead}>
               Mark all as read
             </Button>
           )}
@@ -70,7 +56,7 @@ export function NotificationsDropdown() {
                 className={`flex cursor-pointer gap-3 p-4 ${notification.read ? "" : "bg-emerald-50"}`}
                 onClick={() => {
                   if (!notification.read) {
-                    handleMarkAsRead(notification.id)
+                    markAsRead(notification.id)
                   }
                   setIsOpen(false)
                 }}
@@ -110,7 +96,7 @@ export function NotificationsDropdown() {
   )
 }
 
-function getNotificationIcon(type: NotificationType) {
+function getNotificationIcon(type: string) {
   switch (type) {
     case "message":
       return <MessageSquare className="h-4 w-4 text-white" />
@@ -125,7 +111,7 @@ function getNotificationIcon(type: NotificationType) {
   }
 }
 
-function getIconBackground(type: NotificationType) {
+function getIconBackground(type: string) {
   switch (type) {
     case "message":
       return "bg-blue-500"
@@ -150,46 +136,3 @@ interface Notification {
   read: boolean
   link: string
 }
-
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "order",
-    message: "Your order #12345 has been completed! Please leave a review.",
-    time: "Just now",
-    read: false,
-    link: "/dashboard",
-  },
-  {
-    id: "2",
-    type: "message",
-    message: "AlexDesigns sent you a message about your logo design order.",
-    time: "10 minutes ago",
-    read: false,
-    link: "/messages",
-  },
-  {
-    id: "3",
-    type: "review",
-    message: "John Smith left a 5-star review on your service!",
-    time: "1 hour ago",
-    read: false,
-    link: "/seller-dashboard",
-  },
-  {
-    id: "4",
-    type: "reminder",
-    message: "Your order #12346 is due in 24 hours. Don't forget to deliver!",
-    time: "2 hours ago",
-    read: true,
-    link: "/seller-dashboard?tab=orders",
-  },
-  {
-    id: "5",
-    type: "system",
-    message: "Your account information has been updated successfully.",
-    time: "Yesterday",
-    read: true,
-    link: "/settings",
-  },
-]

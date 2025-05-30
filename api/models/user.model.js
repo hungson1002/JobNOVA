@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
 
-const User = (sequelize) =>
-  sequelize.define(
+const User = (sequelize) => {
+  const UserModel = sequelize.define(
     "User",
     {
       id: {
@@ -44,7 +44,7 @@ const User = (sequelize) =>
       user_roles: {
         type: DataTypes.JSON,
         allowNull: false,
-        defaultValue: ["seeker"]
+        defaultValue: ["seeker"],
       },
       date_of_birth: {
         type: DataTypes.DATEONLY,
@@ -73,5 +73,15 @@ const User = (sequelize) =>
       timestamps: false,
     }
   );
+
+  UserModel.associate = (models) => {
+    UserModel.hasMany(models.Gig, {
+      foreignKey: "seller_clerk_id",
+      sourceKey: "clerk_id",
+    });
+  };
+
+  return UserModel;
+};
 
 export default User;

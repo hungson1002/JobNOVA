@@ -15,7 +15,8 @@ import {
   LogOut,
   Menu,
   X,
-  Images
+  Images,
+  Star
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -34,6 +35,11 @@ const sidebarItems = [
     label: "Manager Service", 
     href: "/admin/manage-gigs",
     icon: <Briefcase className="h-5 w-5" />
+  },
+  { 
+    label: "Top Rate Management", 
+    href: "/admin/manage-top-rate",
+    icon: <Star className="h-5 w-5" />
   },
   { 
     label: "Order Management", 

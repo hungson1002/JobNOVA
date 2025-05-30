@@ -240,7 +240,14 @@ export default function MyGigsPage() {
                   <td className="py-2 px-4 text-emerald-600 font-semibold">${gig.starting_price}</td>
                   <td className="py-2 px-4">{gig.delivery_time} days</td>
                   <td className="py-2 px-4">
-                    <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                    <span className={
+                      `inline-block px-2 py-1 rounded text-xs font-medium ` +
+                      (gig.status === "pending"
+                        ? "bg-gray-200 text-gray-700"
+                        : gig.status === "active"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700")
+                    }>
                       {gig.status}
                     </span>
                   </td>

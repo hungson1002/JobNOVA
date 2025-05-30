@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Pencil, Trash2, MoveUp, MoveDown, Upload, X } from "lucide-react"
+import { Plus, Pencil, Trash2, MoveUp, MoveDown, Upload, X, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
 import { useAuth } from "@clerk/nextjs"
@@ -36,6 +36,7 @@ export default function ManageSlidesPage() {
     cta_link: ""
   })
   const { getToken } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Fetch slides
   useEffect(() => {
@@ -51,7 +52,7 @@ export default function ManageSlidesPage() {
       }
     } catch (error) {
       console.error("Error fetching slides:", error)
-      toast.error("Không thể tải danh sách slides")
+      toast.error("Failed to load slides list")
     } finally {
       setIsLoading(false)
     }
@@ -62,13 +63,13 @@ export default function ManageSlidesPage() {
     if (file) {
       // Kiểm tra kích thước file (giới hạn 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error("Kích thước ảnh không được vượt quá 5MB")
+        toast.error("Image size must not exceed 5MB")
         return
       }
 
       // Kiểm tra loại file
       if (!file.type.startsWith('image/')) {
-        toast.error("Vui lòng chọn file ảnh")
+        toast.error("Please select an image file")
         return
       }
 
@@ -111,10 +112,10 @@ export default function ManageSlidesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.image) {
-      toast.error("Vui lòng chọn ảnh")
+      toast.error("Please select an image")
       return
     }
-
+    setIsSubmitting(true)
     try {
       const token = await getToken()
 
@@ -134,15 +135,17 @@ export default function ManageSlidesPage() {
       })
       const data = await response.json()
       if (data.success) {
-        toast.success("Slide mới đã được thêm vào danh sách")
+        toast.success("New slide added successfully")
         await fetchSlides() // Wait for slides to be fetched
         handleAddDialogOpen(false) // Close dialog and reset form
       } else {
-        toast.error(data.message || "Không thể thêm slide")
+        toast.error(data.message || "Failed to add slide")
       }
     } catch (error) {
       console.error("Error adding slide:", error)
-      toast.error("Không thể thêm slide")
+      toast.error("Failed to add slide")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -170,17 +173,17 @@ export default function ManageSlidesPage() {
       })
       const data = await response.json()
       if (data.success) {
-        toast.success("Thông tin slide đã được cập nhật")
+        toast.success("Slide updated successfully")
         await fetchSlides() // Wait for slides to be fetched
         setIsEditDialogOpen(false)
         setSelectedSlide(null)
         resetForm()
       } else {
-        toast.error(data.message || "Không thể cập nhật slide")
+        toast.error(data.message || "Failed to update slide")
       }
     } catch (error) {
       console.error("Error updating slide:", error)
-      toast.error("Không thể cập nhật slide")
+      toast.error("Failed to update slide")
     }
   }
 
@@ -207,16 +210,16 @@ export default function ManageSlidesPage() {
 
       const data = await response.json()
       if (data.success) {
-        toast.success(data.message || "Đã xóa slide")
+        toast.success(data.message || "Slide deleted successfully")
         await fetchSlides() // Refresh danh sách sau khi xóa
         setIsDeleteDialogOpen(false)
         setSelectedSlide(null)
       } else {
-        toast.error(data.message || "Không thể xóa slide")
+        toast.error(data.message || "Failed to delete slide")
       }
     } catch (error) {
       console.error("Error deleting slide:", error)
-      toast.error("Không thể xóa slide")
+      toast.error("Failed to delete slide")
     }
   }
 
@@ -244,14 +247,14 @@ export default function ManageSlidesPage() {
       })
       const data = await response.json()
       if (!data.success) {
-        toast.error(data.message || "Không thể di chuyển slide lên")
+        toast.error(data.message || "Failed to move slide up")
         await fetchSlides() // fallback nếu lỗi
       } else {
-        toast.success("Đã di chuyển slide lên")
+        toast.success("Slide moved up successfully")
       }
     } catch (error) {
       console.error("Error moving slide up:", error)
-      toast.error("Không thể di chuyển slide")
+      toast.error("Failed to move slide")
       await fetchSlides()
     }
   }
@@ -280,14 +283,14 @@ export default function ManageSlidesPage() {
       })
       const data = await response.json()
       if (!data.success) {
-        toast.error(data.message || "Không thể di chuyển slide xuống")
+        toast.error(data.message || "Failed to move slide down")
         await fetchSlides() // fallback nếu lỗi
       } else {
-        toast.success("Đã di chuyển slide xuống")
+        toast.success("Slide moved down successfully")
       }
     } catch (error) {
       console.error("Error moving slide down:", error)
-      toast.error("Không thể di chuyển slide")
+      toast.error("Failed to move slide")
       await fetchSlides()
     }
   }
@@ -306,289 +309,157 @@ export default function ManageSlidesPage() {
   }
 
   return (
-    <div className="p-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Quản lý Banner Slides</CardTitle>
-              <CardDescription>
-                Thêm, sửa, xóa và sắp xếp các banner slides trên trang chủ
-              </CardDescription>
-            </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={handleAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Thêm Slide Mới
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Thêm Banner Slide Mới</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="title">Tiêu đề</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="subtitle">Mô tả</Label>
-                    <Input
-                      id="subtitle"
-                      value={formData.subtitle}
-                      onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="cta_link">CTA Link</Label>
-                    <Input
-                      id="cta_link"
-                      value={formData.cta_link || ''}
-                      onChange={(e) => setFormData({ ...formData, cta_link: e.target.value })}
-                      placeholder="https://example.com"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="image">Hình ảnh</Label>
-                    <div className="mt-2 flex items-center gap-4">
-                      <div className="relative flex-1">
-                        <Input
-                          id="image"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => document.getElementById('image')?.click()}
-                        >
-                          <Upload className="mr-2 h-4 w-4" />
-                          Chọn ảnh
-                        </Button>
-                      </div>
-                      {formData.imagePreview && (
-                        <div className="relative h-20 w-32">
-                          <Image
-                            src={formData.imagePreview}
-                            alt="Preview"
-                            fill
-                            className="rounded object-cover"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            className="absolute -right-2 -top-2 h-6 w-6"
-                            onClick={() => setFormData({ ...formData, image: null, imagePreview: "" })}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+    <div className="container max-w-5xl mx-auto px-4 py-10">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-10">
+        <div>
+          <h1 className="text-4xl font-extrabold text-emerald-700 tracking-tight mb-2">Manage Banner Slides</h1>
+          <p className="text-lg text-gray-500">Add, edit, reorder, or remove homepage banner slides. Make your platform more attractive!</p>
+        </div>
+        <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-xl px-6 py-2 text-base font-semibold bg-amber-400 hover:bg-amber-500 text-white flex items-center gap-2">
+          <Plus className="w-5 h-5" /> Add New Slide
+        </Button>
+      </div>
+      <div className="rounded-2xl bg-white dark:bg-gray-950 overflow-x-auto border border-gray-100">
+        <Table>
+          <TableHeader className="bg-emerald-50/60 dark:bg-gray-900">
+            <TableRow>
+              <TableHead className="text-lg font-semibold text-gray-700">Image</TableHead>
+              <TableHead className="text-lg font-semibold text-gray-700">Title</TableHead>
+              <TableHead className="text-lg font-semibold text-gray-700">Subtitle</TableHead>
+              <TableHead className="text-lg font-semibold text-gray-700">CTA Link</TableHead>
+              <TableHead className="text-lg font-semibold text-gray-700">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {slides.length > 0 ? (
+              slides.map((slide) => (
+                <TableRow key={slide.id} className="hover:bg-amber-50/40 transition group">
+                  <TableCell>
+                    <div className="w-32 h-20 rounded-xl overflow-hidden border bg-gray-100 flex items-center justify-center">
+                      {slide.image ? (
+                        <img src={slide.image} alt={slide.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-gray-400">No Image</span>
                       )}
                     </div>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => handleAddDialogOpen(false)}>
-                      Hủy
-                    </Button>
-                    <Button type="submit">Thêm</Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Hình ảnh</TableHead>
-                <TableHead>Tiêu đề</TableHead>
-                <TableHead>Mô tả</TableHead>
-                <TableHead>Ngày tạo</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Đang tải...
                   </TableCell>
-                </TableRow>
-              ) : slides.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Chưa có banner slides nào
-                  </TableCell>
-                </TableRow>
-              ) : (
-                slides.map((slide) => (
-                  <TableRow key={slide.id}>
-                    <TableCell>
-                      <div className="relative h-16 w-24 overflow-hidden rounded">
-                        <Image
-                          src={slide.image}
-                          alt={slide.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>{slide.title}</TableCell>
-                    <TableCell>{slide.subtitle}</TableCell>
-                    <TableCell>{new Date(slide.created_at).toLocaleDateString("vi-VN")}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="icon" onClick={() => openEditDialog(slide)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={() => handleDelete(slide.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={() => handleMoveUp(slide.id)}>
-                          <MoveUp className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={() => handleMoveDown(slide.id)}>
-                          <MoveDown className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Chỉnh sửa Banner Slide</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleEdit} className="space-y-4">
-            <div>
-              <Label htmlFor="edit-title">Tiêu đề</Label>
-              <Input
-                id="edit-title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-subtitle">Mô tả</Label>
-              <Input
-                id="edit-subtitle"
-                value={formData.subtitle}
-                onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-cta_link">CTA Link</Label>
-              <Input
-                id="edit-cta_link"
-                value={formData.cta_link || ''}
-                onChange={(e) => setFormData({ ...formData, cta_link: e.target.value })}
-                placeholder="https://example.com"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-image">Hình ảnh</Label>
-              <div className="mt-2 flex items-center gap-4">
-                <div className="relative flex-1">
-                  <Input
-                    id="edit-image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => document.getElementById('edit-image')?.click()}
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    Chọn ảnh mới
-                  </Button>
-                </div>
-                {formData.imagePreview && (
-                  <div className="relative h-20 w-32">
-                    <Image
-                      src={formData.imagePreview}
-                      alt="Preview"
-                      fill
-                      className="rounded object-cover"
-                    />
-                    {formData.image && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -right-2 -top-2 h-6 w-6"
-                        onClick={() => setFormData({ ...formData, image: null, imagePreview: selectedSlide?.image || "" })}
-                      >
-                        <X className="h-4 w-4" />
+                  <TableCell className="font-bold text-base text-gray-800 max-w-[180px] truncate">{slide.title}</TableCell>
+                  <TableCell className="text-gray-600 max-w-[220px] truncate">{slide.subtitle}</TableCell>
+                  <TableCell className="text-blue-600 underline max-w-[180px] truncate">{slide.cta_link}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button size="icon" variant="ghost" className="hover:bg-emerald-50" onClick={() => openEditDialog(slide)} title="Edit">
+                        <Pencil className="w-5 h-5 text-emerald-600" />
                       </Button>
-                    )}
-                  </div>
-                )}
-              </div>
+                      <Button size="icon" variant="ghost" className="hover:bg-red-50" onClick={() => handleDelete(slide.id)} title="Delete">
+                        <Trash2 className="w-5 h-5 text-red-500" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="hover:bg-gray-50" onClick={() => handleMoveUp(slide.id)} title="Move Up">
+                        <MoveUp className="w-5 h-5 text-gray-500" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="hover:bg-gray-50" onClick={() => handleMoveDown(slide.id)} title="Move Down">
+                        <MoveDown className="w-5 h-5 text-gray-500" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-12 text-gray-400 text-lg">
+                  No slides found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Add Slide Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={handleAddDialogOpen}>
+        <DialogContent className="max-w-lg rounded-2xl border-2 border-amber-100">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-emerald-700">Add New Slide</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <Label htmlFor="slide-title">Title</Label>
+              <Input id="slide-title" placeholder="Enter slide title" value={formData.title} onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))} required className="rounded-xl mt-1" />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                Hủy
+            <div>
+              <Label htmlFor="slide-subtitle">Subtitle</Label>
+              <Input id="slide-subtitle" placeholder="Enter slide subtitle" value={formData.subtitle} onChange={e => setFormData(prev => ({ ...prev, subtitle: e.target.value }))} className="rounded-xl mt-1" />
+            </div>
+            <div>
+              <Label htmlFor="slide-image">Image</Label>
+              <Input id="slide-image" type="file" accept="image/*" onChange={handleImageChange} className="rounded-xl mt-1" />
+              {formData.imagePreview && (
+                <div className="mt-3 w-full h-40 rounded-xl overflow-hidden border bg-gray-100 flex items-center justify-center">
+                  <img src={formData.imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="slide-cta">CTA Link</Label>
+              <Input id="slide-cta" placeholder="Enter call-to-action link (e.g. /search)" value={formData.cta_link} onChange={e => setFormData(prev => ({ ...prev, cta_link: e.target.value }))} className="rounded-xl mt-1" />
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" type="button" onClick={() => setIsAddDialogOpen(false)} className="rounded-xl" disabled={isSubmitting}>Cancel</Button>
+              <Button type="submit" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-2" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSubmitting ? "Adding..." : "Add Slide"}
               </Button>
-              <Button type="submit">Lưu thay đổi</Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+      {/* Edit Slide Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-lg rounded-2xl border-2 border-amber-100">
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-emerald-700">Edit Slide</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p>Bạn có chắc chắn muốn xóa slide này?</p>
-            {selectedSlide && (
-              <div className="mt-4">
-                <p className="font-medium">Tiêu đề: {selectedSlide.title}</p>
-                <p className="text-sm text-gray-500">Ngày tạo: {new Date(selectedSlide.created_at).toLocaleDateString("vi-VN")}</p>
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsDeleteDialogOpen(false)
-                setSelectedSlide(null)
-              }}
-            >
-              Hủy
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => selectedSlide && performDelete(selectedSlide.id)}
-            >
-              Xóa
-            </Button>
+          <form onSubmit={handleEdit} className="space-y-6">
+            <div>
+              <Label htmlFor="edit-slide-title">Title</Label>
+              <Input id="edit-slide-title" placeholder="Enter slide title" value={formData.title} onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))} required className="rounded-xl mt-1" />
+            </div>
+            <div>
+              <Label htmlFor="edit-slide-subtitle">Subtitle</Label>
+              <Input id="edit-slide-subtitle" placeholder="Enter slide subtitle" value={formData.subtitle} onChange={e => setFormData(prev => ({ ...prev, subtitle: e.target.value }))} className="rounded-xl mt-1" />
+            </div>
+            <div>
+              <Label htmlFor="edit-slide-image">Image</Label>
+              <Input id="edit-slide-image" type="file" accept="image/*" onChange={handleImageChange} className="rounded-xl mt-1" />
+              {formData.imagePreview && (
+                <div className="mt-3 w-full h-40 rounded-xl overflow-hidden border bg-gray-100 flex items-center justify-center">
+                  <img src={formData.imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="edit-slide-cta">CTA Link</Label>
+              <Input id="edit-slide-cta" placeholder="Enter call-to-action link (e.g. /search)" value={formData.cta_link} onChange={e => setFormData(prev => ({ ...prev, cta_link: e.target.value }))} className="rounded-xl mt-1" />
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" type="button" onClick={() => setIsEditDialogOpen(false)} className="rounded-xl">Cancel</Button>
+              <Button type="submit" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">Save Changes</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Slide Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md rounded-2xl border-2 border-red-100">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-red-600">Delete Slide</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-gray-700">Are you sure you want to delete this slide? This action cannot be undone.</div>
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" type="button" onClick={() => setIsDeleteDialogOpen(false)} className="rounded-xl">Cancel</Button>
+            <Button type="button" className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold" onClick={() => performDelete(selectedSlide?.id!)}>Delete</Button>
           </div>
         </DialogContent>
       </Dialog>

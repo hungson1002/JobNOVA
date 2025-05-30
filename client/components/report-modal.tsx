@@ -4,6 +4,8 @@ import type React from "react"
 
 import { useState } from "react"
 import { Flag, X } from "lucide-react"
+import { useAuth } from "@clerk/nextjs"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -24,29 +26,66 @@ interface ReportModalProps {
   id: string
   name: string
   trigger?: React.ReactNode
+  ownerId?: string
+  currentUserId?: string 
 }
 
-export function ReportModal({ type, id, name, trigger }: ReportModalProps) {
+export function ReportModal({ type, id, name, trigger, ownerId, currentUserId }: ReportModalProps) {
   const [reason, setReason] = useState("")
   const [description, setDescription] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const { getToken } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const token = await getToken()
+      if (!token) {
+        throw new Error("Please sign in to submit a report")
+      }
 
-    // Reset form and close modal
-    setReason("")
-    setDescription("")
-    setIsSubmitting(false)
-    setIsOpen(false)
+      const response = await fetch("http://localhost:8800/api/reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          target_type: type,
+          target_id: id,
+          reason,
+          description,
+        }),
+      })
 
-    // Show success message (in a real app, you'd use a toast notification)
-    alert("Your report has been submitted. Our team will review it shortly.")
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to submit report")
+      }
+
+      // Reset form và đóng modal
+      setReason("")
+      setDescription("")
+      setIsSubmitting(false)
+      setIsOpen(false)
+
+      // Show success toast
+      toast.success("Report Submitted", {
+        description: "Your report has been submitted. Our team will review it shortly."
+      })
+    } catch (error) {
+      console.error("Error submitting report:", error)
+      toast.error("Error", {
+        description: error instanceof Error ? error.message : "Failed to submit report. Please try again."
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const getReasonOptions = () => {
@@ -105,6 +144,14 @@ export function ReportModal({ type, id, name, trigger }: ReportModalProps) {
         return "Please provide details about the issue. Our team will review your report and take appropriate action."
     }
   }
+  if (type === "service" && currentUserId === ownerId) {
+    return (
+      <div className="text-sm text-muted-foreground italic px-4 py-2 border border-gray-200 rounded-md bg-gray-50">
+        Bạn không thể báo cáo gig của chính mình.
+      </div>
+    )
+  }
+  
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

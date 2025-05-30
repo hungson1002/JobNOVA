@@ -4,6 +4,7 @@ import Category from "./category.model.js";
 import ContactForm from "./contactForm.model.js";
 import ExperienceDetail from "./experienceDetail.model.js";
 import Gig from "./gig.model.js";
+import GigExtra from "./gigExtra.model.js";
 import GigFaq from "./gigFAQ.model.js";
 import GigRequirementTemplate from "./gigReqTemplate.model.js";
 import GigRequirements from "./gigRequirement.model.js";
@@ -15,7 +16,10 @@ import JobType from "./jobType.model.js";
 import Message from "./message.model.js";
 import Notification from "./notification.model.js";
 import Order from "./order.model.js";
+import OrderExtra from "./orderExtra.model.js";
 import Payment from "./payment.model.js";
+import Portfolio from "./portfolio.model.js";
+import Report from "./report.model.js";
 import Review from "./review.model.js";
 import ReviewHelpfulVote from "./reviewHelpfulVote.model.js";
 import SavedGig from "./savedGigs.model.js";
@@ -24,9 +28,6 @@ import SeekerSkill from "./seekerSkill.model.js";
 import Skills from "./skills.model.js";
 import User from "./user.model.js";
 import UserSearchHistory from "./userSearchHistory.model.js";
-import GigExtra from "./gigExtra.model.js";
-import OrderExtra from "./orderExtra.model.js";
-import Portfolio from "./portfolio.model.js";
 
 
 export default {
@@ -59,7 +60,8 @@ export default {
   GigExtra,
   OrderExtra,
   Portfolio,
-};
+  Report,
+}
 
 //index.js, init-db.js, mySQL-db.js dành cho việc khởi tạo database và models của MySQL 
 //trong trường hợp không có script của MongoDB và không cài MongoDB => xem file init-db.js

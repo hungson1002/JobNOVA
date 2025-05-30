@@ -8,10 +8,19 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { CheckCircle, XCircle, Search, Filter, Eye } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
+import { CheckCircle, XCircle, Search, Filter, Eye, MoreVertical, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useAuth } from "@clerk/nextjs"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { useNotification } from "@/context/notification-context"
 
 interface Gig {
   id: number;
@@ -53,7 +62,12 @@ export default function ManageGigsPage() {
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const { addNotification } = useNotification();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [gigToDelete, setGigToDelete] = useState<Gig | null>(null);
 
   const statusMap: Record<string, string> = {
     pending: "pending",
@@ -71,11 +85,7 @@ export default function ManageGigsPage() {
         setGigs(data.gigs);
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch gigs",
-        variant: "destructive",
-      });
+      toast("Failed to fetch gigs");
     } finally {
       setLoading(false);
     }
@@ -102,6 +112,22 @@ export default function ManageGigsPage() {
     }
   };
 
+  // Fetch categories for filter
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch("http://localhost:8800/api/categories");
+        const data = await response.json();
+        if (data.success && Array.isArray(data.categories)) {
+          setCategories(data.categories);
+        }
+      } catch (error) {
+        // Không cần toast lỗi ở đây
+      }
+    };
+    fetchCategories();
+  }, []);
+
   useEffect(() => {
     setIsClient(true);
     fetchGigs(tab);
@@ -126,19 +152,12 @@ export default function ManageGigsPage() {
       });
       const data = await response.json();
       if (data.success) {
-        toast({
-          title: "Success",
-          description: "Gig has been approved",
-        });
+        toast.success("Gig has been approved");
         setGigs(prev => prev.filter(gig => gig.id !== gigId));
         fetchCounts();
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve gig",
-        variant: "destructive",
-      });
+      toast("Failed to approve gig");
     }
   };
 
@@ -155,19 +174,12 @@ export default function ManageGigsPage() {
       });
       const data = await response.json();
       if (data.success) {
-        toast({
-          title: "Success",
-          description: "Gig has been rejected",
-        });
+        toast.success("Gig has been rejected");
         setGigs(prev => prev.filter(gig => gig.id !== gigId));
         fetchCounts();
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reject gig",
-        variant: "destructive",
-      });
+      toast("Failed to reject gig");
     }
   };
 
@@ -198,315 +210,677 @@ export default function ManageGigsPage() {
     setSelectedGig(null);
   };
 
+  const handleDelete = async () => {
+    if (!gigToDelete) return;
+    try {
+      // 1. Gọi API xóa gig thực tế
+      await fetch(`http://localhost:8800/api/gigs/${gigToDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${await getToken()}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      // 2. Luôn gửi notification cho chủ gig
+      try {
+        const res = await fetch("http://localhost:8800/api/notifications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${await getToken()}`,
+          },
+          body: JSON.stringify({
+            clerk_id: gigToDelete.seller_clerk_id,
+            title: "Gig deleted",
+            message: `Your gig \"${gigToDelete.title}\" was deleted. Reason: ${deleteReason}`,
+            gig_id: gigToDelete.id,
+            notification_type: "system",
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          toast.error(data.message || "Failed to create notification");
+        }
+      } catch (err) {
+        toast.error("Failed to create notification");
+      }
+
+      // 3. Cập nhật lại danh sách gigs trên UI
+      setGigs(prev => prev.filter(gig => gig.id !== gigToDelete.id));
+
+      toast.success("Xóa thành công!");
+      setDeleteDialogOpen(false);
+      setDeleteReason("");
+      setGigToDelete(null);
+    } catch (error) {
+      toast.error("Xóa thất bại!");
+    }
+  };
+
   if (!isClient) {
     return null
   }
 
   return (
-    <div className="container px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Manage Gigs</h1>
-        <p className="text-muted-foreground">Review, approve, and manage gigs on the platform</p>
+    <div className="container max-w-7xl mx-auto px-4 py-10">
+      <div className="mb-6">
+        <h1 className="text-4xl font-extrabold text-emerald-700 tracking-tight mb-2">Service Management</h1>
+        <p className="text-lg text-gray-500">Review, approve, and manage all gigs/services on the platform</p>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Gig Management</CardTitle>
-          <CardDescription>Review and manage all gigs on the platform</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6 flex flex-col gap-4 md:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by title or seller..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+      {/* Search & Filter Bar */}
+      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white/80 rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="relative flex-1 w-full sm:w-64">
+          <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by title or seller..."
+            className="pl-8 rounded-lg"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[180px] rounded-lg">
+              <SelectValue placeholder="Filter by category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <Card className="rounded-2xl border-2 border-gray-100">
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex justify-center items-center py-16">
+              <Loader2 className="animate-spin h-8 w-8 text-emerald-500 mr-2" />
+              <span className="text-lg text-gray-500">Loading gigs...</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="Graphics & Design">Graphics & Design</SelectItem>
-                  <SelectItem value="Digital Marketing">Digital Marketing</SelectItem>
-                  <SelectItem value="Writing & Translation">Writing & Translation</SelectItem>
-                  <SelectItem value="Video & Animation">Video & Animation</SelectItem>
-                  <SelectItem value="Programming & Tech">Programming & Tech</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          ) : (
+            <Tabs value={tab} onValueChange={handleTabChange} defaultValue="pending">
+              <TabsList className="mb-4 mt-6 flex justify-around w-full">
+                <TabsTrigger value="pending" className="w-full justify-center">
+                  Pending
+                  <Badge variant="secondary" className="ml-2">
+                    {counts.pending}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="approved" className="w-full justify-center">
+                  Approved
+                  <Badge variant="secondary" className="ml-2">
+                    {counts.approved}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="rejected" className="w-full justify-center">
+                  Rejected
+                  <Badge variant="secondary" className="ml-2">
+                    {counts.rejected}
+                  </Badge>
+                </TabsTrigger>
+              </TabsList>
 
-          <Tabs value={tab} onValueChange={handleTabChange} defaultValue="pending">
-            <TabsList className="mb-4">
-              <TabsTrigger value="pending">
-                Pending
-                <Badge variant="secondary" className="ml-2">
-                  {counts.pending}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="approved">
-                Approved
-                <Badge variant="secondary" className="ml-2">
-                  {counts.approved}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="rejected">
-                Rejected
-                <Badge variant="secondary" className="ml-2">
-                  {counts.rejected}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="pending">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Seller</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Job Type</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Delivery</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Submitted Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tab === "pending" && displayedGigs.length > 0 ? (
-                    displayedGigs.map((gig) => (
-                      <TableRow key={gig.id}>
-                        <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{
-                          gig.seller?.firstname && gig.seller?.lastname
-                            ? gig.seller.firstname + ' ' + gig.seller.lastname
-                            : gig.seller?.firstname
-                            ? gig.seller.firstname
-                            : gig.seller?.username
-                            ? gig.seller.username
-                            : ''
-                        }</TableCell>
-                        <TableCell>{gig.category?.name}</TableCell>
-                        <TableCell>{gig.job_type?.job_type}</TableCell>
-                        <TableCell>${gig.starting_price}</TableCell>
-                        <TableCell>{gig.delivery_time} days</TableCell>
-                        <TableCell>{gig.city}, {gig.country}</TableCell>
-                        <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleView(gig)}>
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">View</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0 text-green-500 hover:bg-green-50 hover:text-green-600"
-                              onClick={() => handleApprove(gig.id)}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                              <span className="sr-only">Approve</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
-                              onClick={() => handleReject(gig.id)}
-                            >
-                              <XCircle className="h-4 w-4" />
-                              <span className="sr-only">Reject</span>
-                            </Button>
-                          </div>
+              <TabsContent value="pending">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Seller</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Approved Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tab === "pending" && displayedGigs.length > 0 ? (
+                      displayedGigs.map((gig) => (
+                        <TableRow key={gig.id}>
+                          <TableCell>
+                            {gig.gig_images && gig.gig_images.length > 0 ? (
+                              <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : gig.gig_image ? (
+                              <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : (
+                              <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[200px] truncate cursor-pointer">
+                                    {gig.title}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{gig.title}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[120px] truncate cursor-pointer">
+                                    {(() => {
+                                      const sellerName = gig.seller
+                                        ? gig.seller.firstname && gig.seller.lastname
+                                          ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                          : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                        : gig.seller_clerk_id || "N/A";
+                                      if (sellerName.length > 16) {
+                                        return sellerName;
+                                      }
+                                      return sellerName;
+                                    })()}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{(() => {
+                                    const sellerName = gig.seller
+                                      ? gig.seller.firstname && gig.seller.lastname
+                                        ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                        : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                      : gig.seller_clerk_id || "N/A";
+                                    return sellerName;
+                                  })()}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>{gig.category?.name}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              gig.status === "pending"
+                                ? "bg-gray-200 text-gray-700"
+                                : gig.status === "active"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-red-100 text-red-700"
+                            }>
+                              {gig.status === "pending"
+                                ? "Pending"
+                                : gig.status === "active"
+                                ? "Active"
+                                : "Rejected"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-8 w-8 p-0 flex items-center justify-center">
+                                  <MoreVertical className="h-5 w-5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-2xl shadow-xl py-2 min-w-[200px] border border-gray-100 bg-white">
+                                <DropdownMenuItem onClick={() => handleView(gig)} className="gap-2 px-4 py-2 hover:bg-emerald-50 rounded-xl font-medium text-gray-800">
+                                  <Eye className="h-4 w-4 text-emerald-500" />
+                                  <span>View detail</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {tab === "pending" && (
+                                  <>
+                                    <DropdownMenuItem
+                                      className="gap-2 px-4 py-2 text-emerald-700 font-semibold hover:bg-emerald-50 rounded-xl"
+                                      onClick={async () => { await handleApprove(gig.id); }}
+                                    >
+                                      <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                      <span>Approve</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="gap-2 px-4 py-2 text-red-600 font-semibold hover:bg-red-50 rounded-xl"
+                                      onClick={async () => { await handleReject(gig.id); }}
+                                    >
+                                      <XCircle className="h-4 w-4 text-red-500" />
+                                      <span>Reject</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
+                                <DropdownMenuItem
+                                  className="gap-2 px-4 py-2 text-red-700 font-bold hover:bg-red-100 rounded-xl"
+                                  onClick={() => { setGigToDelete(gig); setDeleteDialogOpen(true); }}
+                                >
+                                  <XCircle className="h-4 w-4 text-red-700" />
+                                  <span>Delete</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">
+                          No pending gigs found
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center">
-                        No pending gigs found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TabsContent>
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
 
-            <TabsContent value="approved">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Seller</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Job Type</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Delivery</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Approved Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tab === "approved" && displayedGigs.length > 0 ? (
-                    displayedGigs.map((gig) => (
-                      <TableRow key={gig.id}>
-                        <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{
-                          gig.seller?.firstname && gig.seller?.lastname
-                            ? gig.seller.firstname + ' ' + gig.seller.lastname
-                            : gig.seller?.firstname
-                            ? gig.seller.firstname
-                            : gig.seller?.username
-                            ? gig.seller.username
-                            : ''
-                        }</TableCell>
-                        <TableCell>{gig.category?.name}</TableCell>
-                        <TableCell>{gig.job_type?.job_type}</TableCell>
-                        <TableCell>${gig.starting_price}</TableCell>
-                        <TableCell>{gig.delivery_time} days</TableCell>
-                        <TableCell>{gig.city}, {gig.country}</TableCell>
-                        <TableCell>
-                          <Badge variant="default">Active</Badge>
-                        </TableCell>
-                        <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleView(gig)}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View</span>
-                          </Button>
+              <TabsContent value="approved">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Seller</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Approved Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tab === "approved" && displayedGigs.length > 0 ? (
+                      displayedGigs.map((gig) => (
+                        <TableRow key={gig.id}>
+                          <TableCell>
+                            {gig.gig_images && gig.gig_images.length > 0 ? (
+                              <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : gig.gig_image ? (
+                              <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : (
+                              <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[200px] truncate cursor-pointer">
+                                    {gig.title}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{gig.title}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[120px] truncate cursor-pointer">
+                                    {(() => {
+                                      const sellerName = gig.seller
+                                        ? gig.seller.firstname && gig.seller.lastname
+                                          ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                          : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                        : gig.seller_clerk_id || "N/A";
+                                      if (sellerName.length > 16) {
+                                        return sellerName;
+                                      }
+                                      return sellerName;
+                                    })()}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{(() => {
+                                    const sellerName = gig.seller
+                                      ? gig.seller.firstname && gig.seller.lastname
+                                        ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                        : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                      : gig.seller_clerk_id || "N/A";
+                                    return sellerName;
+                                  })()}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>{gig.category?.name}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              gig.status === "pending"
+                                ? "bg-gray-200 text-gray-700"
+                                : gig.status === "active"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-red-100 text-red-700"
+                            }>
+                              {gig.status === "pending"
+                                ? "Pending"
+                                : gig.status === "active"
+                                ? "Active"
+                                : "Rejected"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-2xl shadow-xl py-2 min-w-[200px] border border-gray-100 bg-white">
+                                <DropdownMenuItem onClick={() => handleView(gig)} className="gap-2 px-4 py-2 hover:bg-emerald-50 rounded-xl font-medium text-gray-800">
+                                  <Eye className="h-4 w-4 text-emerald-500" />
+                                  <span>View detail</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="gap-2 px-4 py-2 text-red-700 font-bold hover:bg-red-100 rounded-xl"
+                                  onClick={() => { setGigToDelete(gig); setDeleteDialogOpen(true); }}
+                                >
+                                  <XCircle className="h-4 w-4 text-red-700" />
+                                  <span>Delete</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">
+                          No approved gigs found
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center">
-                        No approved gigs found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TabsContent>
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
 
-            <TabsContent value="rejected">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Seller</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Job Type</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Delivery</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Rejected Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tab === "rejected" && displayedGigs.length > 0 ? (
-                    displayedGigs.map((gig) => (
-                      <TableRow key={gig.id}>
-                        <TableCell className="font-medium">{gig.title}</TableCell>
-                        <TableCell>{
-                          gig.seller?.firstname && gig.seller?.lastname
-                            ? gig.seller.firstname + ' ' + gig.seller.lastname
-                            : gig.seller?.firstname
-                            ? gig.seller.firstname
-                            : gig.seller?.username
-                            ? gig.seller.username
-                            : ''
-                        }</TableCell>
-                        <TableCell>{gig.category?.name}</TableCell>
-                        <TableCell>{gig.job_type?.job_type}</TableCell>
-                        <TableCell>${gig.starting_price}</TableCell>
-                        <TableCell>{gig.delivery_time} days</TableCell>
-                        <TableCell>{gig.city}, {gig.country}</TableCell>
-                        <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleView(gig)}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View</span>
-                          </Button>
+              <TabsContent value="rejected">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Seller</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Approved Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tab === "rejected" && displayedGigs.length > 0 ? (
+                      displayedGigs.map((gig) => (
+                        <TableRow key={gig.id}>
+                          <TableCell>
+                            {gig.gig_images && gig.gig_images.length > 0 ? (
+                              <img src={gig.gig_images[0]} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : gig.gig_image ? (
+                              <img src={gig.gig_image} alt="Gig" className="w-28 h-28 object-cover rounded-md border" />
+                            ) : (
+                              <div className="w-28 h-28 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">No Image</div>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[200px] truncate cursor-pointer">
+                                    {gig.title}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{gig.title}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="block max-w-[120px] truncate cursor-pointer">
+                                    {(() => {
+                                      const sellerName = gig.seller
+                                        ? gig.seller.firstname && gig.seller.lastname
+                                          ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                          : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                        : gig.seller_clerk_id || "N/A";
+                                      if (sellerName.length > 16) {
+                                        return sellerName;
+                                      }
+                                      return sellerName;
+                                    })()}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <span className="select-all break-all">{(() => {
+                                    const sellerName = gig.seller
+                                      ? gig.seller.firstname && gig.seller.lastname
+                                        ? `${gig.seller.firstname} ${gig.seller.lastname}`
+                                        : gig.seller.firstname || gig.seller.lastname || gig.seller.username || gig.seller_clerk_id || "N/A"
+                                      : gig.seller_clerk_id || "N/A";
+                                    return sellerName;
+                                  })()}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>{gig.category?.name}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              gig.status === "pending"
+                                ? "bg-gray-200 text-gray-700"
+                                : gig.status === "active"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-red-100 text-red-700"
+                            }>
+                              {gig.status === "pending"
+                                ? "Pending"
+                                : gig.status === "active"
+                                ? "Active"
+                                : "Rejected"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-2xl shadow-xl py-2 min-w-[200px] border border-gray-100 bg-white">
+                                <DropdownMenuItem onClick={() => handleView(gig)} className="gap-2 px-4 py-2 hover:bg-emerald-50 rounded-xl font-medium text-gray-800">
+                                  <Eye className="h-4 w-4 text-emerald-500" />
+                                  <span>View detail</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="gap-2 px-4 py-2 text-red-700 font-bold hover:bg-red-100 rounded-xl"
+                                  onClick={() => { setGigToDelete(gig); setDeleteDialogOpen(true); }}
+                                >
+                                  <XCircle className="h-4 w-4 text-red-700" />
+                                  <span>Delete</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center">
+                          No rejected gigs found
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center">
-                        No rejected gigs found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TabsContent>
-          </Tabs>
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+            </Tabs>
+          )}
         </CardContent>
       </Card>
 
       {/* Modal xem chi tiết gig */}
+      <style>{`
+        [data-radix-dialog-close], button[aria-label="Close"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+        .dialog-content::-webkit-scrollbar { width: 8px; }
+        .dialog-content::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 8px; }
+        .dialog-content::-webkit-scrollbar-track { background: #fff; }
+      `}</style>
       <Dialog open={showModal} onOpenChange={handleCloseModal}>
-        <DialogContent className="max-w-4xl w-[66vw] max-h-[75vh] overflow-y-auto p-0 rounded-2xl border border-gray-100 shadow-2xl scrollbar-thin scrollbar-thumb-gray-200">
-          <DialogHeader className="bg-emerald-600 px-10 py-6">
-            <DialogTitle className="text-white text-2xl">Gig Details</DialogTitle>
-            <DialogDescription className="text-emerald-100">Thông tin chi tiết dịch vụ</DialogDescription>
+        <DialogContent 
+          className="dialog-content max-w-2xl w-full max-h-[80vh] overflow-y-auto p-0 rounded-2xl border border-gray-200 shadow-xl bg-white"
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>Gig Details</DialogTitle>
+            <DialogDescription>Detailed information about the gig</DialogDescription>
           </DialogHeader>
           {selectedGig && (
-            <div className="p-10 bg-white dark:bg-gray-900">
-              {/* Thông tin gig chia 2 cột */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 mb-8">
-                <div className="flex flex-col gap-3">
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Tiêu đề:</span> <span className="text-emerald-700 font-bold">{selectedGig.title}</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Người bán:</span> <span className="text-emerald-700 font-medium">{
-                    selectedGig.seller?.firstname && selectedGig.seller?.lastname
-                      ? selectedGig.seller.firstname + ' ' + selectedGig.seller.lastname
-                      : selectedGig.seller?.firstname
-                      ? selectedGig.seller.firstname
-                      : selectedGig.seller?.username
-                      ? selectedGig.seller.username
-                      : ''
-                  }</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Danh mục:</span> <span className="text-blue-700 font-medium">{selectedGig.category?.name}</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Loại công việc:</span> <span className="text-indigo-700 font-medium">{selectedGig.job_type?.job_type}</span></div>
+            <div className="">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 bg-white rounded-t-2xl relative">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-lg font-bold text-emerald-600 border border-emerald-200">
+                    {selectedGig.seller?.firstname?.[0] || selectedGig.seller?.username?.[0] || 'U'}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-bold text-gray-900">{selectedGig.title}</h2>
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${selectedGig.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : selectedGig.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{selectedGig.status.charAt(0).toUpperCase() + selectedGig.status.slice(1)}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 font-medium">Seller: <span className="text-gray-700 font-semibold">{selectedGig.seller?.firstname && selectedGig.seller?.lastname ? `${selectedGig.seller.firstname} ${selectedGig.seller.lastname}` : selectedGig.seller?.firstname || selectedGig.seller?.username || selectedGig.seller_clerk_id || 'N/A'}</span></div>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-3">
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Giá:</span> <span className="text-pink-600 font-semibold">${selectedGig.starting_price}</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Thời gian giao:</span> <span className="text-orange-600 font-semibold">{selectedGig.delivery_time} ngày</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Vị trí:</span> <span className="text-gray-800 dark:text-gray-100">{selectedGig.city}, {selectedGig.country}</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Trạng thái:</span> <span className={`font-semibold ${selectedGig.status === 'pending' ? 'text-yellow-600' : selectedGig.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>{selectedGig.status}</span></div>
-                  <div><span className="font-semibold text-gray-600 dark:text-gray-300">Ngày tạo:</span> <span className="text-gray-500">{new Date(selectedGig.created_at).toLocaleDateString()}</span></div>
-                </div>
+                <button onClick={handleCloseModal} className="absolute top-4 right-4 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 rounded-full p-2 shadow-sm border border-gray-200 transition-all">
+                  <span className="sr-only">Close</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
               </div>
-              {/* Ảnh/video preview ở dưới */}
-              <div className="flex flex-wrap gap-4 justify-center items-center border-t border-gray-100 pt-6">
-                {selectedGig.gig_images && Array.isArray(selectedGig.gig_images) && selectedGig.gig_images.length > 0 ? (
-                  selectedGig.gig_images.map((url: string, idx: number) =>
-                    url.match(/\.(mp4|mov|avi|wmv)$/i) ? (
-                      <video key={idx} src={url} controls className="rounded-2xl border border-emerald-100 shadow-md w-48 h-32 object-cover hover:scale-105 transition-transform duration-200" />
+
+              {/* Image(s) */}
+              {selectedGig.gig_images && selectedGig.gig_images.length > 0 ? (
+                <div className={`w-full px-6 pt-6 pb-2 ${selectedGig.gig_images.length === 1 ? 'flex justify-center items-center' : ''}`}>
+                  {selectedGig.gig_images.length === 1 ? (
+                    selectedGig.gig_images[0].match(/\.(mp4|mov|avi|wmv)$/i) ? (
+                      <video src={selectedGig.gig_images[0]} controls className="rounded-xl border border-gray-200 shadow w-full max-w-lg h-56 object-cover bg-black" />
                     ) : (
-                      <img key={idx} src={url} alt={`Gig media ${idx + 1}`} className="rounded-2xl border border-emerald-100 shadow-md w-48 h-32 object-cover hover:scale-105 transition-transform duration-200" />
+                      <img src={selectedGig.gig_images[0]} alt="Gig" className="rounded-xl border border-gray-200 shadow w-full max-w-lg h-56 object-cover" />
                     )
-                  )
-                ) : (
-                  selectedGig.gig_image && (
-                    <img src={selectedGig.gig_image} alt="Gig" className="rounded-2xl border border-emerald-100 shadow-md w-48 h-32 object-cover" />
-                    )
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
+                      {selectedGig.gig_images.map((url: string, idx: number) =>
+                        url.match(/\.(mp4|mov|avi|wmv)$/i) ? (
+                          <video key={idx} src={url} controls className="rounded-xl border border-gray-200 shadow w-full h-40 object-cover bg-black hover:scale-105 transition-transform duration-200" />
+                        ) : (
+                          <img key={idx} src={url} alt={`Gig media ${idx + 1}`} className="rounded-xl border border-gray-200 shadow w-full h-40 object-cover hover:scale-105 transition-transform duration-200" />
+                        )
+                      )}
+                    </div>
                   )}
                 </div>
+              ) : selectedGig.gig_image ? (
+                <div className="flex justify-center items-center px-6 pt-6 pb-2">
+                  <img src={selectedGig.gig_image} alt="Gig" className="rounded-xl border border-gray-200 shadow w-full max-w-lg h-56 object-cover" />
+                </div>
+              ) : (
+                <div className="flex justify-center items-center px-6 pt-6 pb-2">
+                  <div className="w-full max-w-lg h-56 flex items-center justify-center bg-gray-50 rounded-xl border border-gray-200 text-gray-400">No Image</div>
+                </div>
+              )}
+
+              {/* Info grid */}
+              <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Title</span>
+                    <span className="text-base font-bold text-emerald-700">{selectedGig.title}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Seller</span>
+                    <span className="text-sm font-medium text-gray-800">{selectedGig.seller?.firstname && selectedGig.seller?.lastname ? `${selectedGig.seller.firstname} ${selectedGig.seller.lastname}` : selectedGig.seller?.firstname || selectedGig.seller?.username || selectedGig.seller_clerk_id || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Category</span>
+                    <span className="text-sm font-medium text-blue-700">{selectedGig.category?.name}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Job Type</span>
+                    <span className="text-sm font-medium text-indigo-700">{selectedGig.job_type?.job_type}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Price</span>
+                    <span className="text-base font-bold text-pink-600">${selectedGig.starting_price}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Delivery Time</span>
+                    <span className="text-sm font-semibold text-orange-600">{selectedGig.delivery_time} days</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Location</span>
+                    <span className="text-sm font-medium text-gray-800">{selectedGig.city}, {selectedGig.country}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Status</span>
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${selectedGig.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : selectedGig.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{selectedGig.status.charAt(0).toUpperCase() + selectedGig.status.slice(1)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-gray-400 mb-0.5">Created At</span>
+                    <span className="text-sm text-gray-500">{new Date(selectedGig.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="px-6 pb-6">
+                <div className="mt-2">
+                  <span className="block text-xs font-semibold text-gray-400 mb-1">Description</span>
+                  <div className="whitespace-pre-line text-gray-700 bg-gray-50 rounded-lg p-4 border border-gray-100 min-h-[48px] text-sm">
+                    {selectedGig.description || <span className="text-gray-400">N/A</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-end px-6 pb-6">
+                <Button onClick={handleCloseModal} variant="outline" className="rounded-full px-6 py-2 text-base font-semibold shadow-sm hover:bg-gray-100 hover:text-emerald-700 transition-all">Close</Button>
+              </div>
             </div>
           )}
-          <DialogFooter className="bg-gray-50 dark:bg-gray-800 px-10 py-4 flex justify-end">
-            <Button onClick={handleCloseModal} variant="outline">Đóng</Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog xác nhận xóa */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa gig</DialogTitle>
+            <DialogDescription className="sr-only">Xác nhận xóa gig</DialogDescription>
+          </DialogHeader>
+          <div>
+            <p className="mb-2">Nhập lý do xóa:</p>
+            <Input
+              value={deleteReason}
+              onChange={e => setDeleteReason(e.target.value)}
+              placeholder="Nhập lý do..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={!deleteReason.trim()}
+            >
+              Xóa
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
