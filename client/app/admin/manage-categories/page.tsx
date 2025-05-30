@@ -83,7 +83,7 @@ export default function ManageCategoriesPage() {
         fetchCategories();
       } else {
         if (response.status === 409) {
-          throw new Error("Cannot update category because it is currently being used by one or more gigs.");
+          throw new Error("Cannot update category because it is currently being used by one or more services.");
         }
         throw new Error(data.message || "Something went wrong");
       }
@@ -112,7 +112,7 @@ export default function ManageCategoriesPage() {
       } else {
         const data = await response.json();
         if (response.status === 409) {
-          toast.error("Cannot delete category because it is currently being used by one or more gigs.");
+          toast.error("Cannot delete category because it is currently being used by one or more services.");
         } else {
           toast.error(data.message || "Failed to delete category");
         }

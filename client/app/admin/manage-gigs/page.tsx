@@ -204,60 +204,56 @@ export default function ManageGigsPage() {
 
   return (
     <div className="container px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Manage Gigs</h1>
-        <p className="text-muted-foreground">Review, approve, and manage gigs on the platform</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Gig Management</CardTitle>
-          <CardDescription>Review and manage all gigs on the platform</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6 flex flex-col gap-4 md:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by title or seller..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="Graphics & Design">Graphics & Design</SelectItem>
-                  <SelectItem value="Digital Marketing">Digital Marketing</SelectItem>
-                  <SelectItem value="Writing & Translation">Writing & Translation</SelectItem>
-                  <SelectItem value="Video & Animation">Video & Animation</SelectItem>
-                  <SelectItem value="Programming & Tech">Programming & Tech</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Manage Gigs</h1>
+          <p className="text-muted-foreground">Review, approve, and manage gigs on the platform</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full md:w-auto">
+          <div className="relative flex-1 w-full sm:w-64">
+            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by title or seller..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Graphics & Design">Graphics & Design</SelectItem>
+                <SelectItem value="Digital Marketing">Digital Marketing</SelectItem>
+                <SelectItem value="Writing & Translation">Writing & Translation</SelectItem>
+                <SelectItem value="Video & Animation">Video & Animation</SelectItem>
+                <SelectItem value="Programming & Tech">Programming & Tech</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+      <Card>
+        <CardContent>
           <Tabs value={tab} onValueChange={handleTabChange} defaultValue="pending">
-            <TabsList className="mb-4">
-              <TabsTrigger value="pending">
+            <TabsList className="mb-4 mt-6 flex justify-around w-full">
+              <TabsTrigger value="pending" className="w-full justify-center">
                 Pending
                 <Badge variant="secondary" className="ml-2">
                   {counts.pending}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="approved">
+              <TabsTrigger value="approved" className="w-full justify-center">
                 Approved
                 <Badge variant="secondary" className="ml-2">
                   {counts.approved}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="rejected">
+              <TabsTrigger value="rejected" className="w-full justify-center">
                 Rejected
                 <Badge variant="secondary" className="ml-2">
                   {counts.rejected}
