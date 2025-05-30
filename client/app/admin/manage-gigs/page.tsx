@@ -8,11 +8,19 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { CheckCircle, XCircle, Search, Filter, Eye } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
+import { CheckCircle, XCircle, Search, Filter, Eye, MoreVertical } from "lucide-react"
+import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useAuth } from "@clerk/nextjs"
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { useNotification } from "@/context/notification-context"
 
 interface Gig {
   id: number;
@@ -54,8 +62,12 @@ export default function ManageGigsPage() {
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const { addNotification } = useNotification();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [gigToDelete, setGigToDelete] = useState<Gig | null>(null);
 
   const statusMap: Record<string, string> = {
     pending: "pending",
@@ -73,11 +85,7 @@ export default function ManageGigsPage() {
         setGigs(data.gigs);
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch gigs",
-        variant: "destructive",
-      });
+      toast("Failed to fetch gigs");
     } finally {
       setLoading(false);
     }
@@ -144,19 +152,12 @@ export default function ManageGigsPage() {
       });
       const data = await response.json();
       if (data.success) {
-        toast({
-          title: "Success",
-          description: "Gig has been approved",
-        });
+        toast.success("Gig has been approved");
         setGigs(prev => prev.filter(gig => gig.id !== gigId));
         fetchCounts();
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve gig",
-        variant: "destructive",
-      });
+      toast("Failed to approve gig");
     }
   };
 
@@ -173,19 +174,12 @@ export default function ManageGigsPage() {
       });
       const data = await response.json();
       if (data.success) {
-        toast({
-          title: "Success",
-          description: "Gig has been rejected",
-        });
+        toast.success("Gig has been rejected");
         setGigs(prev => prev.filter(gig => gig.id !== gigId));
         fetchCounts();
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reject gig",
-        variant: "destructive",
-      });
+      toast("Failed to reject gig");
     }
   };
 
@@ -214,6 +208,54 @@ export default function ManageGigsPage() {
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedGig(null);
+  };
+
+  const handleDelete = async () => {
+    if (!gigToDelete) return;
+    try {
+      // 1. Gọi API xóa gig thực tế
+      await fetch(`http://localhost:8800/api/gigs/${gigToDelete.id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${await getToken()}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      // 2. Luôn gửi notification cho chủ gig
+      try {
+        const res = await fetch("http://localhost:8800/api/notifications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${await getToken()}`,
+          },
+          body: JSON.stringify({
+            clerk_id: gigToDelete.seller_clerk_id,
+            title: "Gig deleted",
+            message: `Your gig \"${gigToDelete.title}\" was deleted. Reason: ${deleteReason}`,
+            gig_id: gigToDelete.id,
+            notification_type: "system",
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          toast.error(data.message || "Failed to create notification");
+        }
+      } catch (err) {
+        toast.error("Failed to create notification");
+      }
+
+      // 3. Cập nhật lại danh sách gigs trên UI
+      setGigs(prev => prev.filter(gig => gig.id !== gigToDelete.id));
+
+      toast.success("Xóa thành công!");
+      setDeleteDialogOpen(false);
+      setDeleteReason("");
+      setGigToDelete(null);
+    } catch (error) {
+      toast.error("Xóa thất bại!");
+    }
   };
 
   if (!isClient) {
@@ -350,34 +392,65 @@ export default function ManageGigsPage() {
                         </TableCell>
                         <TableCell>{gig.category?.name}</TableCell>
                         <TableCell>
-                          <Badge variant="default">Pending</Badge>
+                          <Badge className={
+                            gig.status === "pending"
+                              ? "bg-gray-200 text-gray-700"
+                              : gig.status === "active"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-red-100 text-red-700"
+                          }>
+                            {gig.status === "pending"
+                              ? "Pending"
+                              : gig.status === "active"
+                              ? "Active"
+                              : "Rejected"}
+                          </Badge>
                         </TableCell>
                         <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleView(gig)}>
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">View</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0 text-green-500 hover:bg-green-50 hover:text-green-600"
-                              onClick={() => handleApprove(gig.id)}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                              <span className="sr-only">Approve</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
-                              onClick={() => handleReject(gig.id)}
-                            >
-                              <XCircle className="h-4 w-4" />
-                              <span className="sr-only">Reject</span>
-                            </Button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0 flex items-center justify-center">
+                                <MoreVertical className="h-5 w-5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-xl shadow-lg py-2 min-w-[180px]">
+                              <DropdownMenuItem onClick={() => handleView(gig)} className="gap-2 hover:bg-emerald-50">
+                                <Eye className="h-4 w-4 text-emerald-500" />
+                                <span>View detail</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="gap-2 text-emerald-700 font-medium hover:bg-emerald-50"
+                                onClick={async () => {
+                                  await handleApprove(gig.id);
+                                }}
+                              >
+                                <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                <span>Approve</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="gap-2 text-red-600 font-medium hover:bg-red-50"
+                                onClick={async () => {
+                                  await handleReject(gig.id);
+                                }}
+                              >
+                                <XCircle className="h-4 w-4 text-red-500" />
+                                <span>Reject</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="gap-2 text-red-700 font-bold hover:bg-red-100"
+                                onClick={() => {
+                                  setGigToDelete(gig);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <XCircle className="h-4 w-4 text-red-700" />
+                                <span>Delete</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -465,14 +538,44 @@ export default function ManageGigsPage() {
                         </TableCell>
                         <TableCell>{gig.category?.name}</TableCell>
                         <TableCell>
-                          <Badge variant="default">Active</Badge>
+                          <Badge className={
+                            gig.status === "pending"
+                              ? "bg-gray-200 text-gray-700"
+                              : gig.status === "active"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-red-100 text-red-700"
+                          }>
+                            {gig.status === "pending"
+                              ? "Pending"
+                              : gig.status === "active"
+                              ? "Active"
+                              : "Rejected"}
+                          </Badge>
                         </TableCell>
                         <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleView(gig)}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View</span>
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleView(gig)}>
+                                View detail
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => {
+                                  setGigToDelete(gig);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -560,14 +663,44 @@ export default function ManageGigsPage() {
                         </TableCell>
                         <TableCell>{gig.category?.name}</TableCell>
                         <TableCell>
-                          <Badge variant="default">Rejected</Badge>
+                          <Badge className={
+                            gig.status === "pending"
+                              ? "bg-gray-200 text-gray-700"
+                              : gig.status === "active"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-red-100 text-red-700"
+                          }>
+                            {gig.status === "pending"
+                              ? "Pending"
+                              : gig.status === "active"
+                              ? "Active"
+                              : "Rejected"}
+                          </Badge>
                         </TableCell>
                         <TableCell>{new Date(gig.created_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" className="h-8 w-8 p-0" onClick={() => handleView(gig)}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View</span>
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleView(gig)}>
+                                View detail
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => {
+                                  setGigToDelete(gig);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -718,6 +851,36 @@ export default function ManageGigsPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog xác nhận xóa */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa gig</DialogTitle>
+            <DialogDescription className="sr-only">Xác nhận xóa gig</DialogDescription>
+          </DialogHeader>
+          <div>
+            <p className="mb-2">Nhập lý do xóa:</p>
+            <Input
+              value={deleteReason}
+              onChange={e => setDeleteReason(e.target.value)}
+              placeholder="Nhập lý do..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={!deleteReason.trim()}
+            >
+              Xóa
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

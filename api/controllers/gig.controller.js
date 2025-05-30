@@ -268,6 +268,39 @@ export const deleteGig = async (req, res, next) => {
     if (!gig) {
       return res.status(404).json({ success: false, message: 'Gig not found' });
     }
+
+    // Kiểm tra xem có orders nào chưa completed không
+    const pendingOrders = await models.Order.findAll({
+      where: {
+        gig_id: id,
+        order_status: {
+          [Op.notIn]: ['completed', 'cancelled']
+        }
+      }
+    });
+
+    if (pendingOrders.length > 0) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Cannot delete gig because it has pending orders. Please complete or cancel all orders first.' 
+      });
+    }
+
+    // Xóa các bản ghi liên quan trước
+    await Promise.all([
+      models.Review.destroy({ where: { gig_id: id } }),
+      models.SavedGig.destroy({ where: { gig_id: id } }),
+      models.GigFaq.destroy({ where: { gig_id: id } }),
+      models.GigExtra.destroy({ where: { gig_id: id } }),
+      models.GigSkill.destroy({ where: { gig_id: id } }),
+      models.GigTranslation.destroy({ where: { gig_id: id } }),
+      models.GigView.destroy({ where: { gig_id: id } }),
+      models.GigViewCount.destroy({ where: { gig_id: id } }),
+      models.Notification.destroy({ where: { gig_id: id } }),
+      models.AdminLog.destroy({ where: { gig_id: id } })
+    ]);
+
+    // Sau đó xóa gig
     await gig.destroy();
     console.log(`Gig deleted: id=${id}`);
     return res.status(200).json({ success: true, message: 'Gig deleted successfully' });

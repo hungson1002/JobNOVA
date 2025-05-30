@@ -57,8 +57,14 @@ const defineRelations = (models) => {
   models.Gig.belongsTo(models.JobType, { foreignKey: 'job_type_id', as: 'job_type' });
 
   // Gig-Order: 1-to-many (one gig can have multiple orders)
-  models.Gig.hasMany(models.Order, { foreignKey: 'gig_id' });
-  models.Order.belongsTo(models.Gig, { foreignKey: 'gig_id' });
+  models.Gig.hasMany(models.Order, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
+  models.Order.belongsTo(models.Gig, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
 
   // User-Order (Buyer): 1-to-many (one user can place multiple orders as a buyer)
   models.User.hasMany(models.Order, { foreignKey: 'buyer_clerk_id', sourceKey: 'clerk_id', as: 'buyer_orders' });
@@ -87,8 +93,16 @@ const defineRelations = (models) => {
 
 
   // Gig-Review: 1-to-many (one gig can have multiple reviews)
-  models.Gig.hasMany(models.Review, { foreignKey: 'gig_id', as: 'reviews' });
-  models.Review.belongsTo(models.Gig, { foreignKey: 'gig_id', as: 'gig' });
+  models.Gig.hasMany(models.Review, { 
+    foreignKey: 'gig_id', 
+    as: 'reviews',
+    onDelete: 'CASCADE'
+  });
+  models.Review.belongsTo(models.Gig, { 
+    foreignKey: 'gig_id', 
+    as: 'gig',
+    onDelete: 'CASCADE'
+  });
 
   // User-Review: 1-to-many (one user can write multiple reviews)
   models.User.hasMany(models.Review, { foreignKey: 'reviewer_clerk_id', sourceKey: 'clerk_id' });
@@ -116,9 +130,15 @@ const defineRelations = (models) => {
 
   // User-SavedGig: 1-to-many (one user can save multiple gigs)
   models.User.hasMany(models.SavedGig, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
-  models.Gig.hasMany(models.SavedGig, { foreignKey: 'gig_id' });
+  models.Gig.hasMany(models.SavedGig, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
   models.SavedGig.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
-  models.SavedGig.belongsTo(models.Gig, { foreignKey: 'gig_id' });
+  models.SavedGig.belongsTo(models.Gig, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
 
   // User-ContactForm: 1-to-many (one user can submit multiple contact forms)
   models.User.hasMany(models.ContactForm, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
@@ -142,14 +162,26 @@ const defineRelations = (models) => {
   models.Skills.belongsToMany(models.Gig, { through: models.GigSkill, foreignKey: 'skill_id' });
 
   // Gig-GigView: 1-to-many (one gig can have multiple views)
-  models.Gig.hasMany(models.GigView, { foreignKey: 'gig_id' });
+  models.Gig.hasMany(models.GigView, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
   models.User.hasMany(models.GigView, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
-  models.GigView.belongsTo(models.Gig, { foreignKey: 'gig_id' });
+  models.GigView.belongsTo(models.Gig, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
   models.GigView.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
 
   // Gig-GigViewCount: 1-to-1 (one gig has one view count)
-  models.Gig.hasOne(models.GigViewCount, { foreignKey: 'gig_id' });
-  models.GigViewCount.belongsTo(models.Gig, { foreignKey: 'gig_id' });
+  models.Gig.hasOne(models.GigViewCount, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
+  models.GigViewCount.belongsTo(models.Gig, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
 
   // User-UserSearchHistory: 1-to-many (one user can have multiple search history entries)
   models.User.hasMany(models.UserSearchHistory, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
@@ -161,9 +193,15 @@ const defineRelations = (models) => {
 
   // User-Notification: 1-to-many (one user can have multiple notifications)
   models.User.hasMany(models.Notification, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
-  models.Gig.hasMany(models.Notification, { foreignKey: 'gig_id' });
+  models.Gig.hasMany(models.Notification, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
   models.Notification.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
-  models.Notification.belongsTo(models.Gig, { foreignKey: 'gig_id' });
+  models.Notification.belongsTo(models.Gig, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
 
   // User-Portfolio: 1-to-many (one user can upload multiple portfolio files)
   models.User.hasMany(models.Portfolio, {
@@ -177,12 +215,24 @@ const defineRelations = (models) => {
 
 
   // Gig-GigTranslation: 1-to-many (one gig can have multiple translations)
-  models.Gig.hasMany(models.GigTranslation, { foreignKey: 'gig_id' });
-  models.GigTranslation.belongsTo(models.Gig, { foreignKey: 'gig_id' });
+  models.Gig.hasMany(models.GigTranslation, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
+  models.GigTranslation.belongsTo(models.Gig, { 
+    foreignKey: 'gig_id',
+    onDelete: 'CASCADE'
+  });
 
   // Gig-GigFaq: 1-to-many (one gig can have multiple FAQs)
-  models.Gig.hasMany(models.GigFaq, { foreignKey: "gig_id" });
-  models.GigFaq.belongsTo(models.Gig, { foreignKey: "gig_id" });
+  models.Gig.hasMany(models.GigFaq, { 
+    foreignKey: "gig_id",
+    onDelete: 'CASCADE'
+  });
+  models.GigFaq.belongsTo(models.Gig, { 
+    foreignKey: "gig_id",
+    onDelete: 'CASCADE'
+  });
 
   // Order-GigRequirements: 1-to-many (one order can have multiple requirements)
   models.Order.hasMany(models.GigRequirements, { foreignKey: "order_id" });
@@ -193,8 +243,14 @@ const defineRelations = (models) => {
   models.GigRequirementTemplate.belongsTo(models.Gig, { foreignKey: "gig_id" });
 
   // Gig-GigExtra: 1-to-many (one gig can have multiple extras)
-  models.Gig.hasMany(models.GigExtra, { foreignKey: "gig_id" });
-  models.GigExtra.belongsTo(models.Gig, { foreignKey: "gig_id" });
+  models.Gig.hasMany(models.GigExtra, { 
+    foreignKey: "gig_id",
+    onDelete: 'CASCADE'
+  });
+  models.GigExtra.belongsTo(models.Gig, { 
+    foreignKey: "gig_id",
+    onDelete: 'CASCADE'
+  });
 
 };
 

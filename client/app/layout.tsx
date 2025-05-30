@@ -13,6 +13,7 @@ import { RoleCheck } from "@/components/role-check"
 import { CurrencyProvider } from "@/context/currency-context"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
+import { NotificationProvider } from "@/context/notification-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -52,14 +53,16 @@ export default function RootLayout({
       <html lang="en">
         <body className={inter.className} suppressHydrationWarning>
           <Toaster richColors position="top-center" />
-          <CurrencyProvider>
-            <RoleCheck />
-            {!isAdminRoute && <Navbar />}
-            <BannedLayout>
-              {children}
-            </BannedLayout>
-            {!isAdminRoute && <Footer />}
-          </CurrencyProvider>
+          <NotificationProvider>
+            <CurrencyProvider>
+              <RoleCheck />
+              {!isAdminRoute && <Navbar />}
+              <BannedLayout>
+                {children}
+              </BannedLayout>
+              {!isAdminRoute && <Footer />}
+            </CurrencyProvider>
+          </NotificationProvider>
         </body>
       </html>
     </ClerkProvider>
