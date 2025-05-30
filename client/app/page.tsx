@@ -414,6 +414,9 @@ export default function Home() {
   if (loading) return <div>Loading gigs...</div>;
 
   const serviceCards = (gigs || []).map(mapGigToServiceCard);
+  const topRateServiceCards = serviceCards.filter(
+    (service) => service.badges && service.badges.includes("top_rated")
+  );
   const sortedGigs = showNewest 
     ? [...gigs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     : gigs;
@@ -737,7 +740,7 @@ export default function Home() {
             </Button>
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-            {serviceCards.slice(0, 5).map((service) => (
+            {topRateServiceCards.slice(0, 5).map((service) => (
               <ServiceCard
                 key={service.id}
                 service={service}

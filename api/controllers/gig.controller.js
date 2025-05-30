@@ -19,7 +19,7 @@ export const createGig = async (req, res, next) => {
       city,
       country,
       faqs,
-      gig_requirement_templates, // ✅ lấy từ body
+      gig_requirement_templates,
     } = req.body;
 
     if (!seller_clerk_id || !title) {
@@ -40,8 +40,6 @@ export const createGig = async (req, res, next) => {
       country,
       status: "pending",
     });
-
-    // ✅ Tạo FAQ nếu có
     if (faqs && Array.isArray(faqs)) {
       await Promise.all(faqs.map(faq =>
         models.GigFaq.create({
@@ -52,7 +50,6 @@ export const createGig = async (req, res, next) => {
       ));
     }
 
-    // ✅ Tạo các requirement templates nếu có
     if (gig_requirement_templates && Array.isArray(gig_requirement_templates)) {
       await Promise.all(gig_requirement_templates.map(req =>
         models.GigRequirementTemplate.create({
@@ -73,11 +70,9 @@ export const createGig = async (req, res, next) => {
       }
     }
 
-    // Lấy FAQ đã tạo
     const createdFaqs = await models.GigFaq.findAll({ where: { gig_id: gig.id } });
     gigData.faqs = createdFaqs.map(f => ({ question: f.question, answer: f.answer }));
 
-    // ✅ Lấy Requirement Template đã tạo
     const createdRequirements = await models.GigRequirementTemplate.findAll({ where: { gig_id: gig.id } });
     gigData.requirements = createdRequirements.map(r => ({
       requirement_text: r.requirement_text,
@@ -129,7 +124,6 @@ export const getAllGigs = async (req, res, next) => {
       ],
     });
 
-    // ✅ Chuyển sang map bất đồng bộ để xử lý thêm rating
     const gigsRows = await Promise.all(gigs.rows.map(async (gig) => {
       const gigData = gig.toJSON();
 
@@ -162,9 +156,8 @@ export const getAllGigs = async (req, res, next) => {
       const isNew = Date.now() - createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
       gigData.badges = [];
       if (isNew) gigData.badges.push("new");
-      if (gigData.id % 2 === 0) gigData.badges.push("top_rated");
+      if (gigData.isToprate) gigData.badges.push("top_rated");
 
-      // ✅ Tính rating trung bình và tổng số đánh giá
       const reviews = await models.Review.findAll({
         where: { gig_id: gig.id },
         attributes: ['rating'],
@@ -213,16 +206,13 @@ export const getGigById = async (req, res, next) => {
     if (gigData.gig_images) {
       try { gigData.gig_images = JSON.parse(gigData.gig_images); } catch { gigData.gig_images = []; }
     }
-    // Lấy FAQ
     const faqs = await models.GigFaq.findAll({ where: { gig_id: id } });
     gigData.faqs = faqs.map(f => ({ question: f.question, answer: f.answer }));
-    // Lấy requirements (template cho buyer, lưu JSON trong gig.requirements)
     if (gigData.requirements) {
       try { gigData.requirements = JSON.parse(gigData.requirements); } catch { gigData.requirements = []; }
     } else {
       gigData.requirements = [];
     }
-    // Đếm số order của gig này
     gigData.order_count = await models.Order.count({ where: { gig_id: gigData.id } });
     return res.status(200).json({ success: true, gig: gigData });
   } catch (error) {
@@ -235,11 +225,16 @@ export const getGigById = async (req, res, next) => {
 export const updateGig = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { category_id, job_type_id, title, description, starting_price, delivery_time, gig_image, city, country, status } = req.body;
+    const {
+      category_id, job_type_id, title, description, starting_price, delivery_time,
+      gig_image, city, country, status,
+      isToprate, is_top_rate, isTopRate
+    } = req.body;
     const gig = await models.Gig.findByPk(id);
     if (!gig) {
       return res.status(404).json({ success: false, message: 'Gig not found' });
     }
+    const topRateValue = isToprate ?? is_top_rate ?? isTopRate;
     await gig.update({
       category_id,
       job_type_id,
@@ -251,8 +246,9 @@ export const updateGig = async (req, res, next) => {
       city,
       country,
       status,
+      ...(topRateValue !== undefined ? { isToprate: topRateValue } : {})
     });
-    console.log(`Gig updated: id=${id}`);
+    console.log(`Gig updated: id=${id}, isToprate=${topRateValue}`);
     return res.status(200).json({ success: true, message: 'Gig updated successfully', gig });
   } catch (error) {
     console.error('Error updating gig:', error.message);
