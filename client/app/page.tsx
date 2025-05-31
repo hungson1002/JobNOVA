@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { ArrowRight, Search, ChevronLeft, ChevronRight, Bookmark, ShoppingBag, DollarSign, Store } from "lucide-react"
+import { ArrowRight, Search, ChevronLeft, ChevronRight, Bookmark, ShoppingBag, DollarSign, Store, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -278,6 +278,9 @@ export default function Home() {
   const [postedGigsCount, setPostedGigsCount] = useState(0);
   const savedGigs = useAllSavedGigs();
 
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
   const startSlideAutoPlay = () => {
     if (slideInterval.current) {
       clearInterval(slideInterval.current);
@@ -400,12 +403,42 @@ export default function Home() {
   
   
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery)}`)
+  useEffect(() => {
+    // Lấy lịch sử từ localStorage khi load trang
+    const history = localStorage.getItem('searchHistory');
+    if (history) {
+      setSearchHistory(JSON.parse(history));
     }
-  }
+  }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Lưu vào localStorage nếu chưa có
+      let history = localStorage.getItem('searchHistory');
+      let arr: string[] = history ? JSON.parse(history) : [];
+      if (!arr.includes(searchQuery.trim())) {
+        arr.unshift(searchQuery.trim());
+        if (arr.length > 10) arr = arr.slice(0, 10); // Giới hạn 10 từ khoá gần nhất
+        localStorage.setItem('searchHistory', JSON.stringify(arr));
+        setSearchHistory(arr);
+      }
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      setShowHistory(false);
+    }
+  };
+
+  // Hàm xóa một từ khóa khỏi lịch sử
+  const handleDeleteHistoryItem = (item: string) => {
+    const newHistory = searchHistory.filter((h) => h !== item);
+    setSearchHistory(newHistory);
+    localStorage.setItem('searchHistory', JSON.stringify(newHistory));
+  };
+  // Hàm xóa toàn bộ lịch sử
+  const handleClearHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem('searchHistory');
+  };
 
   if (isClient && isSignedIn && isBanned) {
     return <BannedOverlay />;
@@ -433,7 +466,7 @@ export default function Home() {
           playsInline
           className="absolute top-0 left-0 w-full h-full object-cover z-0"
         >
-          <source src="https://res.cloudinary.com/kaleidoscop3/video/upload/v1747545962/video-banner_zjqq2d.mp4.xoacainaylacovideo" type="video/mp4" />
+          <source src="https://res.cloudinary.com/kaleidoscop3/video/upload/v1747545962/video-banner_zjqq2d.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
 
@@ -490,7 +523,7 @@ export default function Home() {
                 <p className="mb-8 text-lg opacity-90">
                   Millions of people use our marketplace to find quality services at affordable prices.
                 </p>
-                <form onSubmit={handleSearch} className="flex max-w-xl">
+                <form onSubmit={handleSearch} className="flex max-w-xl relative">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                     <Input
@@ -499,7 +532,50 @@ export default function Home() {
                       className="h-12 border-0 pl-10 pr-4 text-black"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => setShowHistory(true)}
+                      onBlur={() => setTimeout(() => setShowHistory(false), 200)}
                     />
+                    {showHistory && searchHistory.length > 0 && (
+                      <div className="absolute left-0 right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                        <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
+                          <span className="text-xs text-gray-500 font-semibold">Search history</span>
+                          <button
+                            type="button"
+                            className="text-xs text-red-500 hover:underline"
+                            onClick={e => { e.preventDefault(); e.stopPropagation(); handleClearHistory(); }}
+                          >
+                            Clear all
+                          </button>
+                        </div>
+                        {searchHistory.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between px-4 py-2 hover:bg-gray-100 cursor-pointer text-gray-700 group"
+                          >
+                            <span
+                              onClick={e => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSearchQuery(item);
+                                setShowHistory(false);
+                                setTimeout(() => router.push(`/search?q=${encodeURIComponent(item)}`), 100);
+                              }}
+                              className="flex-1 truncate"
+                            >
+                              {item}
+                            </span>
+                            <button
+                              type="button"
+                              className="ml-2 p-1 rounded hover:bg-gray-200 text-gray-400 group-hover:text-red-500"
+                              onClick={e => { e.preventDefault(); e.stopPropagation(); handleDeleteHistoryItem(item); }}
+                              tabIndex={-1}
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <Button type="submit" className="ml-2 h-12 bg-gray-900 hover:bg-black">
                     Search
