@@ -19,6 +19,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { ChatAvatar } from "@/components/message/chatAvatar";
 import { ChatBubble } from "@/components/message/chatBubble";
@@ -322,6 +323,15 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
     e.preventDefault();
     e.stopPropagation();
     toggleSave();
+    if (!isSaved) {
+      toast.success("Added to favorites", {
+        description: "Service has been added to your favorites list"
+      });
+    } else {
+      toast.success("Removed from favorites", {
+        description: "Service has been removed from your favorites list"
+      });
+    }
   };
 
   // Share gig

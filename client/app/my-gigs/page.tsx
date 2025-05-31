@@ -7,11 +7,11 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pencil, Trash2, MoreVertical } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "sonner";
 
 interface Gig {
   id: number;
@@ -107,8 +107,7 @@ export default function MyGigsPage() {
       });
       const data = await response.json();
       if (data.success) {
-        toast({
-          title: "Success",
+        toast.success("Updated successfully", {
           description: "Gig updated successfully",
         });
         setGigs(prev => prev.map(gig => 
@@ -125,10 +124,8 @@ export default function MyGigsPage() {
         setShowEditModal(false);
       }
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Gig not updated", {
         description: "Failed to update gig",
-        variant: "destructive",
       });
     }
   };
@@ -145,18 +142,15 @@ export default function MyGigsPage() {
       });
       const data = await response.json();
       if (data.success) {
-        toast({
-          title: "Success",
+        toast.success("Deleted successfully", {
           description: "Gig deleted successfully",
         });
         setGigs(prev => prev.filter(gig => gig.id !== selectedGig.id));
         setShowDeleteAlert(false);
       }
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Gig not deleted", {
         description: "Failed to delete gig",
-        variant: "destructive",
       });
     }
   };
