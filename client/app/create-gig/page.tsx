@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
 import { useAuth } from "@clerk/nextjs"
+import { toast as sonnerToast } from "sonner"
 
 const steps = [
   { title: "Basic Info & Category", desc: "Service title, description, category & job type" },
@@ -147,15 +148,14 @@ export default function CreateGigPage() {
       })
       const data = await res.json()
       if (data.success) {
-        toast({
-          title: "Tạo gig thành công",
-          description: "Gig của bạn đã được gửi lên và đang đợi phê duyệt. Bạn sẽ nhận được thông báo khi gig được duyệt!",
-        });
+        sonnerToast.success("Create service successfully", {
+          description: "Your gig has been submitted and is pending approval. You will be notified once it is approved."
+        })
         setTimeout(() => {
-          router.push("/my-gigs");
-        }, 1800);
+          router.push("/my-gigs")
+        }, 1800)
       } else {
-        setError(data.message || "Create failed");
+        setError(data.message || "Create failed")
       }
     } catch (err) {
       setError("Create failed")
