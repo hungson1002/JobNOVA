@@ -58,30 +58,41 @@ export default function ManageSlidesPage() {
     }
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       // Kiểm tra kích thước file (giới hạn 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image size must not exceed 5MB")
-        return
+        toast.error("Image size must not exceed 5MB");
+        return;
       }
-
       // Kiểm tra loại file
       if (!file.type.startsWith('image/')) {
-        toast.error("Please select an image file")
-        return
+        toast.error("Please select an image file");
+        return;
       }
-
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          image: file,
-          imagePreview: reader.result as string
-        }))
+      // Upload lên Cloudinary
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      try {
+        const res = await fetch('http://localhost:8800/api/cloudinary/upload', {
+          method: 'POST',
+          body: uploadData,
+        });
+        const data = await res.json();
+        if (data.success && typeof data.fileUrl === 'string') {
+          setFormData(prev => ({
+            ...prev,
+            image: data.fileUrl, // Đảm bảo là string
+            imagePreview: data.fileUrl
+          }));
+          toast.success("Image uploaded successfully");
+        } else {
+          toast.error(data.message || "Failed to upload image");
+        }
+      } catch (err) {
+        toast.error("Failed to upload image");
       }
-      reader.readAsDataURL(file)
     }
   }
 
@@ -110,42 +121,41 @@ export default function ManageSlidesPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!formData.image) {
-      toast.error("Please select an image")
-      return
+      toast.error("Please upload an image");
+      return;
     }
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      const token = await getToken()
-
-      const formDataToSend = new FormData()
-      formDataToSend.append('title', formData.title)
-      formDataToSend.append('subtitle', formData.subtitle)
-      formDataToSend.append('image', formData.image)
-      formDataToSend.append('cta_link', formData.cta_link)
-
+      const token = await getToken();
+      const payload = {
+        image: formData.image, // URL Cloudinary
+        title: formData.title,
+        subtitle: formData.subtitle,
+        cta_link: formData.cta_link,
+      };
       const response = await fetch("http://localhost:8800/api/bannerSlides", {
         method: "POST",
         credentials: 'include',
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
-        body: formDataToSend
-      })
-      const data = await response.json()
-      if (data.success) {
-        toast.success("New slide added successfully")
-        await fetchSlides() // Wait for slides to be fetched
-        handleAddDialogOpen(false) // Close dialog and reset form
+        body: JSON.stringify(payload)
+      });
+      const resData = await response.json();
+      if (resData.success) {
+        toast.success("New slide added successfully");
+        await fetchSlides();
+        handleAddDialogOpen(false);
       } else {
-        toast.error(data.message || "Failed to add slide")
+        toast.error(resData.message || "Failed to add slide");
       }
     } catch (error) {
-      console.error("Error adding slide:", error)
-      toast.error("Failed to add slide")
+      toast.error("Failed to add slide");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 

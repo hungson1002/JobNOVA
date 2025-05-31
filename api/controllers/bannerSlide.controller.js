@@ -3,21 +3,18 @@ import { models } from "../models/Sequelize-mysql.js";
 // Thêm banner
 export const createBannerSlide = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: "Missing image file" });
+    console.log("BODY:", req.body);
+    const { image, title, subtitle, cta_link } = req.body;
+    if (!image) {
+      return res.status(400).json({ success: false, message: "Missing image URL" });
     }
-
-    const { title, subtitle, cta_link } = req.body;
-
     const banner = await models.BannerSlide.create({
-      image_data: req.file.buffer,
-      image_type: req.file.mimetype,
+      image,
       title,
       subtitle,
       cta_link,
       position: await getNextPosition(),
     });
-
     return res.status(201).json({ success: true, banner });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Server error", error: error.message });
@@ -28,25 +25,18 @@ export const createBannerSlide = async (req, res) => {
 export const updateBannerSlide = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, subtitle, cta_link } = req.body;
-
+    const { image, title, subtitle, cta_link } = req.body;
     const banner = await models.BannerSlide.findByPk(id);
-
     if (!banner) {
       return res.status(404).json({ success: false, message: "Banner not found" });
     }
-
     banner.title = title;
     banner.subtitle = subtitle;
     banner.cta_link = cta_link;
-
-    if (req.file) {
-      banner.image_data = req.file.buffer;
-      banner.image_type = req.file.mimetype;
+    if (image) {
+      banner.image = image;
     }
-
     await banner.save();
-
     return res.status(200).json({ success: true, message: "Banner updated successfully", banner });
   } catch (error) {
     console.error("Lỗi khi cập nhật banner:", error);
@@ -58,7 +48,6 @@ export const updateBannerSlide = async (req, res) => {
 export const deleteBannerSlide = async (req, res) => {
   try {
     const id = req.params.id;
-
     const banner = await models.BannerSlide.findByPk(id);
     if (!banner) {
       return res.status(404).json({
@@ -66,9 +55,7 @@ export const deleteBannerSlide = async (req, res) => {
         message: "Không tìm thấy slide để xóa",
       });
     }
-
     await banner.destroy();
-
     return res.status(200).json({
       success: true,
       message: "Xóa slide thành công",
@@ -86,17 +73,7 @@ export const deleteBannerSlide = async (req, res) => {
 export const getAllBannerSlides = async (req, res) => {
   try {
     const banners = await models.BannerSlide.findAll({ order: [["position", "ASC"]] });
-
-
-    const formatted = banners.map(b => ({
-      id: b.id,
-      title: b.title,
-      subtitle: b.subtitle,
-      image: `data:${b.image_type};base64,${b.image_data.toString("base64")}`,
-      cta_link: b.cta_link || "/search"
-    }));
-
-    return res.status(200).json({ success: true, banners: formatted });
+    return res.status(200).json({ success: true, banners });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
@@ -107,24 +84,19 @@ export const updatePosition = async (req, res) => {
   try {
     const { id } = req.params;
     const { direction } = req.body;
-
     const banner = await models.BannerSlide.findByPk(id);
     if (!banner) {
       return res.status(404).json({ success: false, message: "Banner not found" });
     }
-
     const banners = await models.BannerSlide.findAll({
       order: [['position', 'ASC']]
     });
-
     const currentIndex = banners.findIndex(b => b.id === banner.id);
-    
     if (direction === 'up' && currentIndex > 0) {
       // Swap positions with the banner above
       const temp = banners[currentIndex - 1].position;
       banners[currentIndex - 1].position = banner.position;
       banner.position = temp;
-      
       await banners[currentIndex - 1].save();
       await banner.save();
     } else if (direction === 'down' && currentIndex < banners.length - 1) {
@@ -132,7 +104,6 @@ export const updatePosition = async (req, res) => {
       const temp = banners[currentIndex + 1].position;
       banners[currentIndex + 1].position = banner.position;
       banner.position = temp;
-      
       await banners[currentIndex + 1].save();
       await banner.save();
     } else {
@@ -141,7 +112,6 @@ export const updatePosition = async (req, res) => {
         message: `Cannot move ${direction}, banner is at the ${direction === 'up' ? 'top' : 'bottom'}`
       });
     }
-
     return res.status(200).json({ success: true, message: "Position updated successfully" });
   } catch (error) {
     console.error("Error updating position:", error);
