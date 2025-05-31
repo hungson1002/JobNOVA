@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { SignInButton, SignUpButton, UserButton, useUser, useAuth } from "@clerk/nextjs"
-import { BarChart, Bell, Briefcase, Camera, ChevronLeft, ChevronRight, Code, Database, Heart, LayoutDashboard, MessageSquare, Music, Palette, PenTool, Search, ShoppingCart, Smile, Video, User, FolderKanban, X } from "lucide-react"
+import { BarChart, Bell, Briefcase, Camera, ChevronLeft, ChevronRight, Code, Database, Heart, LayoutDashboard, MessageSquare, Music, Palette, PenTool, Search, ShoppingCart, Smile, Video, User, FolderKanban, X, Globe, ImageIcon, TrendingUp, Share2, Sparkles, FileText, Monitor, Mic, Gamepad2, Home, Calendar } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -50,19 +50,23 @@ export function Navbar() {
   const clickedInsideDropdownRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifyRef = useRef<HTMLDivElement>(null);
-
   // Mapping tên category sang icon
   const categoryIcons: Record<string, React.ReactNode> = {
-    "Design": <Palette className="h-4 w-4" />,
-    "Music": <Music className="h-4 w-4" />,
-    "Video": <Video className="h-4 w-4" />,
-    "Writing": <PenTool className="h-4 w-4" />,
-    "Programming": <Code className="h-4 w-4" />,
-    "Business": <BarChart className="h-4 w-4" />,
-    "Marketing": <Briefcase className="h-4 w-4" />,
-    "Photography": <Camera className="h-4 w-4" />,
-    "Database": <Database className="h-4 w-4" />,
-    "UI/UX": <Smile className="h-4 w-4" />,
+    "Web Development": <Globe className="h-4 w-4" />,
+    "Graphic Illustration": <ImageIcon className="h-4 w-4" />,
+    "SEO Services": <TrendingUp className="h-4 w-4" />,
+    "Social Media Management": <Share2 className="h-4 w-4" />,
+    "Animation Design": <Sparkles className="h-4 w-4" />,
+    "Content Creation": <FileText className="h-4 w-4" />,
+    "E-commerce Solutions": <ShoppingCart className="h-4 w-4" />,
+    "UI/UX Design": <Smile className="h-4 w-4" />,
+    "Voice Acting": <Mic className="h-4 w-4" />,
+    "Mobile App Development": <Monitor className="h-4 w-4" />,
+    "Video Editing": <Video className="h-4 w-4" />,
+    "Copywriting": <PenTool className="h-4 w-4" />,
+    "Game Development": <Gamepad2 className="h-4 w-4" />,
+    "Interior Design": <Home className="h-4 w-4" />,
+    "Event Planning": <Calendar className="h-4 w-4" />,
   };
 
 // Ẩn dropdown khi click ra ngoài

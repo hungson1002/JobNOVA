@@ -893,26 +893,26 @@ export default function Home() {
               {[
                 {
                   id: 1,
-                  name: "John Doe",
+                  name: "Nguyễn Hồ Ngọc Trúc",
                   role: "CEO",
                   company: "Tech Corp",
-                  avatar: "/testimonials/1.jpg",
+                  avatar: "/avatar/avt1.jpg",
                   text: "Found amazing developers for our project. The quality of work exceeded our expectations."
                 },
                 {
                   id: 2,
-                  name: "Sarah Smith",
+                  name: "Nguyễn Văn Thuận",
                   role: "Marketing Director",
                   company: "Creative Agency",
-                  avatar: "/testimonials/2.jpg",
+                  avatar: "/avatar/avt2.jpg",
                   text: "The designers here are incredibly talented. They helped us rebrand our entire company."
                 },
                 {
                   id: 3,
-                  name: "Mike Johnson",
+                  name: "Nguyễn Hoàng An",
                   role: "Founder",
                   company: "Startup Inc",
-                  avatar: "/testimonials/3.jpg",
+                  avatar: "/avatar/avt3.jpg",
                   text: "Great platform for finding reliable freelancers. Will definitely use again!"
                 }
               ].map((testimonial) => (
@@ -957,11 +957,10 @@ export default function Home() {
                   <Button size="lg" variant="secondary">
                     Become a Seller
                   </Button>
-                </SignInButton>
-                <Button
+                </SignInButton>                <Button
                   size="lg"
-                  variant="outline"
-                  className="border-white text-white hover:bg-white hover:text-emerald-600"
+                  variant="secondary"
+                  className="bg-white text-emerald-600 hover:bg-gray-100 hover:text-emerald-700 border-0"
                   asChild
                 >
                   <Link href="/search">Find Services</Link>

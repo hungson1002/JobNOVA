@@ -232,12 +232,10 @@ async function initDb() {
         location: "New York, USA",
         description: "Working on API integrations and UI design",
       },
-    ]);
-
-    // Tạo banner slide
+    ]);    // Tạo banner slide
     await models.BannerSlide.bulkCreate([
     {
-      image_data: Buffer.from('Sample image data 1'), // Dữ liệu ảnh mẫu
+      image: Buffer.from('Sample image data 1'), // Dữ liệu ảnh mẫu
       image_type: 'image/jpeg',
       title: "Welcome to JobNOVA",
       subtitle: "Find your perfect freelancer today",
@@ -245,7 +243,7 @@ async function initDb() {
       cta_link: "https://example.com/register"
     },
     {
-      image_data: Buffer.from('Sample image data 2'), // Dữ liệu ảnh mẫu
+      image: Buffer.from('Sample image data 2'), // Dữ liệu ảnh mẫu
       image_type: 'image/jpeg',
       title: "Trusted by Thousands",
       subtitle: "Grow your business with ease",
