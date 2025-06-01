@@ -387,12 +387,14 @@ export default function Home() {
       .then(res => res.json())
       .then(data => {
         if (data.success && Array.isArray(data.banners)) {
-          const formatted = data.banners.map((slide: any) => ({
-            image: slide.image,
-            title: slide.title || "",
-            description: slide.subtitle || "",
-            cta_link: typeof slide?.cta_link === "string" ? slide.cta_link.trim() : "/search"
-          }))
+          const formatted = data.banners
+            .filter((slide: any) => slide.image?.trim())
+            .map((slide: any) => ({
+              image: slide.image.trim(),
+              title: slide.title || "",
+              description: slide.subtitle || "",
+              cta_link: typeof slide?.cta_link === "string" ? slide.cta_link.trim() : "/search"
+            }));
           setSlides(formatted)
         }
       })
@@ -466,7 +468,7 @@ export default function Home() {
           playsInline
           className="absolute top-0 left-0 w-full h-full object-cover z-0"
         >
-          <source src="https://res.cloudinary.com/kaleidoscop3/video/upload/v1747545962/video-banner_zjqq2d.mp4" type="video/mp4" />
+          <source src="https://res.cloudinary.com/kaleidoscop3/video/upload/v1747545962/video-banner_zjqq2d.mp4.xoacainaylacovideo" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
 
@@ -693,16 +695,22 @@ export default function Home() {
           <div className="relative max-w-6xl mx-auto group">
             <div className="overflow-hidden rounded-xl">
               <div className="relative flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
-                {slides.map((slide, index) => (
+              {slides.map((slide, index) => (
                   <div key={index} className="w-full flex-shrink-0">
                     <div className="relative h-[400px] rounded-xl overflow-hidden">
-                      <Image
-                        src={slide.image}
-                        alt={slide.title}
-                        fill
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center ">
+                      {slide.image?.trim() ? (
+                        <Image
+                          src={slide.image}
+                          alt={slide.title}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+                          Không có ảnh
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center">
                         <div className="text-white p-12">
                           <div className="absolute top-4">
                             <h3 className="text-4xl font-bold mb-4">{slide.title}</h3>
@@ -711,7 +719,7 @@ export default function Home() {
                           {slide.cta_link && (
                             <div className="absolute bottom-6 right-6">
                               <Button size="lg" asChild variant="secondary">
-                                <Link 
+                                <Link
                                   href={slide.cta_link}
                                   target={slide.cta_link.startsWith("http") ? "_blank" : "_self"}
                                   rel={slide.cta_link.startsWith("http") ? "noopener noreferrer" : undefined}

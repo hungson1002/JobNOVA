@@ -7,6 +7,7 @@ export const createNotification = async (req, res, next) => {
     if (!clerk_id || !title || !message) {
       return res.status(400).json({ success: false, message: 'Missing required fields: clerk_id, title, or message' });
     }
+
     const notification = await models.Notification.create({
       clerk_id,
       title,
@@ -15,13 +16,18 @@ export const createNotification = async (req, res, next) => {
       gig_id,
       notification_type,
     });
+
     console.log(`Notification created: id=${notification.id}`);
+
+    req.io.to(clerk_id).emit("new_notification", notification);
+
     return res.status(201).json({ success: true, message: 'Notification created successfully', notification });
   } catch (error) {
     console.error('Error creating notification:', error.message);
     return res.status(500).json({ success: false, message: 'Error creating notification', error: error.message });
   }
 };
+
 
 // Lấy tất cả thông báo (phân trang)
 export const getAllNotifications = async (req, res, next) => {
@@ -98,5 +104,25 @@ export const deleteNotification = async (req, res, next) => {
   } catch (error) {
     console.error('Error deleting notification:', error.message);
     return res.status(500).json({ success: false, message: 'Error deleting notification', error: error.message });
+  }
+};
+
+// Đánh dấu tất cả thông báo là đã đọc
+export const markAllAsRead = async (req, res) => {
+  try {
+    const { clerk_id } = req.body;
+    if (!clerk_id) {
+      return res.status(400).json({ success: false, message: "Missing clerk_id" });
+    }
+
+    await models.Notification.update(
+      { is_read: true },
+      { where: { clerk_id, is_read: false } }
+    );
+
+    return res.status(200).json({ success: true, message: "All notifications marked as read" });
+  } catch (error) {
+    console.error("Error marking all as read:", error.message);
+    return res.status(500).json({ success: false, message: "Error updating notifications", error: error.message });
   }
 };

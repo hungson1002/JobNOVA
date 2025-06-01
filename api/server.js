@@ -38,7 +38,7 @@ import skillsRoute from "./routes/skills.route.js";
 import userRoute from "./routes/user.route.js";
 import userSearchHistoryRoute from "./routes/userSearchHistory.route.js";
 import messageSocketHandler from "./socket/messageSocket.js";
-
+import notificationSocketHandler from "./socket/notificationSocket.js";
 // .env
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
@@ -65,14 +65,12 @@ app.use("/api/users", userRoute);
 
 app.use(express.json());
 
-// Routes
-app.get('/payment-success', (req, res) => {
-  res.send('<h1>✅ Thanh toán thành công! Cảm ơn bạn đã sử dụng dịch vụ.</h1>');
+app.use((req, res, next) => {
+  req.io = io;
+  next();
 });
 
-app.get('/payment-failed', (req, res) => {
-  res.send('<h1>❌ Thanh toán thất bại! Vui lòng thử lại hoặc liên hệ hỗ trợ.</h1>');
-});
+// Routes
 app.use("/api/adminLog", adminLogRoute);
 app.use("/api/categories", categoryRoute);
 app.use("/api/contactForms", contactFormRoute);
@@ -119,6 +117,7 @@ app.use((err, req, res, next) => {
 // Socket handler
 initSocket(io);
 messageSocketHandler(io);
+notificationSocketHandler(io);
 
 // Sync database & start server
 sequelize

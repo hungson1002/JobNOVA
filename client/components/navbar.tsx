@@ -21,6 +21,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useNotificationSocket } from "@/hooks/useNotificationSocket";
+import { toast } from "sonner";
 
 export function Navbar() {
   const { isSignedIn, isLoaded, user } = useUser()
@@ -36,7 +38,6 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [openNotify, setOpenNotify] = useState(false);
   const [openMsg, setOpenMsg] = useState(false);
-  const notifications: { title: string; time: string }[] = [] // Thay bằng dữ liệu thực tế nếu có
   const messages: { title: string; time: string }[] = [] // Thay bằng dữ liệu thực tế nếu có
   const isAdmin = user?.publicMetadata?.isAdmin
   const isSeller = user?.publicMetadata?.isSeller
@@ -50,6 +51,13 @@ export function Navbar() {
   const clickedInsideDropdownRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifyRef = useRef<HTMLDivElement>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useNotificationSocket(userId ?? "", (notification) => {
+    toast(`🔔 ${notification.title}: ${notification.message}`);
+    setNotifications((prev) => [notification, ...prev]);
+  });
+  
   // Mapping tên category sang icon
   const categoryIcons: Record<string, React.ReactNode> = {
     "Web Development": <Globe className="h-4 w-4" />,
@@ -68,6 +76,7 @@ export function Navbar() {
     "Interior Design": <Home className="h-4 w-4" />,
     "Event Planning": <Calendar className="h-4 w-4" />,
   };
+
 
 // Ẩn dropdown khi click ra ngoài
 useEffect(() => {
@@ -192,6 +201,25 @@ useEffect(() => {
     } catch {}
     setTimeout(() => setIsDeletingHistory(false), 100);
   };
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!userId) return;
+      try {
+        const token = await getToken();
+        const res = await fetch(`http://localhost:8800/api/notifications?clerk_id=${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (data.success) setNotifications(data.notifications);
+      } catch (err) {
+        console.error("Lỗi fetch thông báo:", err);
+      }
+    };
+  
+    fetchNotifications();
+  }, [userId]);
+  
 
   // Khi submit search, lưu lịch sử nếu đã đăng nhập
   const handleSearch = async (e: React.FormEvent) => {
@@ -423,9 +451,12 @@ useEffect(() => {
                             variant="ghost"
                             size="icon"
                             className="hidden md:flex hover:bg-emerald-50 hover:text-emerald-600 transition-colors focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 !outline-none !ring-0"
-                            style={{ outline: "none", boxShadow: "none" }}
+                            style={{ outline: "none", boxShadow: "none", position: "relative" }}
                           >
                             <Bell className="h-5 w-5" />
+                            {notifications.some(n => !n.is_read) && (
+                              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                            )}
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -433,18 +464,39 @@ useEffect(() => {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+
                     {openNotify && (
                       <div className="absolute top-full right-0 z-50 w-80 min-h-[400px] max-h-[700px] bg-white shadow-lg rounded-b-lg overflow-y-auto">
                         <div className="font-semibold px-4 py-2 border-b">Notifications</div>
+
                         {notifications.length === 0 ? (
                           <div className="text-center text-gray-500 py-8">No notifications</div>
                         ) : (
-                          notifications.map((item, idx) => (
-                            <div key={idx} className="whitespace-normal py-3 px-4 hover:bg-gray-100 cursor-pointer">
-                              <div className="font-medium">{item.title}</div>
-                              <div className="text-xs text-gray-500">{item.time}</div>
+                          <>
+                            {notifications.map((item, idx) => (
+                              <div key={idx} className="whitespace-normal py-3 px-4 hover:bg-gray-100 cursor-pointer">
+                                <div className="font-medium">{item.title}</div>
+                                <div className="text-xs text-gray-500">{item.time}</div>
+                              </div>
+                            ))}
+                            <div className="text-right px-4 py-2 border-t text-sm">
+                              <button
+                                onClick={async () => {
+                                  const res = await fetch("http://localhost:8800/api/notifications/mark-all-as-read", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ clerk_id: userId }),
+                                  });
+                                  if (res.ok) {
+                                    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+                                  }
+                                }}
+                                className="text-emerald-600 hover:underline"
+                              >
+                                Đánh dấu tất cả là đã đọc
+                              </button>
                             </div>
-                          ))
+                          </>
                         )}
                       </div>
                     )}

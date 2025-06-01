@@ -45,6 +45,21 @@ export const createReview = async (req, res, next) => {
       helpfulNo: 0,
     });
 
+    const gig = await models.Gig.findByPk(gig_id);
+    if (gig && req.io) {
+      // 1. Lưu notification vào DB
+      const notification = await models.Notification.create({
+        clerk_id: gig.seller_clerk_id,
+        title: "Bạn có đánh giá mới",
+        message: `Gig của bạn vừa nhận được đánh giá ${rating} sao.`,
+        is_read: false,
+        gig_id,
+        notification_type: "review",
+      });
+      // 2. Gửi socket
+      req.io.to(gig.seller_clerk_id).emit("new_notification", notification);
+    }
+
     const reviewer = await models.User.findOne({
       where: { clerk_id: reviewer_clerk_id },
       attributes: ['clerk_id', 'username', 'avatar', 'country', 'firstname', 'lastname'],
@@ -71,6 +86,7 @@ export const createReview = async (req, res, next) => {
     return res.status(500).json({ success: false, message: 'Error creating review', error: error.message });
   }
 };
+
 
 // Lấy tất cả review (phân trang + filter + sort)
 export const getAllReviews = async (req, res, next) => {
