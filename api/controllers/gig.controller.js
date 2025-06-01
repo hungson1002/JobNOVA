@@ -296,9 +296,33 @@ export const deleteGig = async (req, res, next) => {
       models.AdminLog.destroy({ where: { gig_id: id } })
     ]);
 
+    // Lưu lại seller_clerk_id và title trước khi xóa gig
+    const sellerClerkId = gig.seller_clerk_id;
+    const gigTitle = gig.title;
+    const reason = req.body?.reason || "";
+
     // Sau đó xóa gig
     await gig.destroy();
     console.log(`Gig deleted: id=${id}`);
+
+    // Chỉ gửi notification nếu người xóa là admin
+    const roles = req.user?.user_roles || [];
+    if (roles.includes("admin") && sellerClerkId && req.io) {
+      try {
+        const notification = await models.Notification.create({
+          clerk_id: sellerClerkId,
+          title: "Gig deleted",
+          message: `Your gig \"${gigTitle}\" was deleted by admin.${reason ? ` Reason: ${reason}` : ""}`,
+          is_read: false,
+          gig_id: null, // gig đã bị xóa nên để null
+          notification_type: "system",
+        });
+        req.io.to(sellerClerkId).emit("new_notification", notification);
+      } catch (err) {
+        console.error("Error creating notification after gig delete:", err.message);
+      }
+    }
+
     return res.status(200).json({ success: true, message: 'Gig deleted successfully' });
   } catch (error) {
     console.error('Error deleting gig:', error.message);

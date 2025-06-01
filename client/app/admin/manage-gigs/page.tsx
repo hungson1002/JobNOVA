@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { useNotification } from "@/context/notification-context"
+import { Label } from "@/components/ui/label"
 
 interface Gig {
   id: number;
@@ -212,43 +213,32 @@ export default function ManageGigsPage() {
 
   const handleDelete = async () => {
     if (!gigToDelete) return;
+    // Kiểm tra các trường bắt buộc trước khi gửi notification
+    if (!gigToDelete.seller_clerk_id) {
+      toast.error("Seller ID is missing, cannot send notification!");
+      return;
+    }
+    if (!gigToDelete.title) {
+      toast.error("Gig title is missing, cannot send notification!");
+      return;
+    }
+    if (!deleteReason.trim()) {
+      toast.error("Please enter a reason for deletion!");
+      return;
+    }
+    let notificationOk = true;
     try {
-      // 1. Gọi API xóa gig thực tế
+      // 1. Gửi notification trước (nếu cần, nhưng BE sẽ xử lý)
+      // 2. Xóa gig sau khi gửi notification
       await fetch(`http://localhost:8800/api/gigs/${gigToDelete.id}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${await getToken()}`,
           "Content-Type": "application/json"
-        }
+        },
+        body: JSON.stringify({ reason: deleteReason }) // Gửi lý do xóa lên BE
       });
-
-      // 2. Luôn gửi notification cho chủ gig
-      try {
-        const res = await fetch("http://localhost:8800/api/notifications", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${await getToken()}`,
-          },
-          body: JSON.stringify({
-            clerk_id: gigToDelete.seller_clerk_id,
-            title: "Gig deleted",
-            message: `Your gig \"${gigToDelete.title}\" was deleted. Reason: ${deleteReason}`,
-            gig_id: gigToDelete.id,
-            notification_type: "system",
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          toast.error(data.message || "Failed to create notification");
-        }
-      } catch (err) {
-        toast.error("Failed to create notification");
-      }
-
-      // 3. Cập nhật lại danh sách gigs trên UI
       setGigs(prev => prev.filter(gig => gig.id !== gigToDelete.id));
-
       toast.success("Xóa thành công!");
       setDeleteDialogOpen(false);
       setDeleteReason("");
@@ -855,31 +845,37 @@ export default function ManageGigsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog xác nhận xóa */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Xác nhận xóa gig</DialogTitle>
-            <DialogDescription className="sr-only">Xác nhận xóa gig</DialogDescription>
+            <DialogTitle>Delete Gig</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this gig? This action cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <div>
-            <p className="mb-2">Nhập lý do xóa:</p>
-            <Input
-              value={deleteReason}
-              onChange={e => setDeleteReason(e.target.value)}
-              placeholder="Nhập lý do..."
-            />
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="deleteReason">Reason for deletion</Label>
+              <Input
+                id="deleteReason"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="Enter reason for deletion..."
+                className="w-full"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Hủy
+              Cancel
             </Button>
-            <Button
-              variant="destructive"
+            <Button 
+              variant="destructive" 
               onClick={handleDelete}
               disabled={!deleteReason.trim()}
             >
-              Xóa
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

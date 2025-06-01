@@ -6,6 +6,7 @@ import {
   getNotificationById,
   updateNotification,
   markAllAsRead,
+  markAsReadNotification,
 } from '../controllers/notification.controller.js';
 import requireAuth from '../middleware/requireAuth.js';
 
@@ -23,5 +24,7 @@ router.patch('/:id', requireAuth, updateNotification);
 router.delete('/:id', requireAuth, deleteNotification);
 // Đánh dấu tất cả thông báo là đã đọc
 router.post('/mark-all-as-read', requireAuth, markAllAsRead);
+// Đánh dấu notification đã đọc
+router.post('/:id/mark-as-read', requireAuth, markAsReadNotification);
 
 export default router;

@@ -126,3 +126,17 @@ export const markAllAsRead = async (req, res) => {
     return res.status(500).json({ success: false, message: "Error updating notifications", error: error.message });
   }
 };
+
+export const markAsReadNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const notification = await models.Notification.findByPk(id);
+    if (!notification) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+    await notification.update({ is_read: true });
+    return res.status(200).json({ success: true, message: 'Notification marked as read', notification });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error marking as read', error: error.message });
+  }
+};

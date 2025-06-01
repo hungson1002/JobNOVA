@@ -2,12 +2,13 @@
 
 import type React from "react"
 import { SignInButton, SignUpButton, UserButton, useUser, useAuth } from "@clerk/nextjs"
-import { BarChart, Bell, Briefcase, Camera, ChevronLeft, ChevronRight, Code, Database, Heart, LayoutDashboard, MessageSquare, Music, Palette, PenTool, Search, ShoppingCart, Smile, Video, User, FolderKanban, X, Globe, ImageIcon, TrendingUp, Share2, Sparkles, FileText, Monitor, Mic, Gamepad2, Home, Calendar, Star } from "lucide-react"
+import { BarChart, Bell, Briefcase, Camera, ChevronLeft, ChevronRight, Code, Database, Heart, LayoutDashboard, MessageSquare, Music, Palette, PenTool, Search, ShoppingCart, Smile, Video, User, FolderKanban, X, Globe, ImageIcon, TrendingUp, Share2, Sparkles, FileText, Monitor, Mic, Gamepad2, Home, Calendar, Star, Phone, Mail } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { formatDistanceToNow } from "date-fns"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 import { LanguageCurrencySwitcher } from "@/components/language-currency-switcher"
 import { Button } from "@/components/ui/button"
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useNotificationSocket } from "@/hooks/useNotificationSocket";
 import { toast } from "sonner";
+import { useNotification } from "@/context/notification-context";
 
 export function Navbar() {
   const { isSignedIn, isLoaded, user } = useUser()
@@ -52,12 +54,13 @@ export function Navbar() {
   const clickedInsideDropdownRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifyRef = useRef<HTMLDivElement>(null);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const { notifications, markAllAsRead, markAsRead, fetchNotifications, loading: loadingNotifications } = useNotification();
+  const [openSystemModal, setOpenSystemModal] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<any>(null);
+  const [openHelpModal, setOpenHelpModal] = useState(false);
 
   useNotificationSocket(userId ?? "", (notification) => {
     toast(`🔔 ${notification.title}: ${notification.message}`);
-    setNotifications((prev) => [notification, ...prev]);
   });
   
   // Mapping tên category sang icon
@@ -202,41 +205,6 @@ useEffect(() => {
       setSearchHistory([]);
     } catch {}
     setTimeout(() => setIsDeletingHistory(false), 100);
-  };
-
-  // Fetch notifications from API
-  const fetchNotifications = async () => {
-    if (!userId) return;
-    setLoadingNotifications(true);
-    try {
-      const token = await getToken();
-      const res = await fetch(`http://localhost:8800/api/notifications?clerk_id=${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setNotifications(data.notifications);
-    } catch (err) {
-      console.error("Lỗi fetch thông báo:", err);
-    } finally {
-      setLoadingNotifications(false);
-    }
-  };
-
-  // Mark all notifications as read and refetch
-  const handleMarkAllAsRead = async () => {
-    if (!userId) return;
-    const token = await getToken();
-    const res = await fetch("http://localhost:8800/api/notifications/mark-all-as-read", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ clerk_id: userId }),
-    });
-    if (res.ok) {
-      await fetchNotifications();
-    }
   };
 
   // Khi submit search, lưu lịch sử nếu đã đăng nhập
@@ -483,7 +451,15 @@ useEffect(() => {
                           >
                             <Bell className="h-5 w-5" />
                             {notifications.filter(n => !n.is_read).length > 0 && (
-                              <span className="absolute -top-1 -right-1 min-w-[18px] h-5 flex items-center justify-center rounded-full bg-emerald-500 text-white text-xs px-1">
+                              <span
+                                className={
+                                  `absolute -top-2 -right-2 min-w-[22px] h-[22px] flex items-center justify-center rounded-full
+                                  bg-gradient-to-tr from-emerald-400 to-emerald-600 shadow-lg border-2 border-white
+                                  text-white text-base font-bold px-1 select-none
+                                  transition-all duration-200`
+                                }
+                                style={{ zIndex: 2 }}
+                              >
                                 {notifications.filter(n => !n.is_read).length > 9 ? '9+' : notifications.filter(n => !n.is_read).length}
                               </span>
                             )}
@@ -530,12 +506,17 @@ useEffect(() => {
                               if (item.notification_type === "review") icon = <Star className="h-5 w-5 text-yellow-500" />;
                               if (item.notification_type === "message") icon = <MessageSquare className="h-5 w-5 text-blue-500" />;
                               const timeAgo = item.time ? formatDistanceToNow(new Date(item.time), { addSuffix: true }) : "";
+                              const isSystem = item.notification_type === "system";
                               return (
                                 <div
                                   key={idx}
                                   className={`relative flex gap-3 items-start whitespace-normal py-3 px-4 cursor-pointer transition-colors ${isUnread ? 'bg-emerald-50 font-semibold' : 'bg-white'} hover:bg-emerald-100 border-l-4 ${isUnread ? 'border-emerald-500' : 'border-transparent'}`}
                                   onClick={() => {
-                                    if (item.gig_id && item.notification_type === "review") {
+                                    if (isUnread) markAsRead(item.id);
+                                    if (isSystem) {
+                                      setSelectedNotification(item);
+                                      setOpenSystemModal(true);
+                                    } else if (item.gig_id && item.notification_type === "review") {
                                       router.push(`/gigs/${item.gig_id}`);
                                     }
                                   }}
@@ -555,7 +536,7 @@ useEffect(() => {
                         </div>
                         <div className="border-t px-4 py-2 bg-white sticky bottom-0">
                           <button
-                            onClick={handleMarkAllAsRead}
+                            onClick={markAllAsRead}
                             className="text-emerald-600 hover:underline w-full text-center text-sm font-medium"
                           >
                             Mark all as read
@@ -676,7 +657,72 @@ useEffect(() => {
         </div>
       </header>
 
-
+      {/* Modal chi tiết notification system */}
+      <Dialog open={openSystemModal} onOpenChange={setOpenSystemModal}>
+        <DialogContent className="max-w-md">
+          <DialogTitle className="text-2xl font-bold mb-2">{selectedNotification?.title || "System Notification"}</DialogTitle>
+          <div className="text-base text-gray-700 mb-4">
+            {/* Thông điệp chính, tách reason nếu có */}
+            {selectedNotification?.message?.split("Reason:")[0]?.trim()}
+          </div>
+          {selectedNotification?.message?.includes("Reason:") && (
+            <div className="flex items-center gap-2 bg-orange-50 border-l-4 border-orange-400 rounded-md px-3 py-2 mb-4 shadow-sm">
+              <span className="text-orange-500 flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm.93 12.412h-1.86v-1.86h1.86v1.86zm0-3.72h-1.86V7.588h1.86v1.104z"/></svg>
+              </span>
+              <span className="font-semibold text-orange-700 mr-1">Reason:</span>
+              <span className="text-gray-800 whitespace-pre-line">{selectedNotification?.message.split("Reason:")[1]?.trim()}</span>
+            </div>
+          )}
+          <div className="text-xs text-gray-400 text-right mt-2 mb-4">
+            {selectedNotification?.time ? formatDistanceToNow(new Date(selectedNotification.time), { addSuffix: true }) : ""}
+          </div>
+          <div className="mt-6 text-center">
+            <div className="text-sm text-gray-500 mb-2">For any questions, please contact admin for support.</div>
+            <button
+              className="inline-block px-5 py-2 rounded-md bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 transition"
+              onClick={() => setOpenHelpModal(true)}
+            >
+              Contact Support
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Modal hỗ trợ giống BannedOverlay */}
+      <Dialog open={openHelpModal} onOpenChange={setOpenHelpModal}>
+        <DialogContent className="max-w-md">
+          <DialogTitle>Contact Support</DialogTitle>
+          <button
+            className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition"
+            onClick={() => setOpenHelpModal(false)}
+            aria-label="Close"
+            style={{ right: 16, top: 16, position: 'absolute' }}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="flex flex-col items-center mb-4">
+            <MessageSquare className="w-12 h-12 text-emerald-500 mb-2" />
+            <h3 className="text-2xl font-bold mb-1 text-gray-800">Contact Support</h3>
+            <p className="mb-4 text-gray-500 text-center">
+              You can contact us via the following channels:
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 bg-gray-50">
+              <Phone className="w-6 h-6 text-emerald-500" />
+              <a href="tel:+15551234567" className="font-medium text-gray-700 hover:underline">
+                +1 (555) 123-4567
+              </a>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 bg-gray-50">
+              <Mail className="w-6 h-6 text-emerald-500" />
+              <a href="mailto:support@example.com" className="font-medium text-gray-700 hover:underline">
+                support@example.com
+              </a>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
