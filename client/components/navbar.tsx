@@ -202,24 +202,37 @@ useEffect(() => {
     setTimeout(() => setIsDeletingHistory(false), 100);
   };
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      if (!userId) return;
-      try {
-        const token = await getToken();
-        const res = await fetch(`http://localhost:8800/api/notifications?clerk_id=${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (data.success) setNotifications(data.notifications);
-      } catch (err) {
-        console.error("Lỗi fetch thông báo:", err);
-      }
-    };
-  
-    fetchNotifications();
-  }, [userId]);
-  
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    if (!userId) return;
+    try {
+      const token = await getToken();
+      const res = await fetch(`http://localhost:8800/api/notifications?clerk_id=${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) setNotifications(data.notifications);
+    } catch (err) {
+      console.error("Lỗi fetch thông báo:", err);
+    }
+  };
+
+  // Mark all notifications as read and refetch
+  const handleMarkAllAsRead = async () => {
+    if (!userId) return;
+    const token = await getToken();
+    const res = await fetch("http://localhost:8800/api/notifications/mark-all-as-read", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ clerk_id: userId }),
+    });
+    if (res.ok) {
+      await fetchNotifications();
+    }
+  };
 
   // Khi submit search, lưu lịch sử nếu đã đăng nhập
   const handleSearch = async (e: React.FormEvent) => {
@@ -323,6 +336,12 @@ useEffect(() => {
   if (pathname === "/select-role") {
     return null
   }
+
+  useEffect(() => {
+    if (openNotify) {
+      fetchNotifications();
+    }
+  }, [openNotify]);
 
   return (
     <>
@@ -466,38 +485,39 @@ useEffect(() => {
                     </TooltipProvider>
 
                     {openNotify && (
-                      <div className="absolute top-full right-0 z-50 w-80 min-h-[400px] max-h-[700px] bg-white shadow-lg rounded-b-lg overflow-y-auto">
+                      <div
+                        className="absolute top-full right-0 z-50 w-80 bg-white shadow-lg rounded-b-lg"
+                        onWheel={e => e.stopPropagation()}
+                      >
                         <div className="font-semibold px-4 py-2 border-b">Notifications</div>
-
-                        {notifications.length === 0 ? (
-                          <div className="text-center text-gray-500 py-8">No notifications</div>
-                        ) : (
-                          <>
-                            {notifications.map((item, idx) => (
-                              <div key={idx} className="whitespace-normal py-3 px-4 hover:bg-gray-100 cursor-pointer">
-                                <div className="font-medium">{item.title}</div>
-                                <div className="text-xs text-gray-500">{item.time}</div>
-                              </div>
-                            ))}
-                            <div className="text-right px-4 py-2 border-t text-sm">
-                              <button
-                                onClick={async () => {
-                                  const res = await fetch("http://localhost:8800/api/notifications/mark-all-as-read", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ clerk_id: userId }),
-                                  });
-                                  if (res.ok) {
-                                    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-                                  }
-                                }}
-                                className="text-emerald-600 hover:underline"
+                        <div
+                          className="h-96 overflow-y-auto divide-y divide-gray-100"
+                          onWheel={e => e.stopPropagation()}
+                          onScroll={e => e.stopPropagation()}
+                        >
+                          {notifications.length === 0 ? (
+                            <div className="text-center text-gray-500 py-8">No notifications</div>
+                          ) : (
+                            notifications.map((item, idx) => (
+                              <div
+                                key={idx}
+                                className={`whitespace-normal py-3 px-4 hover:bg-gray-100 cursor-pointer flex flex-col gap-1 transition-colors ${!item.is_read ? 'bg-emerald-50' : 'bg-white'}`}
                               >
-                                Đánh dấu tất cả là đã đọc
-                              </button>
-                            </div>
-                          </>
-                        )}
+                                <div className="font-medium text-sm">{item.title}</div>
+                                <div className="text-xs text-gray-500">{item.time}</div>
+                                <div className="text-sm text-gray-700">{item.message}</div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        <div className="border-t px-4 py-2 bg-white sticky bottom-0">
+                          <button
+                            onClick={handleMarkAllAsRead}
+                            className="text-emerald-600 hover:underline w-full text-center text-sm font-medium"
+                          >
+                            Mark all as read
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
