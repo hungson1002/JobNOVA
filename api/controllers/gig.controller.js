@@ -105,6 +105,7 @@ export const getAllGigs = async (req, res, next) => {
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
+      order: [["created_at", "DESC"]],
       include: [
         {
           model: models.User,
