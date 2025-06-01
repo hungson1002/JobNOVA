@@ -2,11 +2,12 @@
 
 import type React from "react"
 import { SignInButton, SignUpButton, UserButton, useUser, useAuth } from "@clerk/nextjs"
-import { BarChart, Bell, Briefcase, Camera, ChevronLeft, ChevronRight, Code, Database, Heart, LayoutDashboard, MessageSquare, Music, Palette, PenTool, Search, ShoppingCart, Smile, Video, User, FolderKanban, X, Globe, ImageIcon, TrendingUp, Share2, Sparkles, FileText, Monitor, Mic, Gamepad2, Home, Calendar } from "lucide-react"
+import { BarChart, Bell, Briefcase, Camera, ChevronLeft, ChevronRight, Code, Database, Heart, LayoutDashboard, MessageSquare, Music, Palette, PenTool, Search, ShoppingCart, Smile, Video, User, FolderKanban, X, Globe, ImageIcon, TrendingUp, Share2, Sparkles, FileText, Monitor, Mic, Gamepad2, Home, Calendar, Star } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
+import { formatDistanceToNow } from "date-fns"
 
 import { LanguageCurrencySwitcher } from "@/components/language-currency-switcher"
 import { Button } from "@/components/ui/button"
@@ -52,6 +53,7 @@ export function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifyRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   useNotificationSocket(userId ?? "", (notification) => {
     toast(`🔔 ${notification.title}: ${notification.message}`);
@@ -205,6 +207,7 @@ useEffect(() => {
   // Fetch notifications from API
   const fetchNotifications = async () => {
     if (!userId) return;
+    setLoadingNotifications(true);
     try {
       const token = await getToken();
       const res = await fetch(`http://localhost:8800/api/notifications?clerk_id=${userId}`, {
@@ -214,6 +217,8 @@ useEffect(() => {
       if (data.success) setNotifications(data.notifications);
     } catch (err) {
       console.error("Lỗi fetch thông báo:", err);
+    } finally {
+      setLoadingNotifications(false);
     }
   };
 
@@ -342,6 +347,10 @@ useEffect(() => {
       fetchNotifications();
     }
   }, [openNotify]);
+
+  useEffect(() => {
+    setOpenNotify(false);
+  }, [pathname]);
 
   return (
     <>
@@ -473,8 +482,10 @@ useEffect(() => {
                             style={{ outline: "none", boxShadow: "none", position: "relative" }}
                           >
                             <Bell className="h-5 w-5" />
-                            {notifications.some(n => !n.is_read) && (
-                              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                            {notifications.filter(n => !n.is_read).length > 0 && (
+                              <span className="absolute -top-1 -right-1 min-w-[18px] h-5 flex items-center justify-center rounded-full bg-emerald-500 text-white text-xs px-1">
+                                {notifications.filter(n => !n.is_read).length > 9 ? '9+' : notifications.filter(n => !n.is_read).length}
+                              </span>
                             )}
                           </Button>
                         </TooltipTrigger>
@@ -495,19 +506,51 @@ useEffect(() => {
                           onWheel={e => e.stopPropagation()}
                           onScroll={e => e.stopPropagation()}
                         >
-                          {notifications.length === 0 ? (
-                            <div className="text-center text-gray-500 py-8">No notifications</div>
+                          {loadingNotifications ? (
+                            <div className="flex flex-col gap-3 p-4">
+                              {[...Array(3)].map((_, i) => (
+                                <div key={i} className="flex gap-3 items-center animate-pulse">
+                                  <div className="w-8 h-8 rounded-full bg-gray-200" />
+                                  <div className="flex-1 space-y-2">
+                                    <div className="h-3 w-1/2 bg-gray-200 rounded" />
+                                    <div className="h-2 w-1/3 bg-gray-100 rounded" />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : notifications.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                              <Bell className="mb-2 h-10 w-10 text-gray-300" />
+                              <p className="text-sm text-gray-500">No notifications yet</p>
+                            </div>
                           ) : (
-                            notifications.map((item, idx) => (
-                              <div
-                                key={idx}
-                                className={`whitespace-normal py-3 px-4 hover:bg-gray-100 cursor-pointer flex flex-col gap-1 transition-colors ${!item.is_read ? 'bg-emerald-50' : 'bg-white'}`}
-                              >
-                                <div className="font-medium text-sm">{item.title}</div>
-                                <div className="text-xs text-gray-500">{item.time}</div>
-                                <div className="text-sm text-gray-700">{item.message}</div>
-                              </div>
-                            ))
+                            notifications.map((item, idx) => {
+                              const isUnread = !item.is_read;
+                              let icon = <Bell className="h-5 w-5 text-gray-400" />;
+                              if (item.notification_type === "review") icon = <Star className="h-5 w-5 text-yellow-500" />;
+                              if (item.notification_type === "message") icon = <MessageSquare className="h-5 w-5 text-blue-500" />;
+                              const timeAgo = item.time ? formatDistanceToNow(new Date(item.time), { addSuffix: true }) : "";
+                              return (
+                                <div
+                                  key={idx}
+                                  className={`relative flex gap-3 items-start whitespace-normal py-3 px-4 cursor-pointer transition-colors ${isUnread ? 'bg-emerald-50 font-semibold' : 'bg-white'} hover:bg-emerald-100 border-l-4 ${isUnread ? 'border-emerald-500' : 'border-transparent'}`}
+                                  onClick={() => {
+                                    if (item.gig_id && item.notification_type === "review") {
+                                      router.push(`/gigs/${item.gig_id}`);
+                                    }
+                                  }}
+                                >
+                                  {/* Dấu chấm xanh cho chưa đọc */}
+                                  {isUnread && <span className="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-2 h-2 rounded-full bg-emerald-500" />}
+                                  <div className="flex-shrink-0 mt-1">{icon}</div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm truncate">{item.title}</div>
+                                    <div className="text-xs text-gray-400 mb-1">{timeAgo}</div>
+                                    <div className="text-sm text-gray-700 truncate">{item.message}</div>
+                                  </div>
+                                </div>
+                              );
+                            })
                           )}
                         </div>
                         <div className="border-t px-4 py-2 bg-white sticky bottom-0">
