@@ -54,13 +54,14 @@ export function Navbar() {
   const clickedInsideDropdownRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifyRef = useRef<HTMLDivElement>(null);
-  const { notifications, markAllAsRead, markAsRead, fetchNotifications, loading: loadingNotifications } = useNotification();
+  const { notifications, markAllAsRead, markAsRead, fetchNotifications, loading: loadingNotifications, addNotification } = useNotification();
   const [openSystemModal, setOpenSystemModal] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<any>(null);
   const [openHelpModal, setOpenHelpModal] = useState(false);
 
   useNotificationSocket(userId ?? "", (notification) => {
     toast(`🔔 ${notification.title}: ${notification.message}`);
+    addNotification(notification);
   });
   
   // Mapping tên category sang icon

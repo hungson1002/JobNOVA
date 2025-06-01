@@ -235,6 +235,7 @@ export function ReviewList({ reviews, className, onReviewUpdate, onReviewDelete 
       onReviewDelete?.(deletingReview.id);
       setDeletingReview(null);
       setShowDeleteModal(false);
+      toast.success("Review deleted successfully!");
     } catch (error) {
       console.error("Error deleting review:", error);
       alert("Failed to delete review. Please try again.");
