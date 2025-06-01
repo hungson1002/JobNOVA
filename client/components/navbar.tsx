@@ -474,7 +474,7 @@ useEffect(() => {
 
                     {openNotify && (
                       <div
-                        className="absolute top-full right-0 z-50 w-80 bg-white shadow-lg rounded-b-lg"
+                        className="absolute top-full right-0 z-50 w-80 bg-white shadow-lg rounded-[4px]"
                         onWheel={e => e.stopPropagation()}
                       >
                         <div className="font-semibold px-4 py-2 border-b">Notifications</div>
@@ -535,7 +535,7 @@ useEffect(() => {
                             })
                           )}
                         </div>
-                        <div className="border-t px-4 py-2 bg-white sticky bottom-0">
+                        <div className="border-t px-4 py-2 bg-white sticky bottom-0 rounded-b-[4px]">
                           <button
                             onClick={markAllAsRead}
                             className="text-emerald-600 hover:underline w-full text-center text-sm font-medium"

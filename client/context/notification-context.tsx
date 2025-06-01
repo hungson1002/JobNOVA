@@ -39,7 +39,9 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (data.success) setNotifications(data.notifications);
+      if (data.success) setNotifications(
+        data.notifications.sort((a, b) => new Date(b.time || b.created_at).getTime() - new Date(a.time || a.created_at).getTime())
+      );
     } catch (err) {
       console.error("Lỗi fetch thông báo:", err);
     } finally {

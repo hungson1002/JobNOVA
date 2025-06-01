@@ -239,6 +239,7 @@ export default function ManageGigsPage() {
         body: JSON.stringify({ reason: deleteReason }) // Gửi lý do xóa lên BE
       });
       setGigs(prev => prev.filter(gig => gig.id !== gigToDelete.id));
+      fetchCounts();
       toast.success("Xóa thành công!");
       setDeleteDialogOpen(false);
       setDeleteReason("");
