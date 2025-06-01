@@ -48,6 +48,7 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/admin");
+  const isMessagesRoute = pathname.startsWith("/messages");
 
   return (
     <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
@@ -61,7 +62,7 @@ export default function RootLayout({
                 <BannedLayout>
                   {children}
                 </BannedLayout>
-                {!isAdminRoute && <Footer />}
+                {!isAdminRoute && !isMessagesRoute && <Footer />}
               </RoleCheck>
             </CurrencyProvider>
           </NotificationProvider>

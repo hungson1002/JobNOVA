@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { MessageList } from "@/components/message/messageList";
 import { useMessages } from "@/hooks/useMessages";
 import { MessageThread } from "@/components/message/messageThread";
+import { fetchUser } from "@/lib/api";
 
 export default function MessagesPage() {
   const { userId, isLoaded } = useAuth();
@@ -21,12 +22,38 @@ export default function MessagesPage() {
       : undefined,
     isDirect: selectedTicket?.is_direct || false,
   });
+  const [recipientInfo, setRecipientInfo] = useState<{ id: string; name: string; avatar: string; online?: boolean }>({ id: "", name: "User", avatar: "/placeholder.svg", online: true });
 
   useEffect(() => {
     if (tickets.length > 0 && !selectedTicket) {
       setSelectedTicket(tickets[0]);
     }
   }, [tickets]);
+
+  useEffect(() => {
+    const fetchRecipient = async () => {
+      if (!selectedTicket || !userId) return;
+      const isDirect = selectedTicket.is_direct;
+      const recipientId = isDirect
+        ? (selectedTicket.buyer_clerk_id === userId ? selectedTicket.seller_clerk_id : selectedTicket.buyer_clerk_id)
+        : (selectedTicket.buyer_clerk_id === userId ? selectedTicket.seller_clerk_id : selectedTicket.buyer_clerk_id);
+      try {
+        const user = await fetchUser(recipientId, "");
+        setRecipientInfo({
+          id: recipientId,
+          name:
+            (user.lastname && user.firstname)
+              ? `${user.lastname} ${user.firstname}`
+              : (user.firstname || user.lastname || user.username || "User"),
+          avatar: user.avatar || "/placeholder.svg",
+          online: true,
+        });
+      } catch {
+        setRecipientInfo({ id: recipientId, name: "User", avatar: "/placeholder.svg", online: true });
+      }
+    };
+    fetchRecipient();
+  }, [selectedTicket, userId]);
 
   if (!isLoaded || !userId) {
     return <div>Loading...</div>;
@@ -61,20 +88,7 @@ export default function MessagesPage() {
           {selectedTicket ? (
             <MessageThread
               messages={messages}
-              recipient={{
-                id: selectedTicket.is_direct
-                  ? (selectedTicket.buyer_clerk_id === userId
-                      ? selectedTicket.seller_clerk_id
-                      : selectedTicket.buyer_clerk_id)
-                  : (selectedTicket.buyer_clerk_id === userId
-                      ? selectedTicket.seller_clerk_id
-                      : selectedTicket.buyer_clerk_id),
-                name: selectedTicket.is_direct
-                  ? "User"
-                  : `Order #${selectedTicket.order_id}`,
-                avatar: "/placeholder.svg",
-                online: true,
-              }}
+              recipient={recipientInfo}
               onSendMessage={async (content) => {
                 if (!selectedTicket) return;
                 const receiverId = selectedTicket.is_direct

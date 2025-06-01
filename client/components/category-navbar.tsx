@@ -15,6 +15,11 @@ export function CategoryNavbar() {
   // Get the current category from search params
   const currentCategory = searchParams.get("category")
 
+  // Ẩn category-navbar trên trang /messages
+  if (pathname.startsWith("/messages")) {
+    return null;
+  }
+
   // Don't show category navbar on role selection page or for admin users
   if (pathname === "/select-role" || isAdmin) {
     return null

@@ -28,6 +28,9 @@ interface MessageListProps {
 interface UserInfo {
   name: string;
   avatar: string;
+  lastname?: string;
+  firstname?: string;
+  username?: string;
 }
 
 export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId }: MessageListProps) {
@@ -52,6 +55,9 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
               [clerkId]: {
                 name: userData.name || userData.username || "User",
                 avatar: userData.avatar || "/placeholder.svg",
+                lastname: userData.lastname,
+                firstname: userData.firstname,
+                username: userData.username,
               },
             }));
           } catch {}
@@ -73,7 +79,18 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
   };
 
   // Helper lấy user info
-  const getUserInfo = (clerkId: string) => userInfoMap[clerkId] || { name: "User", avatar: "/placeholder.svg" };
+  const getUserInfo = (clerkId: string) => {
+    const user = userInfoMap[clerkId];
+    if (!user) return { name: "User", avatar: "/placeholder.svg" };
+    // Ưu tiên lastname + firstname, chỉ firstname nếu không có lastname, hoặc username nếu không có cả hai
+    let name = "User";
+    if (user.lastname && user.firstname) name = `${user.lastname} ${user.firstname}`;
+    else if (user.firstname) name = user.firstname;
+    else if (user.lastname) name = user.lastname;
+    else if (user.username) name = user.username;
+    else if (user.name) name = user.name;
+    return { ...user, name };
+  };
 
   return (
     <div className="w-full border-r lg:w-80">

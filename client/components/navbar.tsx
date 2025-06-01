@@ -617,45 +617,47 @@ useEffect(() => {
         </div>
 
         {/* Subnavbar - Categories */}
-        <div className="border-t bg-white">
-          <div className="container relative">
-            {showLeftButton && (
-              <button 
-                className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-r-lg shadow-md z-10 hidden md:flex items-center justify-center transition-opacity duration-200"
-                onClick={scrollLeft}
-                aria-label="Scroll left"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-            )}
-            <div className="overflow-hidden">
-              <nav 
-                ref={categoriesRef}
-                className="flex items-center space-x-4 overflow-x-auto py-2 whitespace-nowrap touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-              >
-                {categories.map((category) => (
-                  <Link
-                    key={category.id}
-                    href={`/search?category=${category.id}`}
-                    className="flex items-center space-x-1 text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors whitespace-nowrap"
-                  >
-                    {categoryIcons[category.name] || <Palette className="h-4 w-4" />}
-                    <span>{category.name}</span>
-                  </Link>
-                ))}
-              </nav>
+        { !pathname.startsWith("/messages") && (
+          <div className="border-t bg-white">
+            <div className="container relative">
+              {showLeftButton && (
+                <button 
+                  className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-r-lg shadow-md z-10 hidden md:flex items-center justify-center transition-opacity duration-200"
+                  onClick={scrollLeft}
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              )}
+              <div className="overflow-hidden">
+                <nav 
+                  ref={categoriesRef}
+                  className="flex items-center space-x-4 overflow-x-auto py-2 whitespace-nowrap touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                >
+                  {categories.map((category) => (
+                    <Link
+                      key={category.id}
+                      href={`/search?category=${category.id}`}
+                      className="flex items-center space-x-1 text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors whitespace-nowrap"
+                    >
+                      {categoryIcons[category.name] || <Palette className="h-4 w-4" />}
+                      <span>{category.name}</span>
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+              {showRightButton && (
+                <button 
+                  className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-l-lg shadow-md z-10 hidden md:flex items-center justify-center transition-opacity duration-200"
+                  onClick={scrollRight}
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              )}
             </div>
-            {showRightButton && (
-              <button 
-                className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-l-lg shadow-md z-10 hidden md:flex items-center justify-center transition-opacity duration-200"
-                onClick={scrollRight}
-                aria-label="Scroll right"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            )}
           </div>
-        </div>
+        )}
       </header>
 
       {/* Modal chi tiết notification system */}
