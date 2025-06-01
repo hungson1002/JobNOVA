@@ -16,12 +16,6 @@ export function MessageThread({ messages, recipient, onSendMessage }: MessageThr
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
-
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -75,7 +69,7 @@ export function MessageThread({ messages, recipient, onSendMessage }: MessageThr
           <div className="space-y-4">
             {messages.map((message) => (
               <div
-                key={message.id}
+                key={`${message.id}-${message.sent_at}`}
                 className={`flex ${message.sender_clerk_id === recipient.id ? "justify-start" : "justify-end"}`}
               >
                 {message.sender_clerk_id === recipient.id && (

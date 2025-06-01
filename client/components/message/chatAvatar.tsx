@@ -16,7 +16,7 @@ export function ChatAvatar({ avatar, name, unreadCount, onClick }: ChatAvatarPro
         alt={name}
         width={40}
         height={40}
-        className="rounded-full"
+        className="rounded-full h-10 w-10"
       />
       {unreadCount > 0 && (
         <Badge className="absolute top-0 right-0 h-5 w-5 rounded-full bg-emerald-500 p-0 text-center text-xs">

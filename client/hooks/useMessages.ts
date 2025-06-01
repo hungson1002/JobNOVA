@@ -75,7 +75,10 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
         msg.sender_clerk_id === userId ||
         msg.receiver_clerk_id === userId
       ) {
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prev) => {
+          if (prev.some(m => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
         const otherUserId = msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id;
         let avatar = "/placeholder.svg";
         let name = "User";
@@ -259,14 +262,14 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
     }
   }, [userId, orderId, receiverId, isDirect, getToken]);
 
-  // Join rooms
+  // Join rooms mỗi khi orderId, receiverId, isDirect thay đổi
   useEffect(() => {
     if (!socketRef.current || !userId) return;
     if (orderId) {
       socketRef.current.emit("joinOrder", { orderId });
     }
     if (receiverId && isDirect) {
-      socketRef.current.emit("joinChat", { userId, receiverId });
+      socketRef.current.emit("joinChat", { userId, sellerId: receiverId });
     }
   }, [userId, orderId, receiverId, isDirect]);
 
@@ -319,7 +322,10 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
           // Nếu response.message là object lồng, lấy object con
           const msg = (response && response.message && response.message.message) ? response.message.message : response.message;
           if (response.success && msg && msg.id && msg.sent_at) {
-            setMessages((prev) => [...prev, msg]);
+            setMessages((prev) => {
+              if (prev.some(m => m.id === msg.id)) return prev;
+              return [...prev, msg];
+            });
             setChatWindows((prev) =>
               prev.map((w) =>
                 w.userId === receiverId

@@ -528,7 +528,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
           </nav>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 overflow-visible">
           {/* Left Column - Gig Details */}
           <div className="lg:col-span-2">
             <h1 className="mb-6 text-2xl font-bold md:text-3xl">{gig.title}</h1>
@@ -571,7 +571,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             </div>
 
             {/* Chat Bubbles */}
-            <div className="fixed bottom-4 left-4 flex flex-col gap-2">
+            <div className="fixed bottom-4 left-4 flex flex-col gap-2 z-[9999]">
               {chatWindows.map((win) => (
                 <ChatBubble
                   key={win.userId}
@@ -588,7 +588,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             </div>
 
             {/* Chat Avatars */}
-            <div className="fixed bottom-4 right-4 flex flex-col gap-2">
+            <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-[9999]">
               {chatWindows.map((win) => (
                 <ChatAvatar
                   key={win.userId}

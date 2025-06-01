@@ -7,11 +7,20 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MessageList } from "@/components/message/messageList";
 import { useMessages } from "@/hooks/useMessages";
+import { MessageThread } from "@/components/message/messageThread";
 
 export default function MessagesPage() {
   const { userId, isLoaded } = useAuth();
-  const { tickets, loading, error } = useMessages({});
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
+  const { tickets, loading, error, sendMessage, fetchMessagesData, messages } = useMessages({
+    orderId: selectedTicket?.order_id ? String(selectedTicket.order_id) : undefined,
+    receiverId: selectedTicket?.is_direct
+      ? (selectedTicket?.buyer_clerk_id === userId
+          ? selectedTicket?.seller_clerk_id
+          : selectedTicket?.buyer_clerk_id)
+      : undefined,
+    isDirect: selectedTicket?.is_direct || false,
+  });
 
   useEffect(() => {
     if (tickets.length > 0 && !selectedTicket) {
@@ -24,7 +33,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <main className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-4 py-8 h-screen flex flex-col">
       <div className="mb-6 flex items-center">
         <Button variant="ghost" size="sm" className="mr-4" asChild>
           <Link href="/">
@@ -41,20 +50,47 @@ export default function MessagesPage() {
         <div className="text-gray-500 text-sm mb-4">No messages to display.</div>
       )}
 
-      <div className="flex h-[calc(100vh-200px)] flex-col overflow-hidden rounded-lg border bg-white lg:flex-row">
+      <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-white lg:flex-row">
         <MessageList
           tickets={tickets}
           selectedTicketId={selectedTicket?.is_direct ? (selectedTicket?.buyer_clerk_id === userId ? selectedTicket?.seller_clerk_id : selectedTicket?.buyer_clerk_id) : selectedTicket?.order_id}
           onSelectTicket={setSelectedTicket}
           userId={userId}
         />
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col h-full min-h-0">
           {selectedTicket ? (
-            <Link href={`/messages/${selectedTicket.is_direct ? (selectedTicket.buyer_clerk_id === userId ? selectedTicket.seller_clerk_id : selectedTicket.buyer_clerk_id) : selectedTicket.order_id}`}>
-              <Button variant="outline" className="m-4">
-                View Conversation
-              </Button>
-            </Link>
+            <MessageThread
+              messages={messages}
+              recipient={{
+                id: selectedTicket.is_direct
+                  ? (selectedTicket.buyer_clerk_id === userId
+                      ? selectedTicket.seller_clerk_id
+                      : selectedTicket.buyer_clerk_id)
+                  : (selectedTicket.buyer_clerk_id === userId
+                      ? selectedTicket.seller_clerk_id
+                      : selectedTicket.buyer_clerk_id),
+                name: selectedTicket.is_direct
+                  ? "User"
+                  : `Order #${selectedTicket.order_id}`,
+                avatar: "/placeholder.svg",
+                online: true,
+              }}
+              onSendMessage={async (content) => {
+                if (!selectedTicket) return;
+                const receiverId = selectedTicket.is_direct
+                  ? (selectedTicket.buyer_clerk_id === userId
+                      ? selectedTicket.seller_clerk_id
+                      : selectedTicket.buyer_clerk_id)
+                  : selectedTicket.seller_clerk_id;
+                await sendMessage(
+                  content,
+                  userId,
+                  receiverId,
+                  selectedTicket.order_id ? String(selectedTicket.order_id) : undefined
+                );
+                fetchMessagesData();
+              }}
+            />
           ) : (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <div className="mb-4 rounded-full bg-gray-100 p-6">

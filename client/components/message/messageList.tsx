@@ -106,54 +106,50 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
               const userInfo = getUserInfo(otherUserId);
 
               return (
-                <Link 
-                  href={`/messages/${isDirect ? otherUserId : ticket.order_id}`} 
+                <div
                   key={isDirect ? otherUserId : ticket.order_id}
+                  className={`flex cursor-pointer items-start gap-3 border-b p-3 hover:bg-gray-50 ${
+                    selectedTicketId === String(isDirect ? otherUserId : ticket.order_id) ? "bg-gray-50" : ""
+                  }`}
+                  onClick={() => onSelectTicket({ ...ticket, last_message: ticket.last_message ?? undefined })}
                 >
-                  <div
-                    className={`flex cursor-pointer items-start gap-3 border-b p-3 hover:bg-gray-50 ${
-                      selectedTicketId === String(isDirect ? otherUserId : ticket.order_id) ? "bg-gray-50" : ""
-                    }`}
-                    onClick={() => onSelectTicket({ ...ticket, last_message: ticket.last_message ?? undefined })}
-                  >
-                    <div className="relative">
-                      <Image
-                        src={userInfo.avatar}
-                        alt={userInfo.name}
-                        width={40}
-                        height={40}
-                        className="rounded-full"
-                      />
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">
-                          {isDirect ? userInfo.name : `Order #${ticket.order_id}`}
-                        </h3>
-                        <span className="text-xs text-gray-500">
-                          {ticket.last_message?.sent_at ? formatDate(ticket.last_message.sent_at) : ""}
-                        </span>
-                      </div>
-                      <p className="truncate text-sm text-gray-600">
-                        {ticket.last_message?.message_content || "No messages"}
-                      </p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {isDirect ? "Direct" : ticket.status}
-                        </Badge>
-                        {!isDirect && ticket.order_status && (
-                          <span className="text-xs text-gray-500">{ticket.order_status}</span>
-                        )}
-                        <span className="text-xs text-gray-500">{ticket.message_count} msg</span>
-                      </div>
-                    </div>
-                    {ticket.message_count > 0 && !ticket.last_message?.is_read && (
-                      <Badge className="h-5 w-5 rounded-full bg-emerald-500 p-0 text-center">
-                        {ticket.message_count}
-                      </Badge>
-                    )}
+                  <div className="relative">
+                    <Image
+                      src={userInfo.avatar}
+                      alt={userInfo.name}
+                      width={40}
+                      height={40}
+                      className="rounded-full"
+                    />
                   </div>
-                </Link>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">
+                        {isDirect ? userInfo.name : `Order #${ticket.order_id}`}
+                      </h3>
+                      <span className="text-xs text-gray-500">
+                        {ticket.last_message?.sent_at ? formatDate(ticket.last_message.sent_at) : ""}
+                      </span>
+                    </div>
+                    <p className="truncate text-sm text-gray-600">
+                      {ticket.last_message?.message_content || "No messages"}
+                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {isDirect ? "Direct" : ticket.status}
+                      </Badge>
+                      {!isDirect && ticket.order_status && (
+                        <span className="text-xs text-gray-500">{ticket.order_status}</span>
+                      )}
+                      <span className="text-xs text-gray-500">{ticket.message_count} msg</span>
+                    </div>
+                  </div>
+                  {ticket.message_count > 0 && !ticket.last_message?.is_read && (
+                    <Badge className="h-5 w-5 rounded-full bg-emerald-500 p-0 text-center">
+                      {ticket.message_count}
+                    </Badge>
+                  )}
+                </div>
               );
             })}
           </TabsContent>
@@ -163,58 +159,57 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
               const userId = isDirect ? (ticket.buyer_clerk_id || ticket.seller_clerk_id) : (ticket.buyer_clerk_id || ticket.seller_clerk_id);
               const userInfo = getUserInfo(userId);
               return (
-                <Link href={`/messages/${ticket.order_id || userId}`} key={ticket.order_id || userId}>
-                  <div
-                    className={`flex cursor-pointer items-start gap-3 border-b p-3 hover:bg-gray-50 ${
-                      selectedTicketId === String(ticket.order_id) ? "bg-gray-50" : ""
-                    }`}
-                    onClick={() =>
-                      onSelectTicket({
-                        ...ticket,
-                        last_message: ticket.last_message ?? undefined,
-                      })
-                    }
-                  >
-                    <div className="relative">
-                      <Image
-                        src={userInfo.avatar}
-                        alt={userInfo.name}
-                        width={40}
-                        height={40}
-                        className="rounded-full"
-                      />
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium">
-                          {isDirect ? userInfo.name : `Order #${ticket.order_id}`}
-                        </h3>
-                        <span className="text-xs text-gray-500">
-                          {ticket.last_message?.sent_at ? formatDate(ticket.last_message.sent_at) : ""}
-                        </span>
-                      </div>
-                      <p className="truncate text-sm text-gray-600">
-                        {ticket.last_message?.message_content || "No messages"}
-                      </p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {isDirect ? "Direct" : ticket.status}
-                        </Badge>
-                        {!isDirect && (
-                          <span className="text-xs text-gray-500">{ticket.order_status}</span>
-                        )}
-                        {!isDirect && (
-                          <span className="text-xs text-gray-500">{ticket.message_count} msg</span>
-                        )}
-                      </div>
-                    </div>
-                    {ticket.message_count > 0 && !ticket.last_message?.is_read && (
-                      <Badge className="h-5 w-5 rounded-full bg-emerald-500 p-0 text-center">
-                        {ticket.message_count}
-                      </Badge>
-                    )}
+                <div
+                  key={ticket.order_id || userId}
+                  className={`flex cursor-pointer items-start gap-3 border-b p-3 hover:bg-gray-50 ${
+                    selectedTicketId === String(ticket.order_id) ? "bg-gray-50" : ""
+                  }`}
+                  onClick={() =>
+                    onSelectTicket({
+                      ...ticket,
+                      last_message: ticket.last_message ?? undefined,
+                    })
+                  }
+                >
+                  <div className="relative">
+                    <Image
+                      src={userInfo.avatar}
+                      alt={userInfo.name}
+                      width={40}
+                      height={40}
+                      className="rounded-full"
+                    />
                   </div>
-                </Link>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">
+                        {isDirect ? userInfo.name : `Order #${ticket.order_id}`}
+                      </h3>
+                      <span className="text-xs text-gray-500">
+                        {ticket.last_message?.sent_at ? formatDate(ticket.last_message.sent_at) : ""}
+                      </span>
+                    </div>
+                    <p className="truncate text-sm text-gray-600">
+                      {ticket.last_message?.message_content || "No messages"}
+                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {isDirect ? "Direct" : ticket.status}
+                      </Badge>
+                      {!isDirect && (
+                        <span className="text-xs text-gray-500">{ticket.order_status}</span>
+                      )}
+                      {!isDirect && (
+                        <span className="text-xs text-gray-500">{ticket.message_count} msg</span>
+                      )}
+                    </div>
+                  </div>
+                  {ticket.message_count > 0 && !ticket.last_message?.is_read && (
+                    <Badge className="h-5 w-5 rounded-full bg-emerald-500 p-0 text-center">
+                      {ticket.message_count}
+                    </Badge>
+                  )}
+                </div>
               );
             })}
           </TabsContent>
