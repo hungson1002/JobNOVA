@@ -27,7 +27,7 @@ interface Gig {
   city: string;
   country: string;
   status: string;
-  is_top_rate: boolean;
+  isToprate: boolean;
   created_at: string;
   category?: {
     id: number;
@@ -62,7 +62,10 @@ export default function ManageTopRatePage() {
       const response = await fetch(`http://localhost:8800/api/gigs?include=category,job_type&status=active`);
       const data = await response.json();
       if (data.success) {
-        setGigs(data.gigs);
+        setGigs(data.gigs.map((gig: any) => ({
+          ...gig,
+          isToprate: Boolean(gig.isToprate),
+        })));
       }
     } catch (error) {
       toast.error("Failed to fetch gigs");
@@ -111,13 +114,13 @@ export default function ManageTopRatePage() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify({ is_top_rate: !gig.is_top_rate }),
+        body: JSON.stringify({ isToprate: !gig.isToprate }),
       });
       const data = await response.json();
       if (data.success) {
-        toast.success(`Gig ${gig.is_top_rate ? 'removed from' : 'added to'} top rate`);
+        toast.success(`Gig ${gig.isToprate ? 'removed from' : 'added to'} top rate`);
         setGigs(prev => prev.map(g => 
-          g.id === gig.id ? { ...g, is_top_rate: !g.is_top_rate } : g
+          g.id === gig.id ? { ...g, isToprate: !g.isToprate } : g
         ));
       }
     } catch (error) {
@@ -201,7 +204,7 @@ export default function ManageTopRatePage() {
                   </TableCell>
                   <TableCell className="font-bold text-lg text-gray-800 group-hover:text-amber-600 max-w-[220px] truncate">
                     <div className="flex items-center gap-2">
-                      {gig.is_top_rate && (
+                      {gig.isToprate && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full">🔥 Top Rated</span>
                       )}
                       <TooltipProvider>
@@ -261,12 +264,12 @@ export default function ManageTopRatePage() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Switch
-                        checked={gig.is_top_rate}
+                        checked={gig.isToprate}
                         onCheckedChange={() => handleToggleTopRate(gig)}
                         id={`toprate-switch-${gig.id}`}
                       />
                       <label htmlFor={`toprate-switch-${gig.id}`} className="text-xs font-semibold text-gray-700">
-                        {gig.is_top_rate ? "On" : "Off"}
+                        {gig.isToprate ? "On" : "Off"}
                       </label>
                     </div>
                   </TableCell>
