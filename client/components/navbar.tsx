@@ -326,9 +326,9 @@ useEffect(() => {
     }
   }, [isLoaded, isSignedIn, isAdmin, isSeller, isBuyer, pathname, router]);
 
-  // Don't show navbar on role selection page
+  // Đưa return null xuống sau tất cả các hook để không vi phạm Rules of Hooks
   if (pathname === "/select-role") {
-    return null
+    return null;
   }
 
   useEffect(() => {

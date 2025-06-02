@@ -55,7 +55,7 @@ interface UseMessagesProps {
 
 export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessagesProps) => {
   const { userId, isLoaded, getToken } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesMap, setMessagesMap] = useState<{ [key: string]: Message[] }>({});
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [chatWindows, setChatWindows] = useState<ChatWindow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,10 +89,10 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
         msg.sender_clerk_id === userId ||
         msg.receiver_clerk_id === userId
       ) {
-        setMessages((prev) => {
-          if (prev.some(m => m.id === msg.id)) return prev;
-          return [...prev, msg];
-        });
+        setMessagesMap(prev => ({
+          ...prev,
+          [`${msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`}`]: [...(prev[`${msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`}`] || []), msg]
+        }));
         const otherUserId = msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id;
         let avatar = "/placeholder.svg";
         let name = "User";
@@ -210,11 +210,12 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
     socketRef.current.on("messagesRead", (data: { orderId?: string; receiverId?: string; messageIds: number[] }) => {
       const { orderId, receiverId, messageIds } = data;
       // Đánh dấu các message đã đọc
-      setMessages((prev) =>
-        prev.map((m) =>
+      setMessagesMap(prev => ({
+        ...prev,
+        [`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`]: prev[`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`].map((m) =>
           messageIds.includes(m.id) ? { ...m, is_read: true } : m
         )
-      );
+      }));
     
       // Cập nhật số tin chưa đọc cho tickets
       setTickets((prev) => {
@@ -334,19 +335,22 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
       if (!token) throw new Error("Token is missing");
       let data;
       let msgs: Message[] = [];
+      let key = "";
       if (isDirect || receiverIdParam) {
         if (!receiverIdParam) {
           data = await fetchDirectMessages(userId, "", token);
         } else {
           data = await fetchDirectMessages(userId, receiverIdParam, token);
         }
+        key = `direct_${receiverIdParam || receiverId}`;
       } else {
         if (!orderIdParam) return [];
         data = await fetchMessages(orderIdParam, token);
+        key = `order_${orderIdParam}`;
       }
       if (data.success) {
         msgs = data.messages || [];
-        setMessages(msgs);
+        setMessagesMap(prev => ({ ...prev, [key]: msgs }));
         return msgs;
       } else {
         setError(data.message || "Không thể tải tin nhắn");
@@ -359,7 +363,7 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
     } finally {
       setLoading(false);
     }
-  }, [userId, isDirect, getToken]);
+  }, [userId, isDirect, getToken, receiverId]);
 
   // Join rooms mỗi khi orderId, receiverId, isDirect thay đổi
   useEffect(() => {
@@ -421,10 +425,10 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
           // Nếu response.message là object lồng, lấy object con
           const msg = (response && response.message && response.message.message) ? response.message.message : response.message;
           if (response.success && msg && msg.id && msg.sent_at) {
-            setMessages((prev) => {
-              if (prev.some(m => m.id === msg.id)) return prev;
-              return [...prev, msg];
-            });
+            setMessagesMap(prev => ({
+              ...prev,
+              [`${msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`}`]: [...(prev[`${msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`}`] || []), msg]
+            }));
             setChatWindows((prev) =>
               prev.map((w) =>
                 w.userId === receiverId
@@ -456,7 +460,7 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
     let unread = false;
     if (orderId) {
       const orderIdNum = Number(orderId);
-      unread = messages.some(m => !m.is_read && m.order_id === orderIdNum);
+      unread = messagesMap[`order_${orderIdNum}`].some(m => !m.is_read && m.order_id === orderIdNum);
       if (unread) {
         socketRef.current.emit("viewChat", {
           orderId,
@@ -464,7 +468,7 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
         });
       }
     } else if (receiverId) {
-      unread = messages.some(m => !m.is_read && (m.sender_clerk_id === receiverId || m.receiver_clerk_id === receiverId));
+      unread = messagesMap[`direct_${receiverId}`].some(m => !m.is_read && (m.sender_clerk_id === receiverId || m.receiver_clerk_id === receiverId));
       if (unread) {
         socketRef.current.emit("viewChat", {
           receiverId,
@@ -475,7 +479,8 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
   }, 400);
 
   return {
-    messages,
+    messages: [],
+    messagesMap,
     tickets,
     chatWindows,
     setChatWindows,

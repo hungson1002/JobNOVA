@@ -36,7 +36,7 @@ const messageParams = useMemo(() => {
 
 const {
   tickets,
-  messages,
+  messagesMap,
   loading,
   error,
   sendMessage,
@@ -77,8 +77,22 @@ useEffect(() => {
   useEffect(() => {
     if (tickets.length > 0 && !selectedTicket) {
       setSelectedTicket(tickets[0]);
+      const t = tickets[0];
+      if (t && userId) {
+        const isDirect = t.is_direct;
+        const receiverId = isDirect
+          ? t.buyer_clerk_id === userId
+            ? t.seller_clerk_id
+            : t.buyer_clerk_id
+          : null;
+        let key = isDirect && receiverId ? `direct_${receiverId}` : `order_${t.order_id}`;
+        if (!messagesMap[key]) {
+          if (isDirect && receiverId) fetchMessagesData(undefined, receiverId);
+          else fetchMessagesData(String(t.order_id), undefined);
+        }
+      }
     }
-  }, [tickets]);
+  }, [tickets, selectedTicket, userId]);
 
   useEffect(() => {
     const fetchRecipient = async () => {
@@ -104,53 +118,35 @@ useEffect(() => {
     fetchRecipient();
   }, [selectedTicket, userId]);
 
-  useEffect(() => {
-    if (!selectedTicket) return;
-    const isDirect = selectedTicket.is_direct;
-    const receiverId = isDirect
-      ? selectedTicket.buyer_clerk_id === userId
-        ? selectedTicket.seller_clerk_id
-        : selectedTicket.buyer_clerk_id
-      : null;
-
-    const exist = messages.some((m) =>
-      isDirect
-        ? (m.sender_clerk_id === userId && m.receiver_clerk_id === receiverId) ||
-          (m.sender_clerk_id === receiverId && m.receiver_clerk_id === userId)
-        : m.order_id === selectedTicket.order_id
-    );
-
-    if (!exist) {
-      if (isDirect && receiverId) fetchMessagesData(undefined, receiverId);
-      else fetchMessagesData(String(selectedTicket.order_id), undefined);
-    }
-  }, [selectedTicket, userId]);
-
+  // Mỗi lần đổi hội thoại, luôn fetch lại messages cho hội thoại đó
   useEffect(() => {
     if (!selectedTicket || !userId) return;
-    const relevantMsgs = messages.filter((m) =>
-      selectedTicket.is_direct
-        ? [m.sender_clerk_id, m.receiver_clerk_id].includes(userId) &&
-          [m.sender_clerk_id, m.receiver_clerk_id].includes(
-            selectedTicket.buyer_clerk_id === userId
-              ? selectedTicket.seller_clerk_id
-              : selectedTicket.buyer_clerk_id
-          )
-        : m.order_id === selectedTicket.order_id
-    );
-    setSelectedMessages(relevantMsgs);
-  }, [messages, selectedTicket, userId]);
-
-  useEffect(() => {
-    if (!selectedTicket || !userId) return;
-    if (selectedTicket.is_direct) {
-      const receiverId =
-        selectedTicket.buyer_clerk_id === userId ? selectedTicket.seller_clerk_id : selectedTicket.buyer_clerk_id;
-      markMessagesAsRead(undefined, receiverId);
-    } else {
-      markMessagesAsRead(String(selectedTicket.order_id), undefined);
-    }
-  }, [selectedTicket, userId]);
+    const fetchMsgs = async () => {
+      if (selectedTicket.order_id) {
+        // Ưu tiên fetch theo order_id nếu có
+        console.log("DEBUG fetch order:", { userId, orderId: selectedTicket.order_id, selectedTicket });
+        const msgs = await fetchMessagesData(String(selectedTicket.order_id), undefined);
+        console.log("DEBUG order response:", msgs);
+        setSelectedMessages(msgs);
+      } else if (selectedTicket.is_direct) {
+        // Nếu không có order_id, fetch direct
+        const receiverId = selectedTicket.buyer_clerk_id === userId
+          ? selectedTicket.seller_clerk_id
+          : selectedTicket.buyer_clerk_id;
+        if (!receiverId || receiverId === userId) {
+          setSelectedMessages([]);
+          return;
+        }
+        console.log("DEBUG fetch direct:", { userId, receiverId, selectedTicket });
+        const msgs = await fetchMessagesData(undefined, receiverId);
+        console.log("DEBUG direct response:", msgs);
+        setSelectedMessages(msgs);
+      } else {
+        setSelectedMessages([]);
+      }
+    };
+    fetchMsgs();
+  }, [selectedTicket, userId, fetchMessagesData]);
 
   const selectedTicketId = useMemo(() => {
     if (!selectedTicket) return null;

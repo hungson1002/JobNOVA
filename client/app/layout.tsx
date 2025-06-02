@@ -67,9 +67,9 @@ export default function RootLayout({
       <html lang="en">
         <body className={cn("min-h-screen bg-background font-sans antialiased", inter.className)} suppressHydrationWarning>
           <Toaster richColors position="top-center" />
-          <NotificationProvider>
             <CurrencyProvider>
               <RoleCheck>
+              <NotificationProvider>
                 <MessageProvider>
                   {!isAdminRoute && <Navbar />}
                   <BannedLayout>
@@ -77,9 +77,9 @@ export default function RootLayout({
                   </BannedLayout>
                   {!isAdminRoute && !isMessagesRoute && <Footer />}
                 </MessageProvider>
+                </NotificationProvider>
               </RoleCheck>
             </CurrencyProvider>
-          </NotificationProvider>
         </body>
       </html>
     </ClerkProvider>
