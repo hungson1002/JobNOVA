@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { fetchUser } from "@/lib/api";
 import { useMessages, Message } from "@/hooks/useMessages";
 import MessageThread from "@/components/message/messageThread";
 import { MessageList } from "@/components/message/messageList";
 
-export default function MessagesPage() {
+function MessagesPage() {
   const { userId, isLoaded } = useAuth();
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
   const [recipientInfo, setRecipientInfo] = useState<{ id: string; name: string; avatar: string; online?: boolean }>({
@@ -17,6 +17,7 @@ export default function MessagesPage() {
     online: true,
   });
   const [selectedMessages, setSelectedMessages] = useState<Message[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const {
     tickets,
@@ -35,14 +36,18 @@ export default function MessagesPage() {
     isDirect: selectedTicket?.is_direct ?? false,
   });
 
-  // Chọn ticket đầu tiên nếu chưa có
+  useEffect(() => {
+    if (!loading) {
+      setInitialLoading(false);
+    }
+  }, [loading]);
+
   useEffect(() => {
     if (tickets.length > 0 && !selectedTicket) {
       setSelectedTicket(tickets[0]);
     }
   }, [tickets]);
 
-  // Lấy thông tin người nhận
   useEffect(() => {
     const fetchRecipient = async () => {
       if (!selectedTicket || !userId) return;
@@ -67,7 +72,6 @@ export default function MessagesPage() {
     fetchRecipient();
   }, [selectedTicket, userId]);
 
-  // Tải messages nếu chưa có
   useEffect(() => {
     if (!selectedTicket) return;
     const isDirect = selectedTicket.is_direct;
@@ -90,10 +94,8 @@ export default function MessagesPage() {
     }
   }, [selectedTicket, userId]);
 
-  // Cập nhật selectedMessages theo ticket
   useEffect(() => {
     if (!selectedTicket || !userId) return;
-
     const relevantMsgs = messages.filter((m) =>
       selectedTicket.is_direct
         ? [m.sender_clerk_id, m.receiver_clerk_id].includes(userId) &&
@@ -104,11 +106,9 @@ export default function MessagesPage() {
           )
         : m.order_id === selectedTicket.order_id
     );
-
     setSelectedMessages(relevantMsgs);
   }, [messages, selectedTicket, userId]);
 
-  // Mark messages as read
   useEffect(() => {
     if (!selectedTicket || !userId) return;
     if (selectedTicket.is_direct) {
@@ -120,11 +120,22 @@ export default function MessagesPage() {
     }
   }, [selectedTicket, userId]);
 
+  const selectedTicketId = useMemo(() => {
+    if (!selectedTicket) return null;
+    return selectedTicket.is_direct
+      ? selectedTicket.buyer_clerk_id === userId
+        ? selectedTicket.seller_clerk_id
+        : selectedTicket.buyer_clerk_id
+      : selectedTicket.order_id;
+  }, [selectedTicket, userId]);
+
   if (typeof window === "undefined" || !isLoaded || !userId) return null;
 
   return (
     <main className="container mx-auto px-0 h-[calc(100vh-64px)] flex flex-col">
-      {loading && <div className="text-gray-500 text-sm mb-4">Loading...</div>}
+      {initialLoading && loading && (
+        <div className="text-gray-500 text-sm mb-4">Loading...</div>
+      )}
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       {!loading && !error && tickets.length === 0 && (
         <div className="text-gray-500 text-sm mb-4">No messages to display.</div>
@@ -133,13 +144,7 @@ export default function MessagesPage() {
       <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-white lg:flex-row">
         <MessageList
           tickets={tickets}
-          selectedTicketId={
-            selectedTicket?.is_direct
-              ? selectedTicket?.buyer_clerk_id === userId
-                ? selectedTicket?.seller_clerk_id
-                : selectedTicket?.buyer_clerk_id
-              : selectedTicket?.order_id
-          }
+          selectedTicketId={selectedTicketId}
           onSelectTicket={setSelectedTicket}
           userId={userId}
         />
@@ -154,7 +159,12 @@ export default function MessagesPage() {
                     ? selectedTicket.seller_clerk_id
                     : selectedTicket.buyer_clerk_id
                   : selectedTicket.seller_clerk_id;
-                await sendMessage(content, userId, receiverId, selectedTicket.order_id ? String(selectedTicket.order_id) : undefined);
+                await sendMessage(
+                  content,
+                  userId,
+                  receiverId,
+                  selectedTicket.order_id ? String(selectedTicket.order_id) : undefined
+                );
               }}
             />
           ) : (
@@ -186,3 +196,5 @@ export default function MessagesPage() {
     </main>
   );
 }
+
+export default memo(MessagesPage);

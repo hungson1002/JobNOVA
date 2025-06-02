@@ -1,9 +1,16 @@
+"use client";
+
 import { useEffect, useRef, useState, memo } from "react";
 import Image from "next/image";
 import { Send, Paperclip, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Message } from "@/hooks/useMessages";
 
 interface MessageThreadProps {
@@ -12,26 +19,42 @@ interface MessageThreadProps {
   onSendMessage: (content: string) => void;
 }
 
-const MessageThreadComponent = ({ messages, recipient, onSendMessage }: MessageThreadProps) => {
+const MessageThreadComponent = ({
+  messages,
+  recipient,
+  onSendMessage,
+}: MessageThreadProps) => {
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastMessageIdRef = useRef<number | null>(null);
 
-  // Tự động scroll xuống dưới khi có tin nhắn mới
+  // Scroll xuống cuối nếu có tin nhắn mới thực sự
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    const last = messages[messages.length - 1];
+    if (!last || last.id === lastMessageIdRef.current) return;
+
+    lastMessageIdRef.current = last.id;
+
+    // Đợi DOM render xong rồi mới scroll
+    const timeout = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+
+    return () => clearTimeout(timeout);
   }, [messages]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
-    onSendMessage(newMessage);
+    onSendMessage(newMessage.trim());
     setNewMessage("");
   };
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return new Date(dateString).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   return (
@@ -46,13 +69,25 @@ const MessageThreadComponent = ({ messages, recipient, onSendMessage }: MessageT
             height={56}
             className="rounded-full border-2 border-emerald-100 shadow-md group-hover:scale-105 transition-transform duration-200"
           />
-          <span className={`absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-white dark:border-gray-900 ${recipient.online ? "bg-emerald-500" : "bg-gray-400"}`}></span>
+          <span
+            className={`absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-white dark:border-gray-900 ${
+              recipient.online ? "bg-emerald-500" : "bg-gray-400"
+            }`}
+          ></span>
         </div>
         <div>
-          <h3 className="font-bold text-lg text-gray-900 dark:text-white group-hover:underline cursor-pointer">{recipient.name}</h3>
+          <h3 className="font-bold text-lg text-gray-900 dark:text-white group-hover:underline cursor-pointer">
+            {recipient.name}
+          </h3>
           <div className="flex items-center gap-2 mt-1">
-            <span className={`h-2 w-2 rounded-full ${recipient.online ? "bg-emerald-500" : "bg-gray-400"}`}></span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{recipient.online ? "Online" : "Offline"}</span>
+            <span
+              className={`h-2 w-2 rounded-full ${
+                recipient.online ? "bg-emerald-500" : "bg-gray-400"
+              }`}
+            ></span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+              {recipient.online ? "Online" : "Offline"}
+            </span>
           </div>
         </div>
       </div>
@@ -76,7 +111,9 @@ const MessageThreadComponent = ({ messages, recipient, onSendMessage }: MessageT
               return (
                 <div
                   key={`${message.id}-${message.sent_at}`}
-                  className={`flex items-end ${isMe ? "justify-end" : "justify-start"}`}
+                  className={`flex items-end ${
+                    isMe ? "justify-end" : "justify-start"
+                  }`}
                 >
                   {!isMe && (
                     <Image
@@ -87,7 +124,11 @@ const MessageThreadComponent = ({ messages, recipient, onSendMessage }: MessageT
                       className="mr-2 h-8 w-8 rounded-full shadow"
                     />
                   )}
-                  <div className={`max-w-[70%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                  <div
+                    className={`max-w-[70%] flex flex-col ${
+                      isMe ? "items-end" : "items-start"
+                    }`}
+                  >
                     <div
                       className={`rounded-2xl px-4 py-2 shadow-md text-base font-medium break-words ${
                         isMe
@@ -97,10 +138,16 @@ const MessageThreadComponent = ({ messages, recipient, onSendMessage }: MessageT
                     >
                       {message.message_content}
                     </div>
-                    <div className={`mt-1 flex items-center gap-1 text-xs text-gray-400 ${isMe ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`mt-1 flex items-center gap-1 text-xs text-gray-400 ${
+                        isMe ? "justify-end" : "justify-start"
+                      }`}
+                    >
                       <span>{formatTime(message.sent_at)}</span>
                       {isMe && (
-                        <span className="ml-1">{message.is_read ? "Read" : "Sent"}</span>
+                        <span className="ml-1">
+                          {message.is_read ? "Read" : "Sent"}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -118,7 +165,12 @@ const MessageThreadComponent = ({ messages, recipient, onSendMessage }: MessageT
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" className="shrink-0 hover:bg-emerald-100 dark:hover:bg-gray-800">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 hover:bg-emerald-100 dark:hover:bg-gray-800"
+                >
                   <Paperclip className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
@@ -138,7 +190,12 @@ const MessageThreadComponent = ({ messages, recipient, onSendMessage }: MessageT
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" className="shrink-0 hover:bg-emerald-100 dark:hover:bg-gray-800">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 hover:bg-emerald-100 dark:hover:bg-gray-800"
+                >
                   <Smile className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
