@@ -92,79 +92,107 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
     return { ...user, name };
   };
 
+  // Loại bỏ ticket trùng key (chỉ dựa vào direct_${otherUserId} hoặc order_${ticket.order_id})
+  const seenKeys = new Set();
+  const uniqueTickets = filteredTickets.filter(ticket => {
+    const isDirect = ticket.is_direct || !ticket.order_id;
+    const otherUserId = isDirect
+      ? (ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id)
+      : (ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id);
+    const key = isDirect
+      ? `direct_${otherUserId}`
+      : `order_${ticket.order_id}`;
+    if (seenKeys.has(key)) return false;
+    seenKeys.add(key);
+    return true;
+  });
+
   return (
-    <div className="w-full border-r lg:w-80">
-      <div className="border-b p-3">
+    <div className="w-full border-r lg:w-80 bg-gradient-to-b from-white via-gray-50 to-emerald-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 h-full rounded-l-2xl shadow-lg">
+      <div className="border-b p-4 bg-white/80 dark:bg-gray-900/80 rounded-tl-2xl">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
-            className="pl-9"
-            placeholder="Search messages"
+            className="pl-9 rounded-full border-2 border-gray-200 focus:border-emerald-500 bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:focus:border-emerald-500 transition"
+            placeholder="Tìm kiếm hội thoại..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
       <Tabs defaultValue="all">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="unread">Unread</TabsTrigger>
-          <TabsTrigger value="archived">Archived</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 rounded-full bg-gray-100 dark:bg-gray-800 my-2">
+          <TabsTrigger value="all" className="rounded-full data-[state=active]:bg-emerald-500 data-[state=active]:text-white">Tất cả</TabsTrigger>
+          <TabsTrigger value="unread" className="rounded-full data-[state=active]:bg-emerald-500 data-[state=active]:text-white">Chưa đọc</TabsTrigger>
+          <TabsTrigger value="archived" className="rounded-full data-[state=active]:bg-emerald-500 data-[state=active]:text-white">Lưu trữ</TabsTrigger>
         </TabsList>
-        <div className="h-[calc(100vh-300px)] overflow-y-auto">
+        <div className="h-[calc(100vh-300px)] overflow-y-auto custom-scrollbar pr-1">
           <TabsContent value="all" className="m-0">
-            {filteredTickets.map((ticket) => {
+            {uniqueTickets.map((ticket) => {
               // Xác định loại ticket
               const isDirect = ticket.is_direct || !ticket.order_id;
-              // Lấy userId của người đối thoại
               const otherUserId = isDirect 
                 ? (ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id)
                 : (ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id);
               const userInfo = getUserInfo(otherUserId);
 
+              // Fix linter: kiểm tra ticket.messages tồn tại và là mảng, nếu không thì fallback chỉ dùng last_message
+              // Thêm type cho msg là any để tránh lỗi TS
+              let unreadCount = 0;
+              const anyTicket = ticket as any;
+              if (anyTicket.messages && Array.isArray(anyTicket.messages)) {
+                unreadCount = anyTicket.messages.filter(
+                  (msg: any) => msg.receiver_clerk_id === userId && !msg.is_read
+                ).length;
+              } else if (ticket.message_count > 0 && ticket.last_message && !ticket.last_message.is_read && (ticket.last_message as any).receiver_clerk_id === userId) {
+                unreadCount = 1;
+              }
+
               return (
                 <div
-                  key={isDirect ? otherUserId : ticket.order_id}
-                  className={`flex cursor-pointer items-start gap-3 border-b p-3 hover:bg-gray-50 ${
-                    selectedTicketId === String(isDirect ? otherUserId : ticket.order_id) ? "bg-gray-50" : ""
+                  key={isDirect ? `direct_${otherUserId}` : `order_${ticket.order_id}`}
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl mb-2 px-3 py-3 transition-all border border-transparent hover:border-emerald-200 hover:bg-emerald-50/60 dark:hover:bg-gray-800/60 shadow-sm ${
+                    selectedTicketId === String(isDirect ? otherUserId : ticket.order_id) ? "border-emerald-400 bg-emerald-50/80 dark:bg-gray-800/80" : "bg-white dark:bg-gray-900"
                   }`}
                   onClick={() => onSelectTicket({ ...ticket, last_message: ticket.last_message ?? undefined })}
                 >
-                  <div className="relative">
+                  <div className="relative group">
                     <Image
                       src={userInfo.avatar}
                       alt={userInfo.name}
-                      width={40}
-                      height={40}
-                      className="rounded-full"
+                      width={48}
+                      height={48}
+                      className="rounded-full border-2 border-emerald-100 shadow group-hover:scale-105 transition-transform duration-200"
                     />
+                    {/* Badge online giả lập, nếu muốn realtime thì truyền prop online vào userInfo */}
+                    <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 bg-emerald-400"></span>
                   </div>
-                  <div className="flex-1 overflow-hidden">
+                  <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-medium">
+                      <h3 className="font-bold text-base truncate text-gray-900 dark:text-white">
                         {isDirect ? userInfo.name : `Order #${ticket.order_id}`}
                       </h3>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-400 font-semibold">
                         {ticket.last_message?.sent_at ? formatDate(ticket.last_message.sent_at) : ""}
                       </span>
                     </div>
-                    <p className="truncate text-sm text-gray-600">
-                      {ticket.last_message?.message_content || "No messages"}
+                    <p className="truncate text-sm text-gray-600 dark:text-gray-300 mt-1">
+                      {ticket.last_message?.message_content || <span className="italic text-gray-400">Chưa có tin nhắn</span>}
                     </p>
                     <div className="mt-1 flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs px-2 py-0.5 rounded-full border-emerald-300 bg-emerald-50 text-emerald-700">
                         {isDirect ? "Direct" : ticket.status}
                       </Badge>
                       {!isDirect && ticket.order_status && (
-                        <span className="text-xs text-gray-500">{ticket.order_status}</span>
+                        <span className="text-xs text-gray-400 font-medium">{ticket.order_status}</span>
                       )}
-                      <span className="text-xs text-gray-500">{ticket.message_count} msg</span>
+                      <span className="text-xs text-gray-400 font-medium">{ticket.message_count} tin</span>
                     </div>
                   </div>
-                  {ticket.message_count > 0 && !ticket.last_message?.is_read && (
-                    <Badge className="h-5 w-5 rounded-full bg-emerald-500 p-0 text-center">
-                      {ticket.message_count}
-                    </Badge>
+                  {unreadCount > 0 && (
+                    <span className="ml-2 flex items-center justify-center h-6 w-6 rounded-full bg-emerald-500 text-white text-xs font-bold shadow border-2 border-white dark:border-gray-900">
+                      {unreadCount}
+                    </span>
                   )}
                 </div>
               );
@@ -178,8 +206,8 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
               return (
                 <div
                   key={ticket.order_id || userId}
-                  className={`flex cursor-pointer items-start gap-3 border-b p-3 hover:bg-gray-50 ${
-                    selectedTicketId === String(ticket.order_id) ? "bg-gray-50" : ""
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl mb-2 px-3 py-3 transition-all border border-transparent hover:border-emerald-200 hover:bg-emerald-50/60 dark:hover:bg-gray-800/60 shadow-sm ${
+                    selectedTicketId === String(ticket.order_id) ? "border-emerald-400 bg-emerald-50/80 dark:bg-gray-800/80" : "bg-white dark:bg-gray-900"
                   }`}
                   onClick={() =>
                     onSelectTicket({
@@ -188,43 +216,43 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
                     })
                   }
                 >
-                  <div className="relative">
+                  <div className="relative group">
                     <Image
                       src={userInfo.avatar}
                       alt={userInfo.name}
-                      width={40}
-                      height={40}
-                      className="rounded-full"
+                      width={48}
+                      height={48}
+                      className="rounded-full border-2 border-emerald-100 shadow group-hover:scale-105 transition-transform duration-200"
                     />
+                    {/* Badge online giả lập, nếu muốn realtime thì truyền prop online vào userInfo */}
+                    <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 bg-emerald-400"></span>
                   </div>
-                  <div className="flex-1 overflow-hidden">
+                  <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-medium">
+                      <h3 className="font-bold text-base truncate text-gray-900 dark:text-white">
                         {isDirect ? userInfo.name : `Order #${ticket.order_id}`}
                       </h3>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-400 font-semibold">
                         {ticket.last_message?.sent_at ? formatDate(ticket.last_message.sent_at) : ""}
                       </span>
                     </div>
-                    <p className="truncate text-sm text-gray-600">
-                      {ticket.last_message?.message_content || "No messages"}
+                    <p className="truncate text-sm text-gray-600 dark:text-gray-300 mt-1">
+                      {ticket.last_message?.message_content || <span className="italic text-gray-400">Chưa có tin nhắn</span>}
                     </p>
                     <div className="mt-1 flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs px-2 py-0.5 rounded-full border-emerald-300 bg-emerald-50 text-emerald-700">
                         {isDirect ? "Direct" : ticket.status}
                       </Badge>
-                      {!isDirect && (
-                        <span className="text-xs text-gray-500">{ticket.order_status}</span>
+                      {!isDirect && ticket.order_status && (
+                        <span className="text-xs text-gray-400 font-medium">{ticket.order_status}</span>
                       )}
-                      {!isDirect && (
-                        <span className="text-xs text-gray-500">{ticket.message_count} msg</span>
-                      )}
+                      <span className="text-xs text-gray-400 font-medium">{ticket.message_count} tin</span>
                     </div>
                   </div>
                   {ticket.message_count > 0 && !ticket.last_message?.is_read && (
-                    <Badge className="h-5 w-5 rounded-full bg-emerald-500 p-0 text-center">
+                    <span className="ml-2 flex items-center justify-center h-6 w-6 rounded-full bg-emerald-500 text-white text-xs font-bold shadow border-2 border-white dark:border-gray-900">
                       {ticket.message_count}
-                    </Badge>
+                    </span>
                   )}
                 </div>
               );

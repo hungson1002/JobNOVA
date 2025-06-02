@@ -2,34 +2,47 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { MessageList } from "@/components/message/messageList";
-import { useMessages } from "@/hooks/useMessages";
-import { MessageThread } from "@/components/message/messageThread";
 import { fetchUser } from "@/lib/api";
+import { useMessages, Message } from "@/hooks/useMessages";
+import MessageThread from "@/components/message/messageThread";
+import { MessageList } from "@/components/message/messageList";
 
 export default function MessagesPage() {
   const { userId, isLoaded } = useAuth();
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
-  const { tickets, loading, error, sendMessage, fetchMessagesData, messages } = useMessages({
-    orderId: selectedTicket?.order_id ? String(selectedTicket.order_id) : undefined,
-    receiverId: selectedTicket?.is_direct
-      ? (selectedTicket?.buyer_clerk_id === userId
-          ? selectedTicket?.seller_clerk_id
-          : selectedTicket?.buyer_clerk_id)
-      : undefined,
-    isDirect: selectedTicket?.is_direct || false,
+  const [recipientInfo, setRecipientInfo] = useState<{ id: string; name: string; avatar: string; online?: boolean }>({
+    id: "",
+    name: "User",
+    avatar: "/placeholder.svg",
+    online: true,
   });
-  const [recipientInfo, setRecipientInfo] = useState<{ id: string; name: string; avatar: string; online?: boolean }>({ id: "", name: "User", avatar: "/placeholder.svg", online: true });
+  const [selectedMessages, setSelectedMessages] = useState<Message[]>([]);
 
+  const {
+    tickets,
+    messages,
+    loading,
+    error,
+    sendMessage,
+    fetchMessagesData,
+    fetchTicketsData,
+    markMessagesAsRead,
+  } = useMessages({
+    orderId: selectedTicket?.order_id ?? null,
+    receiverId: selectedTicket?.is_direct
+      ? (selectedTicket?.buyer_clerk_id === userId ? selectedTicket?.seller_clerk_id : selectedTicket?.buyer_clerk_id)
+      : undefined,
+    isDirect: selectedTicket?.is_direct ?? false,
+  });
+
+  // Chọn ticket đầu tiên nếu chưa có
   useEffect(() => {
     if (tickets.length > 0 && !selectedTicket) {
       setSelectedTicket(tickets[0]);
     }
   }, [tickets]);
 
+  // Lấy thông tin người nhận
   useEffect(() => {
     const fetchRecipient = async () => {
       if (!selectedTicket || !userId) return;
@@ -41,10 +54,9 @@ export default function MessagesPage() {
         const user = await fetchUser(recipientId, "");
         setRecipientInfo({
           id: recipientId,
-          name:
-            (user.lastname && user.firstname)
-              ? `${user.lastname} ${user.firstname}`
-              : (user.firstname || user.lastname || user.username || "User"),
+          name: user.lastname && user.firstname
+            ? `${user.lastname} ${user.firstname}`
+            : user.firstname || user.lastname || user.username || "User",
           avatar: user.avatar || "/placeholder.svg",
           online: true,
         });
@@ -55,22 +67,63 @@ export default function MessagesPage() {
     fetchRecipient();
   }, [selectedTicket, userId]);
 
-  if (!isLoaded || !userId) {
-    return <div>Loading...</div>;
-  }
+  // Tải messages nếu chưa có
+  useEffect(() => {
+    if (!selectedTicket) return;
+    const isDirect = selectedTicket.is_direct;
+    const receiverId = isDirect
+      ? selectedTicket.buyer_clerk_id === userId
+        ? selectedTicket.seller_clerk_id
+        : selectedTicket.buyer_clerk_id
+      : null;
+
+    const exist = messages.some((m) =>
+      isDirect
+        ? (m.sender_clerk_id === userId && m.receiver_clerk_id === receiverId) ||
+          (m.sender_clerk_id === receiverId && m.receiver_clerk_id === userId)
+        : m.order_id === selectedTicket.order_id
+    );
+
+    if (!exist) {
+      if (isDirect && receiverId) fetchMessagesData(undefined, receiverId);
+      else fetchMessagesData(String(selectedTicket.order_id), undefined);
+    }
+  }, [selectedTicket, userId]);
+
+  // Cập nhật selectedMessages theo ticket
+  useEffect(() => {
+    if (!selectedTicket || !userId) return;
+
+    const relevantMsgs = messages.filter((m) =>
+      selectedTicket.is_direct
+        ? [m.sender_clerk_id, m.receiver_clerk_id].includes(userId) &&
+          [m.sender_clerk_id, m.receiver_clerk_id].includes(
+            selectedTicket.buyer_clerk_id === userId
+              ? selectedTicket.seller_clerk_id
+              : selectedTicket.buyer_clerk_id
+          )
+        : m.order_id === selectedTicket.order_id
+    );
+
+    setSelectedMessages(relevantMsgs);
+  }, [messages, selectedTicket, userId]);
+
+  // Mark messages as read
+  useEffect(() => {
+    if (!selectedTicket || !userId) return;
+    if (selectedTicket.is_direct) {
+      const receiverId =
+        selectedTicket.buyer_clerk_id === userId ? selectedTicket.seller_clerk_id : selectedTicket.buyer_clerk_id;
+      markMessagesAsRead(undefined, receiverId);
+    } else {
+      markMessagesAsRead(String(selectedTicket.order_id), undefined);
+    }
+  }, [selectedTicket, userId]);
+
+  if (typeof window === "undefined" || !isLoaded || !userId) return null;
 
   return (
-    <main className="container mx-auto px-4 py-8 h-screen flex flex-col">
-      <div className="mb-6 flex items-center">
-        <Button variant="ghost" size="sm" className="mr-4" asChild>
-          <Link href="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Link>
-        </Button>
-        <h1 className="text-3xl font-bold">Messages</h1>
-      </div>
-
+    <main className="container mx-auto px-0 h-[calc(100vh-64px)] flex flex-col">
       {loading && <div className="text-gray-500 text-sm mb-4">Loading...</div>}
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       {!loading && !error && tickets.length === 0 && (
@@ -80,29 +133,28 @@ export default function MessagesPage() {
       <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-white lg:flex-row">
         <MessageList
           tickets={tickets}
-          selectedTicketId={selectedTicket?.is_direct ? (selectedTicket?.buyer_clerk_id === userId ? selectedTicket?.seller_clerk_id : selectedTicket?.buyer_clerk_id) : selectedTicket?.order_id}
+          selectedTicketId={
+            selectedTicket?.is_direct
+              ? selectedTicket?.buyer_clerk_id === userId
+                ? selectedTicket?.seller_clerk_id
+                : selectedTicket?.buyer_clerk_id
+              : selectedTicket?.order_id
+          }
           onSelectTicket={setSelectedTicket}
           userId={userId}
         />
-        <div className="flex flex-1 flex-col h-full min-h-0">
+        <div className="flex flex-1 flex-col h-full min-h-0 overflow-y-auto">
           {selectedTicket ? (
             <MessageThread
-              messages={messages}
+              messages={selectedMessages}
               recipient={recipientInfo}
               onSendMessage={async (content) => {
-                if (!selectedTicket) return;
                 const receiverId = selectedTicket.is_direct
-                  ? (selectedTicket.buyer_clerk_id === userId
-                      ? selectedTicket.seller_clerk_id
-                      : selectedTicket.buyer_clerk_id)
+                  ? selectedTicket.buyer_clerk_id === userId
+                    ? selectedTicket.seller_clerk_id
+                    : selectedTicket.buyer_clerk_id
                   : selectedTicket.seller_clerk_id;
-                await sendMessage(
-                  content,
-                  userId,
-                  receiverId,
-                  selectedTicket.order_id ? String(selectedTicket.order_id) : undefined
-                );
-                fetchMessagesData();
+                await sendMessage(content, userId, receiverId, selectedTicket.order_id ? String(selectedTicket.order_id) : undefined);
               }}
             />
           ) : (

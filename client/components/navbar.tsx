@@ -26,6 +26,8 @@ import {
 import { useNotificationSocket } from "@/hooks/useNotificationSocket";
 import { toast } from "sonner";
 import { useNotification } from "@/context/notification-context";
+import { useMessageContext } from "@/context/message-context";
+import { fetchUser } from "@/lib/api";
 
 export function Navbar() {
   const { isSignedIn, isLoaded, user } = useUser()
@@ -58,6 +60,9 @@ export function Navbar() {
   const [openSystemModal, setOpenSystemModal] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<any>(null);
   const [openHelpModal, setOpenHelpModal] = useState(false);
+  const { tickets, loading: loadingMessages, fetchTicketsData } = useMessageContext();
+  const msgRef = useRef<HTMLDivElement>(null);
+  const [userInfoMap, setUserInfoMap] = useState<Record<string, { name: string; avatar: string }>>({});
 
   useNotificationSocket(userId ?? "", (notification) => {
     toast(`🔔 ${notification.title}: ${notification.message}`);
@@ -110,6 +115,19 @@ useEffect(() => {
       }
     };
 
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Ẩn dropdown message khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (msgRef.current && !msgRef.current.contains(event.target as Node)) {
+        setOpenMsg(false);
+      }
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -320,6 +338,55 @@ useEffect(() => {
   useEffect(() => {
     setOpenNotify(false);
   }, [pathname]);
+
+  // Fetch tên và avatar cho user liên quan đến ticket
+  useEffect(() => {
+    const fetchAll = async () => {
+      const uniqueUserIds = Array.from(new Set(tickets.map(t => {
+        if (!t.order_id) return t.buyer_clerk_id === userId ? t.seller_clerk_id : t.buyer_clerk_id;
+        return t.buyer_clerk_id === userId ? t.seller_clerk_id : t.buyer_clerk_id;
+      })));
+      for (const clerkId of uniqueUserIds) {
+        if (clerkId && !userInfoMap[clerkId]) {
+          try {
+            const userData = await fetchUser(clerkId, "");
+            setUserInfoMap(prev => ({
+              ...prev,
+              [clerkId]: {
+                name: (userData.lastname && userData.firstname)
+                  ? `${userData.lastname} ${userData.firstname}`
+                  : (userData.firstname || userData.lastname || userData.username || "User"),
+                avatar: userData.avatar || "/placeholder.svg",
+              },
+            }));
+          } catch {}
+        }
+      }
+    };
+    fetchAll();
+  }, [tickets, userId]);
+
+  // Helper lấy user info
+  const getUserInfo = (clerkId: string) => {
+    return userInfoMap[clerkId] || { name: "User", avatar: "/placeholder.svg" };
+  };
+
+  const filteredTickets = tickets.filter(ticket => ticket.last_message && ticket.last_message.message_content);
+
+  // Loại bỏ ticket trùng key cho dropdown message (chỉ dựa vào direct_${otherUserId} hoặc order_${ticket.order_id})
+  const seenMsgKeys = new Set();
+  const uniqueDropdownTickets = filteredTickets.filter(ticket => {
+    const isDirect = ticket.is_direct || !ticket.order_id;
+    const otherUserId = isDirect
+      ? (ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id)
+      : (ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id);
+    const key = isDirect
+      ? `direct_${otherUserId}`
+      : `order_${ticket.order_id}`;
+    if (seenMsgKeys.has(key)) return false;
+    seenMsgKeys.add(key);
+    return true;
+  });
 
   return (
     <>
@@ -547,26 +614,99 @@ useEffect(() => {
                     )}
                   </div>
 
-                  {/* Message button with tooltip */}
-                  <TooltipProvider delayDuration={0}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Link href="/messages">
+                  {/* Message Dropdown giống notification */}
+                  <div className="relative flex items-center" ref={msgRef}>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Button
+                            onClick={() => {
+                              setOpenMsg(!openMsg);
+                              if (!openMsg) fetchTicketsData();
+                            }}
                             variant="ghost"
                             size="icon"
                             className="hidden md:flex hover:bg-emerald-50 hover:text-emerald-600 transition-colors focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 !outline-none !ring-0"
-                            style={{ outline: "none", boxShadow: "none" }}
+                            style={{ outline: "none", boxShadow: "none", position: "relative" }}
                           >
                             <MessageSquare className="h-5 w-5" />
+                            {(() => {
+                              const unreadCount = tickets.reduce((sum, t) => sum + (t.unread_count ?? 0), 0);
+                              return unreadCount > 0 ? (
+                                <span
+                                  className="absolute -top-2 -right-2 min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-gradient-to-tr from-emerald-400 to-emerald-600 shadow-lg border-2 border-white text-white text-base font-bold px-1 select-none transition-all duration-200"
+                                  style={{ zIndex: 2 }}
+                                >
+                                  {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
+                              ) : null;
+                            })()}
                           </Button>
-                        </Link>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Messages</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Messages</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    {openMsg && (
+                      <div className="absolute top-full right-0 z-50 w-80 bg-white shadow-lg rounded-[4px] flex flex-col h-[467px]">
+                        <div className="font-semibold px-4 py-2 border-b">Messages</div>
+                        <div className="h-96 flex-1 overflow-y-auto divide-y divide-gray-100">
+                          {loadingMessages ? (
+                            <div className="flex flex-col gap-3 p-4">
+                              {[...Array(3)].map((_, i) => (
+                                <div key={i} className="flex gap-3 items-center animate-pulse">
+                                  <div className="w-8 h-8 rounded-full bg-gray-200" />
+                                  <div className="flex-1 space-y-2">
+                                    <div className="h-3 w-1/2 bg-gray-200 rounded" />
+                                    <div className="h-2 w-1/3 bg-gray-100 rounded" />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : uniqueDropdownTickets.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                              <MessageSquare className="mb-2 h-10 w-10 text-gray-300" />
+                              <p className="text-sm text-gray-500">No messages yet</p>
+                            </div>
+                          ) : (
+                            uniqueDropdownTickets.slice(0, 5).map((ticket) => {
+                              const lastMsg = ticket.last_message;
+                              const isDirect = ticket.is_direct || !ticket.order_id;
+                              const otherUserId = isDirect
+                                ? (ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id)
+                                : (ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id);
+                              const userInfo = getUserInfo(otherUserId);
+                              const name = isDirect ? userInfo.name : `Order #${ticket.order_id}`;
+                              const avatar = userInfo.avatar;
+                              const timeAgo = lastMsg?.sent_at ? formatDistanceToNow(new Date(lastMsg.sent_at), { addSuffix: true }) : "";
+                              const isUnread = !!(lastMsg && (lastMsg as any).is_read === false && (lastMsg as any).receiver_clerk_id === userId);
+                              return (
+                                <div key={isDirect ? `direct_${otherUserId}` : `order_${ticket.order_id}`}
+                                  className={`relative flex gap-3 items-start whitespace-normal py-3 px-4 cursor-pointer transition-colors hover:bg-emerald-100 border-l-4 border-transparent ${isUnread ? 'bg-emerald-50 font-semibold' : 'bg-white'}`}
+                                  onClick={() => router.push(`/messages/${isDirect ? otherUserId : ticket.order_id}`)}>
+                                  <div className="flex-shrink-0 mt-1">
+                                    <img src={avatar} alt={name} className="h-8 w-8 rounded-full border border-emerald-100 object-cover" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm truncate">{name}</div>
+                                    <div className="text-xs text-gray-400 mb-1">{timeAgo}</div>
+                                    <div className="text-sm text-gray-700 truncate">{lastMsg?.message_content || "No message"}</div>
+                                  </div>
+                                  {(ticket.unread_count ?? 0) > 0 && (
+                                    <span className="ml-2 w-6 h-6 flex items-center justify-center rounded-full bg-emerald-500 text-white text-xs font-bold">{ticket.unread_count}</span>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        <div className="border-t px-4 py-2 bg-white sticky bottom-0 rounded-b-[4px]">
+                          <Link href="/messages" className="block text-emerald-600 hover:underline w-full text-center text-sm font-medium pt-2">View all messages</Link>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Saved Tooltip */}
                   <TooltipProvider delayDuration={0}>

@@ -235,7 +235,7 @@ export default function ManageGigsPage() {
         headers: {
           "Authorization": `Bearer ${await getToken()}`,
           "Content-Type": "application/json"
-        },
+          },
         body: JSON.stringify({ reason: deleteReason }) // Gửi lý do xóa lên BE
       });
       setGigs(prev => prev.filter(gig => gig.id !== gigToDelete.id));
@@ -858,21 +858,21 @@ export default function ManageGigsPage() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="deleteReason">Reason for deletion</Label>
-              <Input
+            <Input
                 id="deleteReason"
-                value={deleteReason}
+              value={deleteReason}
                 onChange={(e) => setDeleteReason(e.target.value)}
                 placeholder="Enter reason for deletion..."
                 className="w-full"
-              />
+            />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleDelete}
               disabled={!deleteReason.trim()}
             >

@@ -81,8 +81,8 @@ export default function ManageSlidesPage() {
         });
         const data = await res.json();
         if (data.success && typeof data.fileUrl === 'string') {
-          setFormData(prev => ({
-            ...prev,
+        setFormData(prev => ({
+          ...prev,
             image: data.fileUrl, // Đảm bảo là string
             imagePreview: data.fileUrl
           }));

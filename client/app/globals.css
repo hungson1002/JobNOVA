@@ -132,3 +132,9 @@ input, select, textarea {
 .dark .dark-transition {
   @apply transition-all duration-300;
 }
+
+/* Ẩn scroll ngoài cùng khi ở trang messages */
+.no-scroll, .no-scroll body, .no-scroll html, body.no-scroll, html.no-scroll {
+  overflow: hidden !important;
+  height: 100vh !important;
+}

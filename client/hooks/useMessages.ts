@@ -26,8 +26,16 @@ export interface Ticket {
   seller_clerk_id: string;
   order_status: string | null;
   status: "open" | "closed";
-  last_message: { message_content: string; sent_at: string } | null;
+  last_message: {
+    message_content: string;
+    sent_at: string;
+    is_read?: boolean;
+    receiver_clerk_id?: string;
+    sender_clerk_id?: string;
+    ticket_status?: string;
+  } | null;
   message_count: number;
+  unread_count?: number;
   is_direct?: boolean;
 }
 
@@ -124,32 +132,95 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
             },
           ]);
         }
-        setTickets((prev) =>
-          prev.map((t) =>
-            t.order_id === msg.order_id && t.order_id !== undefined && msg.order_id !== null
-              ? {
-                  ...t,
-                  last_message: {
-                    message_content: msg.message_content,
-                    sent_at: msg.sent_at,
-                  },
-                  message_count: (t.message_count || 0) + 1,
-                }
-              : t
-          )
-        );
+        setTickets((prev) => {
+          let updated = false;
+          const newTickets = prev.map((t) => {
+            // Order message
+            if (msg.order_id && t.order_id === Number(msg.order_id)) {
+              if (msg.receiver_clerk_id === userId && !msg.is_read) {
+                updated = true;
+                return { ...t, unread_count: (t.unread_count || 0) + 1 };
+              }
+              return t;
+            }
+            // Direct message
+            if (!msg.order_id && t.is_direct && (t.buyer_clerk_id === msg.sender_clerk_id || t.seller_clerk_id === msg.sender_clerk_id)) {
+              if (msg.receiver_clerk_id === userId && !msg.is_read) {
+                updated = true;
+                return { ...t, unread_count: (t.unread_count || 0) + 1 };
+              }
+              return t;
+            }
+            return t;
+          });
+          // Nếu chưa có ticket này, thêm mới (giữ nguyên logic cũ)
+          if (!updated) {
+            if (msg.order_id) {
+              const orderIdNum = Number(msg.order_id);
+              newTickets.push({
+                ticket_id: msg.id,
+                order_id: orderIdNum,
+                buyer_clerk_id: msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id,
+                seller_clerk_id: msg.sender_clerk_id === userId ? msg.sender_clerk_id : msg.receiver_clerk_id,
+                order_status: null,
+                status: "open",
+                last_message: {
+                  message_content: msg.message_content,
+                  sent_at: msg.sent_at,
+                  is_read: msg.is_read,
+                  receiver_clerk_id: msg.receiver_clerk_id,
+                  sender_clerk_id: msg.sender_clerk_id,
+                },
+                message_count: 1,
+                is_direct: false,
+              });
+            } else {
+              const otherUserId = msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id;
+              newTickets.push({
+                ticket_id: msg.id,
+                order_id: null,
+                buyer_clerk_id: msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id,
+                seller_clerk_id: msg.sender_clerk_id === userId ? msg.sender_clerk_id : msg.receiver_clerk_id,
+                order_status: null,
+                status: "open",
+                last_message: {
+                  message_content: msg.message_content,
+                  sent_at: msg.sent_at,
+                  is_read: msg.is_read,
+                  receiver_clerk_id: msg.receiver_clerk_id,
+                  sender_clerk_id: msg.sender_clerk_id,
+                },
+                message_count: 1,
+                is_direct: true,
+              });
+            }
+          }
+          return newTickets;
+        });
       }
+      fetchTicketsData();
     });
 
-    socketRef.current.on("messagesRead", ({ messageIds }: { messageIds: number[] }) => {
+    socketRef.current.on("messagesRead", ({ orderId, receiverId, messageIds }: { orderId?: string; receiverId?: string; messageIds: number[] }) => {
       setMessages((prev) =>
         prev.map((m) =>
           messageIds.includes(m.id) ? { ...m, is_read: true } : m
         )
       );
-      setChatWindows((prev) =>
-        prev.map((w) => ({ ...w, unreadCount: 0 }))
+      setTickets((prev) =>
+        prev.map((t) => {
+          // Nếu là order
+          if (orderId && t.order_id === Number(orderId)) {
+            return { ...t, unread_count: 0 };
+          }
+          // Nếu là direct
+          if (receiverId && t.is_direct && (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)) {
+            return { ...t, unread_count: 0 };
+          }
+          return t;
+        })
       );
+      fetchTicketsData();
     });
 
     return () => {
@@ -188,8 +259,14 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
             if (!existingTicket.last_message || new Date(msg.sent_at) > new Date(existingTicket.last_message.sent_at)) {
               existingTicket.last_message = {
                 message_content: msg.message_content,
-                sent_at: msg.sent_at
+                sent_at: msg.sent_at,
+                is_read: msg.is_read,
+                receiver_clerk_id: msg.receiver_clerk_id,
+                sender_clerk_id: msg.sender_clerk_id,
               };
+            }
+            if (msg.receiver_clerk_id === userId && !msg.is_read) {
+              existingTicket.unread_count = (existingTicket.unread_count || 0) + 1;
             }
           } else {
             acc.push({
@@ -201,9 +278,13 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
               status: "open",
               last_message: {
                 message_content: msg.message_content,
-                sent_at: msg.sent_at
+                sent_at: msg.sent_at,
+                is_read: msg.is_read,
+                receiver_clerk_id: msg.receiver_clerk_id,
+                sender_clerk_id: msg.sender_clerk_id,
               },
               message_count: 1,
+              unread_count: msg.receiver_clerk_id === userId && !msg.is_read ? 1 : 0,
               is_direct: true
             });
           }
@@ -227,40 +308,41 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
   }, [userId, getToken]);
 
   // Fetch messages
-  const fetchMessagesData = useCallback(async () => {
-    if (!userId) return;
+  const fetchMessagesData = useCallback(async (orderIdParam?: string, receiverIdParam?: string) => {
+    if (!userId) return [];
     setLoading(true);
     setError(null);
     try {
       const token = await getToken();
       if (!token) throw new Error("Token is missing");
       let data;
-      
-      if (isDirect) {
-        if (!receiverId) {
-          // Nếu không có receiverId, fetch tất cả direct messages
+      let msgs: Message[] = [];
+      if (isDirect || receiverIdParam) {
+        if (!receiverIdParam) {
           data = await fetchDirectMessages(userId, "", token);
         } else {
-          // Nếu có receiverId, fetch direct messages với người nhận cụ thể
-          data = await fetchDirectMessages(userId, receiverId, token);
+          data = await fetchDirectMessages(userId, receiverIdParam, token);
         }
       } else {
-        if (!orderId) return;
-        data = await fetchMessages(orderId, token);
+        if (!orderIdParam) return [];
+        data = await fetchMessages(orderIdParam, token);
       }
-
       if (data.success) {
-        setMessages(data.messages || []);
+        msgs = data.messages || [];
+        setMessages(msgs);
+        return msgs;
       } else {
         setError(data.message || "Không thể tải tin nhắn");
+        return [];
       }
     } catch (err) {
       console.error("Fetch messages error:", err);
       setError("Lỗi kết nối mạng hoặc server không phản hồi");
+      return [];
     } finally {
       setLoading(false);
     }
-  }, [userId, orderId, receiverId, isDirect, getToken]);
+  }, [userId, isDirect, getToken]);
 
   // Join rooms mỗi khi orderId, receiverId, isDirect thay đổi
   useEffect(() => {

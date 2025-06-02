@@ -15,6 +15,7 @@ import { CurrencyProvider } from "@/context/currency-context"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { NotificationProvider } from "@/context/notification-context"
+import { MessageProvider } from "@/context/message-context"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -50,6 +51,17 @@ export default function RootLayout({
   const isAdminRoute = pathname.startsWith("/admin");
   const isMessagesRoute = pathname.startsWith("/messages");
 
+  useEffect(() => {
+    if (isMessagesRoute) {
+      document.body.classList.add("no-scroll");
+    } else {
+      document.body.classList.remove("no-scroll");
+    }
+    return () => {
+      document.body.classList.remove("no-scroll");
+    };
+  }, [isMessagesRoute]);
+
   return (
     <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
       <html lang="en">
@@ -58,11 +70,13 @@ export default function RootLayout({
           <NotificationProvider>
             <CurrencyProvider>
               <RoleCheck>
-                {!isAdminRoute && <Navbar />}
-                <BannedLayout>
-                  {children}
-                </BannedLayout>
-                {!isAdminRoute && !isMessagesRoute && <Footer />}
+                <MessageProvider>
+                  {!isAdminRoute && <Navbar />}
+                  <BannedLayout>
+                    {children}
+                  </BannedLayout>
+                  {!isAdminRoute && !isMessagesRoute && <Footer />}
+                </MessageProvider>
               </RoleCheck>
             </CurrencyProvider>
           </NotificationProvider>

@@ -189,16 +189,32 @@ export const getTickets = async (req, res, next) => {
       ],
     });
 
-    const tickets = orders.map((order) => ({
-      ticket_id: order.id,
-      order_id: order.id,
-      buyer_clerk_id: order.buyer_clerk_id,
-      seller_clerk_id: order.seller_clerk_id,
-      order_status: order.order_status,
-      status: order.Messages.length > 0 ? order.Messages[0].ticket_status : "open",
-      last_message: order.Messages.length > 0 ? order.Messages[order.Messages.length - 1] : null,
-      message_count: order.Messages.length,
-    }));
+    const tickets = orders.map((order) => {
+      const lastMsg = order.Messages.length > 0 ? order.Messages[order.Messages.length - 1] : null;
+      const unread_count = order.Messages.filter(
+        m => m.receiver_clerk_id === clerk_id && !m.is_read
+      ).length;
+      return {
+        ticket_id: order.id,
+        order_id: order.id,
+        buyer_clerk_id: order.buyer_clerk_id,
+        seller_clerk_id: order.seller_clerk_id,
+        order_status: order.order_status,
+        status: lastMsg ? lastMsg.ticket_status : "open",
+        last_message: lastMsg
+          ? {
+              message_content: lastMsg.message_content,
+              sent_at: lastMsg.sent_at,
+              is_read: lastMsg.is_read,
+              receiver_clerk_id: lastMsg.receiver_clerk_id,
+              sender_clerk_id: lastMsg.sender_clerk_id,
+              ticket_status: lastMsg.ticket_status,
+            }
+          : null,
+        message_count: order.Messages.length,
+        unread_count,
+      };
+    });
 
     res.status(200).json({ success: true, tickets });
   } catch (err) {
