@@ -1,6 +1,5 @@
 "use client"
 
-import { MessageProvider } from "@/context/message-context"
 import { ClerkProvider, useUser } from "@clerk/nextjs"
 import { Inter } from "next/font/google"
 import type React from "react"
@@ -50,7 +49,7 @@ export default function RootLayout({
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/admin");
   const isMessagesRoute = pathname.startsWith("/messages");
-
+  
   useEffect(() => {
     if (isMessagesRoute) {
       document.body.classList.add("no-scroll");
@@ -63,23 +62,21 @@ export default function RootLayout({
   }, [isMessagesRoute]);
 
   return (
-    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+    <ClerkProvider>
       <html lang="en">
         <body className={cn("min-h-screen bg-background font-sans antialiased", inter.className)} suppressHydrationWarning>
           <Toaster richColors position="top-center" />
-            <CurrencyProvider>
-              <RoleCheck>
+          <CurrencyProvider>
+            <RoleCheck>
               <NotificationProvider>
-                <MessageProvider>
-                  {!isAdminRoute && <Navbar />}
-                  <BannedLayout>
-                    {children}
-                  </BannedLayout>
-                  {!isAdminRoute && !isMessagesRoute && <Footer />}
-                </MessageProvider>
-                </NotificationProvider>
-              </RoleCheck>
-            </CurrencyProvider>
+                <Navbar isVisible={!isAdminRoute} />
+                <BannedLayout>
+                  {children}
+                </BannedLayout>
+                {!isAdminRoute && !isMessagesRoute && <Footer />}
+              </NotificationProvider>
+            </RoleCheck>
+          </CurrencyProvider>
         </body>
       </html>
     </ClerkProvider>

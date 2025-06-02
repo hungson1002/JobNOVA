@@ -26,137 +26,23 @@ import {
 import { useNotificationSocket } from "@/hooks/useNotificationSocket";
 import { toast } from "sonner";
 import { useNotification } from "@/context/notification-context";
-import { useMessageContext } from "@/context/message-context";
+import { useMessages } from "@/hooks/useMessages";
 import { fetchUser } from "@/lib/api";
 
-export function Navbar() {
-  const { unreadCount } = useMessageContext();
-  const { isSignedIn, isLoaded, user } = useUser()
-  const pathname = usePathname()
-  const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>([])
-  const categoriesRef = useRef<HTMLDivElement>(null)
-  const [showLeftButton, setShowLeftButton] = useState(false)
-  const [showRightButton, setShowRightButton] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [openNotify, setOpenNotify] = useState(false);
-  const [openMsg, setOpenMsg] = useState(false);
-  const messages: { title: string; time: string }[] = [] // Thay bằng dữ liệu thực tế nếu có
-  const isAdmin = user?.publicMetadata?.isAdmin
-  const isSeller = user?.publicMetadata?.isSeller
-  const isBuyer = user?.publicMetadata?.isBuyer
-  const { userId, getToken } = useAuth();
+interface NavbarProps {
+  isVisible?: boolean;
+}
+
+// Custom hooks
+function useSearchHistory(userId: string | null, getToken: () => Promise<string | null>) {
   const [searchHistory, setSearchHistory] = useState<any[]>([]);
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const [isDeletingHistory, setIsDeletingHistory] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const clickedInsideDropdownRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const notifyRef = useRef<HTMLDivElement>(null);
-  const { notifications, markAllAsRead, markAsRead, fetchNotifications, loading: loadingNotifications, addNotification } = useNotification();
-  const [openSystemModal, setOpenSystemModal] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<any>(null);
-  const [openHelpModal, setOpenHelpModal] = useState(false);
-  const { tickets, loading: loadingMessages, fetchTicketsData } = useMessageContext();
-  const msgRef = useRef<HTMLDivElement>(null);
-  const [userInfoMap, setUserInfoMap] = useState<Record<string, { name: string; avatar: string }>>({});
 
-
-  useNotificationSocket(userId ?? "", (notification) => {
-    toast(`🔔 ${notification.title}: ${notification.message}`);
-    addNotification(notification);
-  });
-  
-  // Mapping tên category sang icon
-  const categoryIcons: Record<string, React.ReactNode> = {
-    "Web Development": <Globe className="h-4 w-4" />,
-    "Graphic Illustration": <ImageIcon className="h-4 w-4" />,
-    "SEO Services": <TrendingUp className="h-4 w-4" />,
-    "Social Media Management": <Share2 className="h-4 w-4" />,
-    "Animation Design": <Sparkles className="h-4 w-4" />,
-    "Content Creation": <FileText className="h-4 w-4" />,
-    "E-commerce Solutions": <ShoppingCart className="h-4 w-4" />,
-    "UI/UX Design": <Smile className="h-4 w-4" />,
-    "Voice Acting": <Mic className="h-4 w-4" />,
-    "Mobile App Development": <Monitor className="h-4 w-4" />,
-    "Video Editing": <Video className="h-4 w-4" />,
-    "Copywriting": <PenTool className="h-4 w-4" />,
-    "Game Development": <Gamepad2 className="h-4 w-4" />,
-    "Interior Design": <Home className="h-4 w-4" />,
-    "Event Planning": <Calendar className="h-4 w-4" />,
-  };
-
-
-// Ẩn dropdown khi click ra ngoài
-useEffect(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node) &&
-      inputRef.current &&
-      !inputRef.current.contains(event.target as Node)
-    ) {
-      setShowHistoryDropdown(false);
-    }
-  };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Handle click outside for notification dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (notifyRef.current && !notifyRef.current.contains(event.target as Node)) {
-        setOpenNotify(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Ẩn dropdown message khi click ra ngoài
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (msgRef.current && !msgRef.current.contains(event.target as Node)) {
-        setOpenMsg(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  const goToSearch = (keyword: string) => {
-    const query = keyword.trim();
-    if (!query) return;
-    const currentParams = new URLSearchParams(window.location.search);
-    currentParams.set("q", query);
-  
-    let currency = "USD";
-    if (typeof window !== "undefined") {
-      currency = localStorage.getItem("currency") || "USD";
-    }
-  
-    if (!currentParams.get("minPrice")) currentParams.set("minPrice", currency === "VND" ? "0" : "10");
-    if (!currentParams.get("maxPrice")) currentParams.set("maxPrice", currency === "VND" ? "30000000" : "500");
-  
-    router.push(`/search?${currentParams.toString()}`);
-    setSearchQuery(query);
-    setShowHistoryDropdown(false);
-  };
-  
-
-  // Fetch search history
   const fetchSearchHistory = async () => {
     if (!userId) return;
     setLoadingHistory(true);
@@ -178,7 +64,6 @@ useEffect(() => {
     }
   };
 
-  // Save search history
   const handleSaveSearchHistory = async (keyword: string) => {
     if (!userId || !keyword) return;
     try {
@@ -198,7 +83,6 @@ useEffect(() => {
     } catch {}
   };
 
-  // Xóa 1 lịch sử
   const handleDeleteHistory = async (id: number) => {
     if (!userId) return;
     setIsDeletingHistory(true);
@@ -210,10 +94,9 @@ useEffect(() => {
       });
       setSearchHistory((prev) => prev.filter((item) => item.id !== id));
     } catch {}
-    setTimeout(() => setIsDeletingHistory(false), 100); // Đảm bảo flag reset sau thao tác
+    setTimeout(() => setIsDeletingHistory(false), 100);
   };
 
-  // Xóa tất cả lịch sử
   const handleDeleteAllHistory = async () => {
     if (!userId) return;
     setIsDeletingHistory(true);
@@ -228,22 +111,20 @@ useEffect(() => {
     setTimeout(() => setIsDeletingHistory(false), 100);
   };
 
-  // Khi submit search, lưu lịch sử nếu đã đăng nhập
-  const handleSearch = async (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent, searchQuery: string, goToSearch: (query: string) => void) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     if (userId) await handleSaveSearchHistory(searchQuery.trim());
     goToSearch(searchQuery);
   };
 
-  // Khi focus vào ô search, fetch lịch sử
   const handleInputFocus = () => {
     if (userId) {
       fetchSearchHistory();
       setShowHistoryDropdown(true);
     }
   };
-  // Khi blur, ẩn dropdown sau 200ms (để kịp click), nhưng không ẩn nếu đang xóa
+
   const handleInputBlur = () => {
     setTimeout(() => {
       if (!clickedInsideDropdownRef.current && !isDeletingHistory) {
@@ -253,95 +134,176 @@ useEffect(() => {
     }, 200);
   };
 
-  const checkScrollButtons = () => {
-    if (!categoriesRef.current) return
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setShowHistoryDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
-    const { scrollLeft, scrollWidth, clientWidth } = categoriesRef.current
-    setShowLeftButton(scrollLeft > 0)
-    setShowRightButton(scrollLeft < scrollWidth - clientWidth - 1)
-  }
+  return {
+    searchHistory,
+    showHistoryDropdown,
+    setShowHistoryDropdown,
+    loadingHistory,
+    isDeletingHistory,
+    inputRef,
+    dropdownRef,
+    clickedInsideDropdownRef,
+    fetchSearchHistory,
+    handleSaveSearchHistory,
+    handleDeleteHistory,
+    handleDeleteAllHistory,
+    handleSearch,
+    handleInputFocus,
+    handleInputBlur,
+  };
+}
+
+function useNotificationDropdown() {
+  const [openNotify, setOpenNotify] = useState(false);
+  const notifyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const container = categoriesRef.current
-    if (!container) return
-
-    // Kiểm tra ban đầu
-    checkScrollButtons()
-
-    // Theo dõi sự kiện scroll
-    container.addEventListener('scroll', checkScrollButtons)
-
-    // Theo dõi thay đổi kích thước
-    const resizeObserver = new ResizeObserver(checkScrollButtons)
-    resizeObserver.observe(container)
-
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifyRef.current && !notifyRef.current.contains(event.target as Node)) {
+        setOpenNotify(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      container.removeEventListener('scroll', checkScrollButtons)
-      resizeObserver.disconnect()
-    }
-  }, [])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
-  const scrollLeft = () => {
-    if (!categoriesRef.current) return
-    categoriesRef.current.scrollBy({ left: -200, behavior: 'smooth' })
-  }
+  return { openNotify, setOpenNotify, notifyRef };
+}
 
-  const scrollRight = () => {
-    if (!categoriesRef.current) return
-    categoriesRef.current.scrollBy({ left: 200, behavior: 'smooth' })
-  }
+function useMessageDropdown() {
+  const [openMsg, setOpenMsg] = useState(false);
+  const msgRef = useRef<HTMLDivElement>(null);
 
-  const handleSignIn = () => {
-    setIsAuthModalOpen(true)
-  }
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (msgRef.current && !msgRef.current.contains(event.target as Node)) {
+        setOpenMsg(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
-  const handleSignUp = () => {
-    setIsAuthModalOpen(true)
-  }
+  return { openMsg, setOpenMsg, msgRef };
+}
 
+function useCategories() {
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [showLeftButton, setShowLeftButton] = useState(false);
+  const [showRightButton, setShowRightButton] = useState(false);
+  const categoriesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('http://localhost:8800/api/categories')
-        const data = await response.json()
+        const response = await fetch('http://localhost:8800/api/categories');
+        const data = await response.json();
         if (data.success && data.categories) {
-          setCategories(data.categories)
+          setCategories(data.categories);
         }
       } catch (error) {
-        console.error('Error fetching categories:', error)
+        console.error('Error fetching categories:', error);
       }
-    }
-    fetchCategories()
-  }, [])
+    };
+    fetchCategories();
+  }, []);
 
-  // Tự động push đến /admin nếu vừa đăng nhập và là admin, không ở /admin
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      if (isAdmin && pathname !== "/admin/admin-dashboard" && pathname !== "/select-role") {
+    const container = categoriesRef.current;
+    if (!container) return;
+
+    const checkScrollButtons = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = container;
+      setShowLeftButton(scrollLeft > 0);
+      setShowRightButton(scrollLeft < scrollWidth - clientWidth - 1);
+    };
+
+    checkScrollButtons();
+    container.addEventListener('scroll', checkScrollButtons);
+    const resizeObserver = new ResizeObserver(checkScrollButtons);
+    resizeObserver.observe(container);
+
+    return () => {
+      container.removeEventListener('scroll', checkScrollButtons);
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  const scrollLeft = () => {
+    if (!categoriesRef.current) return;
+    categoriesRef.current.scrollBy({ left: -200, behavior: 'smooth' });
+  };
+
+  const scrollRight = () => {
+    if (!categoriesRef.current) return;
+    categoriesRef.current.scrollBy({ left: 200, behavior: 'smooth' });
+  };
+
+  return {
+    categories,
+    showLeftButton,
+    showRightButton,
+    categoriesRef,
+    scrollLeft,
+    scrollRight,
+  };
+}
+
+// @ts-ignore - We know isAdmin is boolean because we check metadata.isAdmin === true
+function useAdminRedirect(
+  isLoaded: boolean,
+  isSignedIn: boolean,
+  isAdmin: boolean,
+  pathname: string,
+  router: any
+) {
+  useEffect(() => {
+    if (isLoaded && isSignedIn && isAdmin) {
+      if (pathname !== "/admin/admin-dashboard" && pathname !== "/select-role") {
         router.push("/admin/admin-dashboard");
-      } else if ((isSeller || isBuyer || (isSeller && isBuyer)) && pathname === "/dashboard" || pathname === "/dashboard/user" || pathname === "/dashboard/buyer" || pathname === "/dashboard/seller" || pathname === "/sign-in") {
-        router.push("/");
       }
     }
-  }, [isLoaded, isSignedIn, isAdmin, isSeller, isBuyer, pathname, router]);
+  }, [isLoaded, isSignedIn, isAdmin, pathname, router]);
+}
 
-  // Đưa return null xuống sau tất cả các hook để không vi phạm Rules of Hooks
-  if (pathname === "/select-role") {
-    return null;
-  }
-
+function useNotificationFetch(openNotify: boolean, fetchNotifications: () => void) {
   useEffect(() => {
     if (openNotify) {
       fetchNotifications();
     }
-  }, [openNotify]);
+  }, [openNotify, fetchNotifications]);
+}
 
+function useNotificationClose(pathname: string, setOpenNotify: (open: boolean) => void) {
   useEffect(() => {
     setOpenNotify(false);
-  }, [pathname]);
+  }, [pathname, setOpenNotify]);
+}
 
-  // Fetch tên và avatar cho user liên quan đến ticket
+function useUserInfoMap(tickets: any[], userId: string | null, setUserInfoMap: (map: Record<string, { name: string; avatar: string }>) => void) {
+  const [localUserInfoMap, setLocalUserInfoMap] = useState<Record<string, { name: string; avatar: string }>>({});
+
   useEffect(() => {
     const fetchAll = async () => {
       const uniqueUserIds = Array.from(new Set(tickets.map(t => {
@@ -349,10 +311,10 @@ useEffect(() => {
         return t.buyer_clerk_id === userId ? t.seller_clerk_id : t.buyer_clerk_id;
       })));
       for (const clerkId of uniqueUserIds) {
-        if (clerkId && !userInfoMap[clerkId]) {
+        if (clerkId && !localUserInfoMap[clerkId]) {
           try {
             const userData = await fetchUser(clerkId, "");
-            setUserInfoMap(prev => ({
+            setLocalUserInfoMap(prev => ({
               ...prev,
               [clerkId]: {
                 name: (userData.lastname && userData.firstname)
@@ -366,9 +328,121 @@ useEffect(() => {
       }
     };
     fetchAll();
-  }, [tickets, userId]);
+  }, [tickets, userId, localUserInfoMap]);
 
-  // Helper lấy user info
+  useEffect(() => {
+    setUserInfoMap(localUserInfoMap);
+  }, [localUserInfoMap, setUserInfoMap]);
+}
+
+export function Navbar({ isVisible = true }: NavbarProps) {
+  // Context hooks
+  const pathname = usePathname()
+  const router = useRouter()
+  const { isSignedIn, isLoaded, user } = useUser()
+  const { userId, getToken } = useAuth();
+  const { unreadCount, tickets, loading: loadingMessages, fetchTicketsData } = useMessages({});
+  const { notifications, markAllAsRead, markAsRead, fetchNotifications, loading: loadingNotifications, addNotification } = useNotification();
+
+  // Custom hooks
+  useNotificationSocket(userId ?? "", (notification) => {
+    toast(`🔔 ${notification.title}: ${notification.message}`);
+    addNotification(notification);
+  });
+
+  const {
+    searchHistory,
+    showHistoryDropdown,
+    setShowHistoryDropdown,
+    loadingHistory,
+    isDeletingHistory,
+    inputRef,
+    dropdownRef,
+    clickedInsideDropdownRef,
+    fetchSearchHistory,
+    handleSaveSearchHistory,
+    handleDeleteHistory,
+    handleDeleteAllHistory,
+    handleSearch,
+    handleInputFocus,
+    handleInputBlur,
+  } = useSearchHistory(userId || null, getToken);
+
+  const { openNotify, setOpenNotify, notifyRef } = useNotificationDropdown();
+  const { openMsg, setOpenMsg, msgRef } = useMessageDropdown();
+  const { categories, showLeftButton, showRightButton, categoriesRef, scrollLeft, scrollRight } = useCategories();
+
+  // State hooks
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [openSystemModal, setOpenSystemModal] = useState(false)
+  const [selectedNotification, setSelectedNotification] = useState<any>(null)
+  const [openHelpModal, setOpenHelpModal] = useState(false)
+  const [userInfoMap, setUserInfoMap] = useState<Record<string, { name: string; avatar: string }>>({})
+
+  // Additional custom hooks
+  const metadata = user?.publicMetadata || {};
+  const isAdmin = metadata.isAdmin === true;
+  const isSeller = metadata.isSeller === true;
+  const isBuyer = metadata.isBuyer === true;
+
+  // @ts-ignore - We know isAdmin is boolean because we check metadata.isAdmin === true
+  useAdminRedirect(isLoaded, isSignedIn, isAdmin, pathname, router);
+  useNotificationFetch(openNotify, fetchNotifications);
+  useNotificationClose(pathname, setOpenNotify);
+  useUserInfoMap(tickets, userId || null, setUserInfoMap);
+
+  // Early return - sau khi đã khai báo tất cả hooks
+  if (!isVisible || pathname === "/select-role") return null;
+
+  // Mapping tên category sang icon
+  const categoryIcons: Record<string, React.ReactNode> = {
+    "Web Development": <Globe className="h-4 w-4" />,
+    "Graphic Illustration": <ImageIcon className="h-4 w-4" />,
+    "SEO Services": <TrendingUp className="h-4 w-4" />,
+    "Social Media Management": <Share2 className="h-4 w-4" />,
+    "Animation Design": <Sparkles className="h-4 w-4" />,
+    "Content Creation": <FileText className="h-4 w-4" />,
+    "E-commerce Solutions": <ShoppingCart className="h-4 w-4" />,
+    "UI/UX Design": <Smile className="h-4 w-4" />,
+    "Voice Acting": <Mic className="h-4 w-4" />,
+    "Mobile App Development": <Monitor className="h-4 w-4" />,
+    "Video Editing": <Video className="h-4 w-4" />,
+    "Copywriting": <PenTool className="h-4 w-4" />,
+    "Game Development": <Gamepad2 className="h-4 w-4" />,
+    "Interior Design": <Home className="h-4 w-4" />,
+    "Event Planning": <Calendar className="h-4 w-4" />,
+  };
+
+  const goToSearch = (keyword: string) => {
+    const query = keyword.trim();
+    if (!query) return;
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.set("q", query);
+  
+    let currency = "USD";
+    if (typeof window !== "undefined") {
+      currency = localStorage.getItem("currency") || "USD";
+    }
+  
+    if (!currentParams.get("minPrice")) currentParams.set("minPrice", currency === "VND" ? "0" : "10");
+    if (!currentParams.get("maxPrice")) currentParams.set("maxPrice", currency === "VND" ? "30000000" : "500");
+  
+    router.push(`/search?${currentParams.toString()}`);
+    setSearchQuery(query);
+    setShowHistoryDropdown(false);
+  };
+
+  const handleSignIn = () => {
+    setIsAuthModalOpen(true)
+  }
+
+  const handleSignUp = () => {
+    setIsAuthModalOpen(true)
+  }
+
   const getUserInfo = (clerkId: string) => {
     return userInfoMap[clerkId] || { name: "User", avatar: "/placeholder.svg" };
   };
@@ -402,7 +476,7 @@ useEffect(() => {
           </div>
 
           <div className="flex flex-1 items-center gap-4" suppressHydrationWarning>
-            <form onSubmit={handleSearch} className="relative flex-1 mx-4 flex">
+            <form onSubmit={(e) => handleSearch(e, searchQuery, goToSearch)} className="relative flex-1 mx-4 flex">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 ref={inputRef}
