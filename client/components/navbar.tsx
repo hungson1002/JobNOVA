@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { useNotification } from "@/context/notification-context";
 import { useMessageContext } from "@/context/message-context";
 import { fetchUser } from "@/lib/api";
-
+import { useMessages } from "@/hooks/useMessages";
 export function Navbar() {
   const { isSignedIn, isLoaded, user } = useUser()
   const pathname = usePathname()
@@ -63,6 +63,8 @@ export function Navbar() {
   const { tickets, loading: loadingMessages, fetchTicketsData } = useMessageContext();
   const msgRef = useRef<HTMLDivElement>(null);
   const [userInfoMap, setUserInfoMap] = useState<Record<string, { name: string; avatar: string }>>({});
+  const { unreadCount } = useMessages({});
+
 
   useNotificationSocket(userId ?? "", (notification) => {
     toast(`🔔 ${notification.title}: ${notification.message}`);

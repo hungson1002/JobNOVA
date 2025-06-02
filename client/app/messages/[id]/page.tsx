@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter, useParams } from "next/navigation";
-import { MessageThread } from "@/components/message/messageThread";
+import MessageThread from "@/components/message/messageThread";
 import { useMessages } from "@/hooks/useMessages";
 import { fetchUser, fetchTickets } from "@/lib/api";
 

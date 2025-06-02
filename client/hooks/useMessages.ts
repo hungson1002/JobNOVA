@@ -61,7 +61,13 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<ReturnType<typeof io> | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
+  useEffect(() => {
+    const count = tickets.reduce((sum, t) => sum + (t.unread_count ?? 0), 0);
+    setUnreadCount(count);
+  }, [tickets]);
+  
   // Initialize WebSocket
   useEffect(() => {
     if (!isLoaded || !userId) return;
@@ -201,27 +207,38 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
       fetchTicketsData();
     });
 
-    socketRef.current.on("messagesRead", ({ orderId, receiverId, messageIds }: { orderId?: string; receiverId?: string; messageIds: number[] }) => {
+    socketRef.current.on("messagesRead", (data: { orderId?: string; receiverId?: string; messageIds: number[] }) => {
+      const { orderId, receiverId, messageIds } = data;
+      // Đánh dấu các message đã đọc
       setMessages((prev) =>
         prev.map((m) =>
           messageIds.includes(m.id) ? { ...m, is_read: true } : m
         )
       );
-      setTickets((prev) =>
-        prev.map((t) => {
-          // Nếu là order
+    
+      // Cập nhật số tin chưa đọc cho tickets
+      setTickets((prev) => {
+        const updated = prev.map((t) => {
+          // Với order message
           if (orderId && t.order_id === Number(orderId)) {
             return { ...t, unread_count: 0 };
           }
-          // Nếu là direct
-          if (receiverId && t.is_direct && (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)) {
+    
+          // Với direct message
+          if (
+            receiverId &&
+            t.is_direct &&
+            (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)
+          ) {
             return { ...t, unread_count: 0 };
           }
+    
           return t;
-        })
-      );
-      fetchTicketsData();
+        });
+        return [...updated]; // ✅ tạo mảng mới để trigger render lại
+      });
     });
+    
 
     return () => {
       socketRef.current?.off("newMessage");
@@ -468,6 +485,7 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
     markMessagesAsRead,
     fetchMessagesData,
     fetchTicketsData,
+    unreadCount,
   };
 };
 

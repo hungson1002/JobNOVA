@@ -1,5 +1,6 @@
 "use client"
 
+import { MessageProvider } from "@/context/message-context"
 import { ClerkProvider, useUser } from "@clerk/nextjs"
 import { Inter } from "next/font/google"
 import type React from "react"
@@ -15,7 +16,6 @@ import { CurrencyProvider } from "@/context/currency-context"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { NotificationProvider } from "@/context/notification-context"
-import { MessageProvider } from "@/context/message-context"
 
 const inter = Inter({ subsets: ["latin"] })
 

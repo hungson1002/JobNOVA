@@ -30,18 +30,18 @@ const MessageThreadComponent = ({
 
   // Scroll xuống cuối nếu có tin nhắn mới thực sự
   useEffect(() => {
-    const last = messages[messages.length - 1];
-    if (!last || last.id === lastMessageIdRef.current) return;
-
-    lastMessageIdRef.current = last.id;
-
-    // Đợi DOM render xong rồi mới scroll
-    const timeout = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 50);
-
-    return () => clearTimeout(timeout);
-  }, [messages]);
+    const node = messagesEndRef.current;
+    if (!node) return;
+  
+    const observer = new ResizeObserver(() => {
+      node.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+  
+    observer.observe(node);
+  
+    return () => observer.disconnect();
+  }, [messages.length]);
+  
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
