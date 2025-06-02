@@ -6,6 +6,7 @@ import { fetchUser } from "@/lib/api";
 import { useMessages, Message } from "@/hooks/useMessages";
 import MessageThread from "@/components/message/messageThread";
 import { MessageList } from "@/components/message/messageList";
+import { useSearchParams } from "next/navigation";
 
 function MessagesPage() {
   const { userId, isLoaded } = useAuth();
@@ -18,23 +19,54 @@ function MessagesPage() {
   });
   const [selectedMessages, setSelectedMessages] = useState<Message[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
+  const searchParams = useSearchParams();
 
-  const {
-    tickets,
-    messages,
-    loading,
-    error,
-    sendMessage,
-    fetchMessagesData,
-    fetchTicketsData,
-    markMessagesAsRead,
-  } = useMessages({
-    orderId: selectedTicket?.order_id ?? null,
-    receiverId: selectedTicket?.is_direct
-      ? (selectedTicket?.buyer_clerk_id === userId ? selectedTicket?.seller_clerk_id : selectedTicket?.buyer_clerk_id)
+const messageParams = useMemo(() => {
+  if (!selectedTicket || !userId) return null;
+  return {
+    orderId: selectedTicket.order_id ?? null,
+    receiverId: selectedTicket.is_direct
+      ? (selectedTicket.buyer_clerk_id === userId
+          ? selectedTicket.seller_clerk_id
+          : selectedTicket.buyer_clerk_id)
       : undefined,
-    isDirect: selectedTicket?.is_direct ?? false,
-  });
+    isDirect: selectedTicket.is_direct ?? false,
+  };
+}, [selectedTicket, userId]);
+
+const {
+  tickets,
+  messages,
+  loading,
+  error,
+  sendMessage,
+  fetchMessagesData,
+  fetchTicketsData,
+  markMessagesAsRead,
+} = useMessages(messageParams || {});
+
+useEffect(() => {
+  const type = searchParams.get("type");
+  const id = searchParams.get("id");
+
+  if (tickets.length > 0) {
+    let foundTicket = null;
+    if (type === "direct") {
+      foundTicket = tickets.find(t => {
+        const otherUser = t.buyer_clerk_id === userId ? t.seller_clerk_id : t.buyer_clerk_id;
+        return otherUser === id;
+      });
+    } else if (type === "order") {
+      foundTicket = tickets.find(t => String(t.order_id) === id);
+    }
+
+    if (foundTicket) {
+      setSelectedTicket(foundTicket);
+    } else if (!selectedTicket) {
+      setSelectedTicket(tickets[0]);
+    }
+  }
+}, [tickets, userId]);
 
   useEffect(() => {
     if (!loading) {

@@ -28,8 +28,9 @@ import { toast } from "sonner";
 import { useNotification } from "@/context/notification-context";
 import { useMessageContext } from "@/context/message-context";
 import { fetchUser } from "@/lib/api";
-import { useMessages } from "@/hooks/useMessages";
+
 export function Navbar() {
+  const { unreadCount } = useMessageContext();
   const { isSignedIn, isLoaded, user } = useUser()
   const pathname = usePathname()
   const router = useRouter()
@@ -63,7 +64,6 @@ export function Navbar() {
   const { tickets, loading: loadingMessages, fetchTicketsData } = useMessageContext();
   const msgRef = useRef<HTMLDivElement>(null);
   const [userInfoMap, setUserInfoMap] = useState<Record<string, { name: string; avatar: string }>>({});
-  const { unreadCount } = useMessages({});
 
 
   useNotificationSocket(userId ?? "", (notification) => {
@@ -632,17 +632,14 @@ useEffect(() => {
                             style={{ outline: "none", boxShadow: "none", position: "relative" }}
                           >
                             <MessageSquare className="h-5 w-5" />
-                            {(() => {
-                              const unreadCount = tickets.reduce((sum, t) => sum + (t.unread_count ?? 0), 0);
-                              return unreadCount > 0 ? (
-                                <span
-                                  className="absolute -top-2 -right-2 min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-gradient-to-tr from-emerald-400 to-emerald-600 shadow-lg border-2 border-white text-white text-base font-bold px-1 select-none transition-all duration-200"
-                                  style={{ zIndex: 2 }}
-                                >
-                                  {unreadCount > 9 ? '9+' : unreadCount}
-                                </span>
-                              ) : null;
-                            })()}
+                            {unreadCount > 0 && (
+                              <span
+                                className="absolute -top-2 -right-2 min-w-[22px] h-[22px] flex items-center justify-center rounded-full bg-gradient-to-tr from-emerald-400 to-emerald-600 shadow-lg border-2 border-white text-white text-base font-bold px-1 select-none transition-all duration-200"
+                                style={{ zIndex: 2 }}
+                              >
+                                {unreadCount > 9 ? "9+" : unreadCount}
+                              </span>
+                            )}
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -686,7 +683,8 @@ useEffect(() => {
                               return (
                                 <div key={isDirect ? `direct_${otherUserId}` : `order_${ticket.order_id}`}
                                   className={`relative flex gap-3 items-start whitespace-normal py-3 px-4 cursor-pointer transition-colors hover:bg-emerald-100 border-l-4 border-transparent ${isUnread ? 'bg-emerald-50 font-semibold' : 'bg-white'}`}
-                                  onClick={() => router.push(`/messages/${isDirect ? otherUserId : ticket.order_id}`)}>
+                                  onClick={() => router.push(`/messages?type=${isDirect ? "direct" : "order"}&id=${isDirect ? otherUserId : ticket.order_id}`)}
+                                >
                                   <div className="flex-shrink-0 mt-1">
                                     <img src={avatar} alt={name} className="h-8 w-8 rounded-full border border-emerald-100 object-cover" />
                                   </div>

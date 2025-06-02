@@ -12,6 +12,7 @@ interface MessageContextType {
   markMessagesAsRead: (...args: any[]) => void;
   fetchMessagesData: (...args: any[]) => Promise<Message[]>;
   fetchTicketsData: () => Promise<void>;
+  unreadCount: number;
 }
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
