@@ -13,6 +13,11 @@ const messageSocketHandler = (io) => {
       console.log(`Client ${socket.id} joined room order_${orderId}`);
     });
 
+    socket.on("joinDirect", ({ room }) => {
+      socket.join(room);
+      console.log(`Client ${socket.id} joined room ${room}`);
+    });
+
     socket.on("sendMessage", async (messageData, callback) => {
       try {
         if ((!(messageData.order_id || messageData.is_direct_message)) ||

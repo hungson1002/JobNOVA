@@ -93,51 +93,6 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
           ...prev,
           [`${msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`}`]: [...(prev[`${msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`}`] || []), msg]
         }));
-        const otherUserId = msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id;
-        let avatar = "/placeholder.svg";
-        let name = "User";
-        let needCreateWindow = false;
-        setChatWindows((prev) => {
-          const window = prev.find((w) => w.userId === otherUserId);
-          if (window) {
-            return prev.map((w) =>
-              w.userId === otherUserId
-                ? {
-                    ...w,
-                    messages: [...w.messages, msg],
-                    unreadCount:
-                      msg.sender_clerk_id !== userId && !msg.is_read
-                        ? w.unreadCount + 1
-                        : w.unreadCount,
-                  }
-                : w
-            );
-          } else {
-            needCreateWindow = true;
-            return prev;
-          }
-        });
-        if (needCreateWindow) {
-          // Nếu là seller, fetch avatar và name buyer
-          if (userId === msg.receiver_clerk_id) {
-            try {
-              const token = await getToken();
-              const userData = await import("@/lib/api").then(m => m.fetchUser(msg.sender_clerk_id, String(token)));
-              avatar = userData.avatar || "/placeholder.svg";
-              name = userData.name || userData.username || "User";
-            } catch {}
-          }
-          setChatWindows((prev) => [
-            ...prev,
-            {
-              userId: otherUserId,
-              messages: [msg],
-              unreadCount: msg.sender_clerk_id !== userId && !msg.is_read ? 1 : 0,
-              avatar,
-              name,
-            },
-          ]);
-        }
         setTickets((prev) => {
           let updated = false;
           const newTickets = prev.map((t) => {
@@ -204,7 +159,6 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
           return newTickets;
         });
       }
-      fetchTicketsData();
     });
 
     socketRef.current.on("messagesRead", (data: { orderId?: string; receiverId?: string; messageIds: number[] }) => {
