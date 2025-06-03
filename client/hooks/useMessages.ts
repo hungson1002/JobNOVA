@@ -119,8 +119,9 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
         });
       }
     };
-    const handleMessagesRead = (data: { orderId?: string; receiverId?: string; messageIds: number[] }) => {
-      const { orderId, receiverId, messageIds } = data;
+    const handleMessagesRead = (data: { orderId?: string; receiverId?: string; messageIds: number[]; userId?: string }) => {
+      const { orderId, receiverId, messageIds, userId: readUserId } = data;
+      if (readUserId && readUserId !== userId) return; // Chỉ update nếu là user mình
       setMessagesMap(prev => ({
         ...prev,
         [`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`]:

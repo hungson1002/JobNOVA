@@ -30,7 +30,7 @@ export const initSocket = (socketIo) => {
             { is_read: true },
             { where: { id: messageIds } }
           );
-          io.to(`order_${orderId}`).emit("messagesRead", { orderId, messageIds });
+          io.to(`user_${userId}`).emit("messagesRead", { orderId, messageIds, userId });
         } else if (receiverId) {
           // Direct message: đánh dấu đã đọc theo sender/receiver
           const messages = await models.Message.findAll({
@@ -50,8 +50,7 @@ export const initSocket = (socketIo) => {
             { is_read: true },
             { where: { id: messageIds } }
           );
-          const directRoom = `direct_${[userId, receiverId].sort().join("_")}`;
-          io.to(directRoom).emit("messagesRead", { receiverId, messageIds });
+          io.to(`user_${userId}`).emit("messagesRead", { receiverId, messageIds, userId });
         }
       } catch (err) {
         console.error("Error marking messages as read:", err.message);
