@@ -48,6 +48,7 @@ interface ChatWindow {
   unreadCount: number;
   avatar: string;
   name: string;
+  minimized: boolean;
 }
 
 interface UseMessagesProps {

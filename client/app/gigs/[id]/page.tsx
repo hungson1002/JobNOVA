@@ -48,6 +48,7 @@ import { ReviewForm } from "@/components/review-form";
 import { PortfolioSection } from "@/components/portfolio-section";
 import { PortfolioForm } from "@/components/portfolio-form";
 import { PortfolioGrid } from "@/components/portfolio-grid";
+import { ChatPrompt } from "@/components/message/ChatPrompt";
 
 interface PageParams {
   id: string;
@@ -83,6 +84,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [portfolios, setPortfolios] = useState<any[]>([]);
   const [loadingPortfolio, setLoadingPortfolio] = useState(true);
+  const [showChatBubble, setShowChatBubble] = useState(false);
 
   const fetchPortfoliosByGigId = async (gigId: number) => {
     if (!gigId) return [];
@@ -231,7 +233,8 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
       if (!token) {
         return;
       }
-      const userData = await fetchUser(gig.seller_clerk_id, token);
+      const safeToken = token || "";
+      const userData = await fetchUser(String(gig.seller_clerk_id), safeToken);
       
       // Kiểm tra xem chat window đã tồn tại chưa
       const existingWindow = chatWindows.find(w => w.userId === gig.seller_clerk_id);
@@ -244,6 +247,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             unreadCount: 0,
             avatar: userData.avatar || "/placeholder.svg",
             name: userData.name || userData.username || "Seller",
+            minimized: true,
           },
         ]);
       }
@@ -281,14 +285,23 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
 
   // Close chat window
   const closeChat = (userId: string) => {
-    setChatWindows((prev) => prev.filter((w) => w.userId !== userId));
+    setChatWindows((prev) =>
+      prev.map((w) =>
+        w.userId === userId ? { ...w, minimized: true } : w
+      )
+    );
     setMinimizedWindows((prev) => prev.filter((id) => id !== userId));
   };
 
   // Mark messages as read when opening a chat
   const handleOpenChat = (userId: string) => {
     markMessagesAsRead(undefined, userId);
-    toggleMinimize(userId);
+    setChatWindows((prev) =>
+      prev.map((w) =>
+        w.userId === userId ? { ...w, minimized: false } : w
+      )
+    );
+    setMinimizedWindows((prev) => prev.filter((id) => id !== userId));
   };
 
   // Image navigation
@@ -428,6 +441,33 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   
     fetchDirectMessages();
   }, [userId, gig?.seller_clerk_id, getToken, setChatWindows]);
+
+  useEffect(() => {
+    if (
+      userId &&
+      gig?.seller_clerk_id &&
+      userId !== gig.seller_clerk_id &&
+      chatWindows.findIndex(w => w.userId === gig.seller_clerk_id) === -1
+    ) {
+      (async () => {
+        const token = getToken ? await getToken() : "";
+        const safeToken = token || "";
+        const sellerId = String(gig.seller_clerk_id);
+        const sellerData = await fetchUser(sellerId, safeToken);
+        setChatWindows((prev) => [
+          ...prev,
+          {
+            userId: sellerId,
+            messages: [],
+            unreadCount: 0,
+            avatar: sellerData.avatar || "/placeholder.svg",
+            name: sellerData.name || sellerData.username || "Seller",
+            minimized: true,
+          },
+        ]);
+      })();
+    }
+  }, [userId, gig?.seller_clerk_id]);
 
   if (loadingGig) return <div>Loading...</div>;
   if (!gig) return <div>Gig not found</div>;
@@ -571,34 +611,33 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             </div>
 
             {/* Chat Bubbles */}
-            <div className="fixed bottom-4 left-4 flex flex-col gap-2 z-[9999]">
-              {chatWindows.map((win) => (
-                <ChatBubble
-                  key={win.userId}
-                  userId={userId || ""}
-                  messages={win.messages}
-                  avatar={win.avatar}
-                  name={win.name}
-                  onSendMessage={(content) => handleSendMessage(content, win.userId)}
-                  onClose={() => closeChat(win.userId)}
-                  isMinimized={minimizedWindows.includes(win.userId)}
-                  onToggleMinimize={() => handleOpenChat(win.userId)}
-                />
-              ))}
-            </div>
-
-            {/* Chat Avatars */}
-            <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-[9999]">
-              {chatWindows.map((win) => (
-                <ChatAvatar
-                  key={win.userId}
-                  avatar={win.avatar}
-                  name={win.name}
-                  unreadCount={win.unreadCount}
-                  onClick={() => handleOpenChat(win.userId)}
-                />
-              ))}
-            </div>
+            {userId !== gig?.seller_clerk_id && chatWindows.length > 0 && (
+              <>
+                {!showChatBubble && (
+                  <ChatPrompt
+                    avatar={chatWindows[0].avatar}
+                    name={chatWindows[0].name}
+                    status={"Online"}
+                    onClick={() => setShowChatBubble(true)}
+                  />
+                )}
+                {showChatBubble && (
+                  <div className="fixed bottom-4 left-4 flex flex-col gap-2 z-[9999]">
+                    <ChatBubble
+                      key={chatWindows[0].userId}
+                      userId={userId || ""}
+                      messages={chatWindows[0].messages}
+                      avatar={chatWindows[0].avatar}
+                      name={chatWindows[0].name}
+                      onSendMessage={(content) => handleSendMessage(content, chatWindows[0].userId)}
+                      onClose={() => setShowChatBubble(false)}
+                      isMinimized={false}
+                      onToggleMinimize={() => setShowChatBubble(false)}
+                    />
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Image Gallery */}
             <div className="mb-8">

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { X, Send, Paperclip, Smile } from "lucide-react";
+import { X, Send, Paperclip, Smile, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -42,96 +42,100 @@ export function ChatBubble({
   };
 
   return (
-    <div className="fixed bottom-4 left-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg flex flex-col z-[9999]">
-      {!isMinimized && (
-        <>
-          <div className="p-2 border-b flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Image
-                src={avatar || "/placeholder.svg"}
-                alt={name}
-                width={24}
-                height={24}
-                className="rounded-full"
-              />
-              <span className="font-semibold">{name}</span>
-            </div>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm" onClick={onToggleMinimize}>
-                <span>-</span>
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div ref={chatRef} className="flex-1 p-2 overflow-y-auto max-h-60">
-            {messages.map((msg, index) => (
-              <div
-                key={msg.id ? msg.id : `${msg.sender_clerk_id}-${msg.sent_at}-${index}`}
-                className={`mb-2 ${msg.sender_clerk_id === userId ? "text-left" : "text-right"}`}
-              >
-                <span
-                  className={`p-2 rounded-lg ${
-                    msg.sender_clerk_id === userId ? "bg-gray-100" : "bg-emerald-100"
-                  }`}
-                >
-                  {msg.message_content}
-                </span>
-                <div className="text-xs text-gray-500">{!msg.sent_at || isNaN(Date.parse(msg.sent_at)) ? "..." : formatTime(msg.sent_at)}</div>
-              </div>
-            ))}
-          </div>
-          <div className="p-2 border-t flex">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" className="shrink-0">
-                    <Paperclip className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Attach file</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend(e)}
-              placeholder="Type a message..."
-              className="flex-1 mr-2"
-            />
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" className="shrink-0">
-                    <Smile className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Add emoji</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <Button onClick={handleSend} size="sm" disabled={!newMessage.trim()}>
-              <Send className="h-5 w-5" />
-            </Button>
-          </div>
-        </>
-      )}
-      {isMinimized && (
-        <div className="p-2 flex items-center gap-2 cursor-pointer" onClick={onToggleMinimize}>
+    <div className="fixed bottom-4 left-4 w-96 max-w-[95vw] bg-white rounded-2xl shadow-2xl flex flex-col z-[9999] border border-gray-200 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-emerald-50 to-white rounded-t-2xl">
+        <div className="flex items-center gap-3">
           <Image
             src={avatar || "/placeholder.svg"}
             alt={name}
-            width={32}
-            height={32}
-            className="rounded-full"
+            width={44}
+            height={44}
+            className="rounded-full border-2 border-emerald-200 shadow"
           />
-          <span className="font-semibold">{name}</span>
+          <div>
+            <div className="font-semibold text-gray-900 text-base leading-tight">{name}</div>
+            <div className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1"></span>
+              Online
+            </div>
+          </div>
         </div>
-      )}
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-gray-100">
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+      {/* Chat content */}
+      <div ref={chatRef} className="flex-1 p-4 overflow-y-auto max-h-72 bg-white rounded-b-xl custom-scrollbar">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-gray-400 py-8">
+            <span className="mb-2">No messages yet</span>
+            <span className="text-xs">Start the conversation!</span>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((msg, index) => {
+              const isMe = msg.sender_clerk_id === userId;
+              return (
+                <div
+                  key={msg.id ? msg.id : `${msg.sender_clerk_id}-${msg.sent_at}-${index}`}
+                  className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`px-4 py-2 rounded-2xl shadow text-sm max-w-[70%] break-words ${
+                      isMe
+                        ? "bg-emerald-100 text-emerald-900 rounded-br-md"
+                        : "bg-gray-100 text-gray-900 rounded-bl-md"
+                    }`}
+                  >
+                    {msg.message_content}
+                    <div className="text-[10px] text-gray-400 mt-1 text-right">{formatTime(msg.sent_at)}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {/* Input */}
+      <form onSubmit={handleSend} className="flex items-center gap-2 px-4 py-3 border-t bg-white rounded-b-2xl">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="button" variant="ghost" size="icon" className="shrink-0">
+                <Paperclip className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Attach file</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <Input
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend(e)}
+          placeholder="Type a message..."
+          className="flex-1 rounded-full border-2 border-emerald-200 focus:border-emerald-500 bg-gray-50 px-4 text-sm"
+        />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="button" variant="ghost" size="icon" className="shrink-0">
+                <Smile className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Add emoji</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <Button type="submit" size="icon" className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow">
+          <Send className="h-5 w-5" />
+        </Button>
+      </form>
     </div>
   );
 }
