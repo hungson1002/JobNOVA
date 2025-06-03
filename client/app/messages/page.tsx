@@ -43,6 +43,7 @@ const {
   fetchMessagesData,
   fetchTicketsData,
   markMessagesAsRead,
+  setTickets,
 } = useMessages(messageParams || {});
 
 useEffect(() => {
@@ -204,6 +205,24 @@ useEffect(() => {
                     sent_at: msg.sent_at || new Date().toISOString(),
                     is_read: false,
                   }]);
+                  // Cập nhật ticket ở sidebar
+                  setTickets((prev: typeof tickets) =>
+                    prev.map((t: typeof tickets[number]) =>
+                      t.ticket_id === selectedTicket.ticket_id
+                        ? {
+                            ...t,
+                            last_message: {
+                              message_content: msg.message_content,
+                              sent_at: msg.sent_at,
+                              is_read: msg.is_read,
+                              receiver_clerk_id: msg.receiver_clerk_id,
+                              sender_clerk_id: msg.sender_clerk_id,
+                            },
+                            message_count: (t.message_count || 0) + 1,
+                          }
+                        : t
+                    )
+                  );
                 }
               }}
             />

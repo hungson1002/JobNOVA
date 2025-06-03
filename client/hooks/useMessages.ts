@@ -447,6 +447,7 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
     fetchMessagesData,
     fetchTicketsData,
     unreadCount,
+    setTickets,
   };
 };
 
