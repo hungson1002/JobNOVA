@@ -187,12 +187,24 @@ useEffect(() => {
                     ? selectedTicket.seller_clerk_id
                     : selectedTicket.buyer_clerk_id
                   : selectedTicket.seller_clerk_id;
-                await sendMessage(
+                const response = await sendMessage(
                   content,
                   userId,
                   receiverId,
                   selectedTicket.order_id ? String(selectedTicket.order_id) : undefined
                 );
+                if (response && typeof response === 'object' && 'success' in response && response.success && 'message' in response) {
+                  const resAny = response as any;
+                  const msg = (resAny.message && resAny.message.message) ? resAny.message.message : resAny.message;
+                  setSelectedMessages(prev => [...prev, {
+                    ...msg,
+                    message_content: content,
+                    sender_clerk_id: userId,
+                    receiver_clerk_id: receiverId,
+                    sent_at: msg.sent_at || new Date().toISOString(),
+                    is_read: false,
+                  }]);
+                }
               }}
             />
           ) : (

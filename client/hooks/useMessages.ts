@@ -372,7 +372,9 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
       socketRef.current.emit("joinOrder", { orderId });
     }
     if (receiverId && isDirect) {
-      socketRef.current.emit("joinChat", { userId, sellerId: receiverId });
+      // Join direct room theo chuẩn server: direct_{userId}_{receiverId} (sort)
+      const room = `direct_${[userId, receiverId].sort().join("_")}`;
+      socketRef.current.emit("joinDirect", { room });
     }
   }, [userId, orderId, receiverId, isDirect]);
 

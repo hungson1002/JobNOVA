@@ -195,11 +195,11 @@ export const getTickets = async (req, res, next) => {
         m => m.receiver_clerk_id === clerk_id && !m.is_read
       ).length;
       return {
-        ticket_id: order.id,
-        order_id: order.id,
-        buyer_clerk_id: order.buyer_clerk_id,
-        seller_clerk_id: order.seller_clerk_id,
-        order_status: order.order_status,
+      ticket_id: order.id,
+      order_id: order.id,
+      buyer_clerk_id: order.buyer_clerk_id,
+      seller_clerk_id: order.seller_clerk_id,
+      order_status: order.order_status,
         status: lastMsg ? lastMsg.ticket_status : "open",
         last_message: lastMsg
           ? {
@@ -211,7 +211,7 @@ export const getTickets = async (req, res, next) => {
               ticket_status: lastMsg.ticket_status,
             }
           : null,
-        message_count: order.Messages.length,
+      message_count: order.Messages.length,
         unread_count,
       };
     });
