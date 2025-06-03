@@ -50,7 +50,7 @@ useEffect(() => {
   const type = searchParams.get("type");
   const id = searchParams.get("id");
 
-  if (tickets.length > 0) {
+  if (tickets.length > 0 && !selectedTicket) {
     let foundTicket = null;
     if (type === "direct") {
       foundTicket = tickets.find(t => {
@@ -63,11 +63,12 @@ useEffect(() => {
 
     if (foundTicket) {
       setSelectedTicket(foundTicket);
-    } else if (!selectedTicket) {
+    } else if (!type && !id) {
       setSelectedTicket(tickets[0]);
     }
   }
-}, [tickets, userId]);
+  // Nếu đã có selectedTicket thì không làm gì cả, kể cả tickets thay đổi
+}, [tickets, userId, selectedTicket, searchParams.get("type"), searchParams.get("id")]);
 
   useEffect(() => {
     if (!loading) {

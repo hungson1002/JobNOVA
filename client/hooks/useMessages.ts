@@ -105,12 +105,7 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
                   sender_clerk_id: msg.sender_clerk_id,
                   id: msg.id,
                 },
-                unread_count:
-                  msg.receiver_clerk_id === userId && !msg.is_read
-                    ? (t.unread_count || 0) + 1
-                    : isSender
-                      ? 0
-                      : t.unread_count,
+                unread_count: isSender ? 0 : (msg.receiver_clerk_id === userId && !msg.is_read ? (t.unread_count || 0) + 1 : t.unread_count),
                 message_count: (t.message_count || 0) + 1,
               };
             }
