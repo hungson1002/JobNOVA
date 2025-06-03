@@ -341,7 +341,7 @@ export function Navbar({ isVisible = true }: NavbarProps) {
   const router = useRouter()
   const { isSignedIn, isLoaded, user } = useUser()
   const { userId, getToken } = useAuth();
-  const { unreadCount, tickets, loading: loadingMessages, fetchTicketsData } = useMessages({});
+  const { unreadCount, tickets, loading: loadingMessages, markMessagesAsRead } = useMessages({});
   const { notifications, markAllAsRead, markAsRead, fetchNotifications, loading: loadingNotifications, addNotification } = useNotification();
 
   // Custom hooks
@@ -698,7 +698,6 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                           <Button
                             onClick={() => {
                               setOpenMsg(!openMsg);
-                              if (!openMsg) fetchTicketsData();
                             }}
                             variant="ghost"
                             size="icon"
@@ -755,9 +754,17 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                               const timeAgo = lastMsg?.sent_at ? formatDistanceToNow(new Date(lastMsg.sent_at), { addSuffix: true }) : "";
                               const isUnread = !!(lastMsg && (lastMsg as any).is_read === false && (lastMsg as any).receiver_clerk_id === userId);
                               return (
-                                <div key={isDirect ? `direct_${otherUserId}` : `order_${ticket.order_id}`}
+                                <div
+                                  key={isDirect ? `direct_${otherUserId}` : `order_${ticket.order_id}`}
                                   className={`relative flex gap-3 items-start whitespace-normal py-3 px-4 cursor-pointer transition-colors hover:bg-emerald-100 border-l-4 border-transparent ${isUnread ? 'bg-emerald-50 font-semibold' : 'bg-white'}`}
-                                  onClick={() => router.push(`/messages?type=${isDirect ? "direct" : "order"}&id=${isDirect ? otherUserId : ticket.order_id}`)}
+                                  onClick={() => {
+                                    if (isDirect) {
+                                      markMessagesAsRead(undefined, otherUserId);
+                                    } else {
+                                      markMessagesAsRead(String(ticket.order_id), undefined);
+                                    }
+                                    router.push(`/messages?type=${isDirect ? "direct" : "order"}&id=${isDirect ? otherUserId : ticket.order_id}`);
+                                  }}
                                 >
                                   <div className="flex-shrink-0 mt-1">
                                     <img src={avatar} alt={name} className="h-8 w-8 rounded-full border border-emerald-100 object-cover" />

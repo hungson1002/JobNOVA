@@ -2,9 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
-import  io  from "socket.io-client";
+import io from "socket.io-client";
 // import type { Socket } from "socket.io-client";
 import { fetchMessages, fetchTickets, fetchDirectMessages } from "@/lib/api";
+
+// Tạo socket messages ở module scope (singleton)
+const messageSocket = io("http://localhost:8800");
 
 export interface Message {
   id: number;
@@ -60,126 +63,76 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
   const [chatWindows, setChatWindows] = useState<ChatWindow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const socketRef = useRef<ReturnType<typeof io> | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const count = tickets.reduce((sum, t) => sum + (t.unread_count ?? 0), 0);
     setUnreadCount(count);
   }, [tickets]);
-  
-  // Initialize WebSocket
+
+  // Join user room và lắng nghe event chỉ 1 lần
   useEffect(() => {
     if (!isLoaded || !userId) return;
-    if (socketRef.current) return; // Đã có socket thì không khởi tạo lại
-    socketRef.current = io("http://localhost:8800", {
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      auth: { credentials: "include" },
-    });
-    socketRef.current.on("connect_error", (err: Error) => {
-      setError("Không thể kết nối với server chat");
-      console.error("Socket connection error:", err);
-    });
-    socketRef.current.on("newMessage", async (newMessage: Message) => {
+    messageSocket.emit("joinUser", { userId });
+    const handleNewMessage = (newMessage: Message) => {
       const msg = (newMessage && (newMessage as any).message) ? (newMessage as any).message : newMessage;
       if (!msg.id || !msg.sent_at) return;
-      if (
-        msg.sender_clerk_id === userId ||
-        msg.receiver_clerk_id === userId
-      ) {
-        setMessagesMap(prev => ({
-          ...prev,
-          [`${msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`}`]: [...(prev[`${msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`}`] || []), msg]
-        }));
+      if (msg.sender_clerk_id === userId || msg.receiver_clerk_id === userId) {
+        const key = msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`;
+        setMessagesMap(prev => {
+          const exists = (prev[key] || []).some(m => m.id === msg.id);
+          if (exists) return prev;
+          return {
+            ...prev,
+            [key]: [...(prev[key] || []), msg]
+          };
+        });
         setTickets((prev) => {
-          let updated = false;
-          const newTickets = prev.map((t) => {
-            // Order message
-            if (msg.order_id && t.order_id === Number(msg.order_id)) {
-              if (msg.receiver_clerk_id === userId && !msg.is_read) {
-                updated = true;
-                return { ...t, unread_count: (t.unread_count || 0) + 1 };
-              }
-              return t;
-            }
-            // Direct message
-            if (!msg.order_id && t.is_direct && (t.buyer_clerk_id === msg.sender_clerk_id || t.seller_clerk_id === msg.sender_clerk_id)) {
-              if (msg.receiver_clerk_id === userId && !msg.is_read) {
-                updated = true;
-                return { ...t, unread_count: (t.unread_count || 0) + 1 };
-              }
-              return t;
+          return prev.map((t) => {
+            if (
+              (msg.order_id && t.order_id === Number(msg.order_id)) ||
+              (!msg.order_id && t.is_direct && (t.buyer_clerk_id === msg.sender_clerk_id || t.seller_clerk_id === msg.sender_clerk_id))
+            ) {
+              if (t.last_message && (t.last_message as any).id === msg.id) return t;
+              const isSender = msg.sender_clerk_id === userId;
+              return {
+                ...t,
+                last_message: {
+                  message_content: msg.message_content,
+                  sent_at: msg.sent_at,
+                  is_read: isSender ? true : msg.is_read,
+                  receiver_clerk_id: msg.receiver_clerk_id,
+                  sender_clerk_id: msg.sender_clerk_id,
+                  id: msg.id,
+                },
+                unread_count:
+                  msg.receiver_clerk_id === userId && !msg.is_read
+                    ? (t.unread_count || 0) + 1
+                    : isSender
+                      ? 0
+                      : t.unread_count,
+                message_count: (t.message_count || 0) + 1,
+              };
             }
             return t;
           });
-          // Nếu chưa có ticket này, thêm mới (giữ nguyên logic cũ)
-          if (!updated) {
-            if (msg.order_id) {
-              const orderIdNum = Number(msg.order_id);
-              newTickets.push({
-                ticket_id: msg.id,
-                order_id: orderIdNum,
-                buyer_clerk_id: msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id,
-                seller_clerk_id: msg.sender_clerk_id === userId ? msg.sender_clerk_id : msg.receiver_clerk_id,
-                order_status: null,
-                status: "open",
-                last_message: {
-                  message_content: msg.message_content,
-                  sent_at: msg.sent_at,
-                  is_read: msg.is_read,
-                  receiver_clerk_id: msg.receiver_clerk_id,
-                  sender_clerk_id: msg.sender_clerk_id,
-                },
-                message_count: 1,
-                is_direct: false,
-              });
-            } else {
-              const otherUserId = msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id;
-              newTickets.push({
-                ticket_id: msg.id,
-                order_id: null,
-                buyer_clerk_id: msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id,
-                seller_clerk_id: msg.sender_clerk_id === userId ? msg.sender_clerk_id : msg.receiver_clerk_id,
-                order_status: null,
-                status: "open",
-                last_message: {
-                  message_content: msg.message_content,
-                  sent_at: msg.sent_at,
-                  is_read: msg.is_read,
-                  receiver_clerk_id: msg.receiver_clerk_id,
-                  sender_clerk_id: msg.sender_clerk_id,
-                },
-                message_count: 1,
-                is_direct: true,
-              });
-            }
-          }
-          return newTickets;
         });
       }
-    });
-
-    socketRef.current.on("messagesRead", (data: { orderId?: string; receiverId?: string; messageIds: number[] }) => {
+    };
+    const handleMessagesRead = (data: { orderId?: string; receiverId?: string; messageIds: number[] }) => {
       const { orderId, receiverId, messageIds } = data;
-      // Đánh dấu các message đã đọc
       setMessagesMap(prev => ({
         ...prev,
-        [`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`]: prev[`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`].map((m) =>
-          messageIds.includes(m.id) ? { ...m, is_read: true } : m
-        )
+        [`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`]:
+          (prev[`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`] || []).map((m) =>
+            messageIds.includes(m.id) ? { ...m, is_read: true } : m
+          )
       }));
-    
-      // Cập nhật số tin chưa đọc cho tickets
       setTickets((prev) => {
         const updated = prev.map((t) => {
-          // Với order message
           if (orderId && t.order_id === Number(orderId)) {
             return { ...t, unread_count: 0 };
           }
-    
-          // Với direct message
           if (
             receiverId &&
             t.is_direct &&
@@ -187,19 +140,16 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
           ) {
             return { ...t, unread_count: 0 };
           }
-    
           return t;
         });
-        return [...updated]; // ✅ tạo mảng mới để trigger render lại
+        return [...updated];
       });
-    });
-    
-
+    };
+    messageSocket.on("newMessage", handleNewMessage);
+    messageSocket.on("messagesRead", handleMessagesRead);
     return () => {
-      socketRef.current?.off("newMessage");
-      socketRef.current?.off("messagesRead");
-      socketRef.current?.disconnect();
-      socketRef.current = null;
+      messageSocket.off("newMessage", handleNewMessage);
+      messageSocket.off("messagesRead", handleMessagesRead);
     };
   }, [isLoaded, userId]);
 
@@ -321,14 +271,14 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
 
   // Join rooms mỗi khi orderId, receiverId, isDirect thay đổi
   useEffect(() => {
-    if (!socketRef.current || !userId) return;
+    if (!messageSocket || !userId) return;
     if (orderId) {
-      socketRef.current.emit("joinOrder", { orderId });
+      messageSocket.emit("joinOrder", { orderId });
     }
     if (receiverId && isDirect) {
       // Join direct room theo chuẩn server: direct_{userId}_{receiverId} (sort)
       const room = `direct_${[userId, receiverId].sort().join("_")}`;
-      socketRef.current.emit("joinDirect", { room });
+      messageSocket.emit("joinDirect", { room });
     }
   }, [userId, orderId, receiverId, isDirect]);
 
@@ -362,7 +312,7 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
     receiverId: string,
     orderId?: string | null
   ) => {
-    if (!socketRef.current) return { success: false, message: "Socket not connected" };
+    if (!messageSocket) return { success: false, message: "Socket not connected" };
     try {
       const token = await getToken();
       if (!token) throw new Error("Token is missing");
@@ -377,7 +327,7 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
       };
 
       return new Promise((resolve) => {
-        socketRef.current!.emit("sendMessage", messageData, (response: any) => {
+        messageSocket.emit("sendMessage", messageData, (response: any) => {
           // Nếu response.message là object lồng, lấy object con
           const msg = (response && response.message && response.message.message) ? response.message.message : response.message;
           if (response.success && msg && msg.id && msg.sent_at) {
@@ -411,26 +361,15 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
 
   // Mark messages as read
   const markMessagesAsRead = debounce((orderId?: string, receiverId?: string) => {
-    if (!socketRef.current) return;
-    // Chỉ emit nếu có tin nhắn chưa đọc
-    let unread = false;
+    if (!messageSocket) return;
     if (orderId) {
       const orderIdNum = Number(orderId);
-      unread = messagesMap[`order_${orderIdNum}`].some(m => !m.is_read && m.order_id === orderIdNum);
-      if (unread) {
-        socketRef.current.emit("viewChat", {
-          orderId,
-          userId,
-        });
-      }
+      // Luôn set unread_count về 0 khi gọi, không cần kiểm tra unread
+      setTickets(prev => prev.map(t => t.order_id === orderIdNum ? { ...t, unread_count: 0 } : t));
+      messageSocket.emit("viewChat", { orderId, userId });
     } else if (receiverId) {
-      unread = messagesMap[`direct_${receiverId}`].some(m => !m.is_read && (m.sender_clerk_id === receiverId || m.receiver_clerk_id === receiverId));
-      if (unread) {
-        socketRef.current.emit("viewChat", {
-          receiverId,
-          userId,
-        });
-      }
+      setTickets(prev => prev.map(t => (t.is_direct && (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)) ? { ...t, unread_count: 0 } : t));
+      messageSocket.emit("viewChat", { receiverId, userId });
     }
   }, 400);
 
