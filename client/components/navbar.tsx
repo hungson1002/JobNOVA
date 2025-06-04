@@ -280,7 +280,7 @@ function useAdminRedirect(
 ) {
   useEffect(() => {
     if (isLoaded && isSignedIn && isAdmin) {
-      if (pathname !== "/admin/admin-dashboard" && pathname !== "/select-role") {
+      if (pathname === "/admin") {
         router.push("/admin/admin-dashboard");
       }
     }

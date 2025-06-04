@@ -8,6 +8,14 @@ import { useUser, useAuth } from "@clerk/nextjs"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from 'sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,6 +28,8 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [loadingConfirm, setLoadingConfirm] = useState(false);
+
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
 
@@ -174,6 +184,9 @@ function OrderCard({
   const router = useRouter()
   const { getToken } = useAuth()
   const [loadingCancel, setLoadingCancel] = useState(false)
+  const [loadingConfirm, setLoadingConfirm] = useState(false)
+  const [showDialog, setShowDialog] = useState<null | "confirm" | "cancel">(null);
+  const [pendingAction, setPendingAction] = useState<() => void>(() => () => {});
 
   const getGigImage = () => {
     let images: string[] = [];
@@ -194,49 +207,79 @@ function OrderCard({
   };
 
   const handleCancelOrder = async () => {
-    toast(
-      "Bạn có chắc chắn muốn hủy đơn hàng này?",
-      {
-        action: {
-          label: "Xác nhận hủy",
-          onClick: async () => {
-            setLoadingCancel(true);
-            try {
-              const token = await getToken();
-              const res = await fetch(
-                `http://localhost:8800/api/orders/${order.id}/cancel`,
-                {
-                  method: "PUT",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
-                }
-              );
-              const data = await res.json();
-              if (res.ok) {
-                onCancelClick(order.id);
-                toast.success("Đã hủy đơn hàng thành công!");
-              } else {
-                toast.error(data?.message || "Hủy đơn hàng thất bại!");
-              }
-            } catch (err) {
-              toast.error("Có lỗi xảy ra, vui lòng thử lại!");
-            } finally {
-              setLoadingCancel(false);
-            }
+    setPendingAction(() => doCancelOrder);
+    setShowDialog("cancel");
+  };
+
+  const doCancelOrder = async () => {
+    setLoadingCancel(true);
+    setShowDialog(null);
+    try {
+      const token = await getToken();
+      const res = await fetch(
+        `http://localhost:8800/api/orders/${order.id}/cancel`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-        },
-        cancel: "Đóng"
+        }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        onCancelClick(order.id);
+        toast.success("Order cancelled successfully!");
+      } else {
+        toast.error(data?.message || "Failed to cancel order!");
       }
-    );
-  }
+    } catch (err) {
+      toast.error("An error occurred, please try again!");
+    } finally {
+      setLoadingCancel(false);
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    setPendingAction(() => doConfirmPayment);
+    setShowDialog("confirm");
+  };
+
+  const doConfirmPayment = async () => {
+    setLoadingConfirm(true);
+    setShowDialog(null);
+    try {
+      const token = await getToken();
+      const res = await fetch(`http://localhost:8800/api/orders/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ orderId: order.id }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.success) {
+        order.order_status = "completed";
+        toast.success("Order confirmed and completed!");
+        router.refresh();
+      } else {
+        toast.error(data?.message || "Failed to confirm payment!");
+      }
+    } catch {
+      toast.error("Error confirming payment!");
+    } finally {
+      setLoadingConfirm(false);
+    }
+  };
+
+  const handleMessageSeller = () => {
+    router.push(`/messages?order=${order.id}&seller=${order.seller_clerk_id}`);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
         return (
-          <Badge variant="outline" className="border-amber-500 text-amber-500">
+          <Badge className="bg-amber-400 text-white border-amber-400">
             <Clock className="h-3 w-3" />
             Pending
           </Badge>
@@ -274,7 +317,7 @@ function OrderCard({
         );
       case "cancelled":
         return (
-          <Badge variant="outline" className="border-red-500 text-red-500">
+          <Badge className="bg-red-500 text-white border-red-500">
             <XCircle className="h-3 w-3" />
             Cancelled
           </Badge>
@@ -298,7 +341,9 @@ function OrderCard({
       case "in_progress":
         return (
           <>
-            <Button variant="outline">Contact Seller</Button>
+            <Button variant="outline" onClick={handleMessageSeller}>
+              Contact Seller
+            </Button>
             <Button
               variant="outline"
               className="text-red-500 hover:bg-red-50"
@@ -312,6 +357,14 @@ function OrderCard({
       case "pending":
         return (
           <>
+            <Button
+              className="bg-emerald-500 text-white hover:bg-emerald-600"
+              size="sm"
+              onClick={handleConfirmPayment}
+              disabled={loadingConfirm}
+            >
+              {loadingConfirm ? "Confirming..." : "Confirm Payment"}
+            </Button>
             <Button
               variant="destructive"
               size="sm"
@@ -334,59 +387,91 @@ function OrderCard({
   }
 
   return (
-    <Card className="p-6 md:p-8 mb-4">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div className="flex flex-col md:flex-row gap-6 flex-1">
-          <div className="flex-shrink-0 flex flex-col items-center gap-2">
-            <img
-              src={getGigImage()}
-              alt={gig.title || "Gig"}
-              width={96}
-              height={96}
-              style={{ objectFit: 'cover', borderRadius: '0.5rem', border: '1px solid #e5e7eb', width: 96, height: 96 }}
-            />
-            <span className="text-xs text-gray-400">Order #{order.id}</span>
+    <>
+      <Card className="p-6 md:p-8 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="flex flex-col md:flex-row gap-6 flex-1">
+            <div className="flex-shrink-0 flex flex-col items-center gap-2">
+              <img
+                src={getGigImage()}
+                alt={gig.title || "Gig"}
+                width={96}
+                height={96}
+                style={{ objectFit: 'cover', borderRadius: '0.5rem', border: '1px solid #e5e7eb', width: 96, height: 96 }}
+              />
+              <span className="text-xs text-gray-400">Order #{order.id}</span>
+            </div>
+            <div className="flex flex-col justify-center gap-2 min-w-[180px]">
+              <h2 className="text-xl font-bold mb-1">{gig.title || "Gig"}</h2>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-gray-500 text-sm">Seller:</span>
+                <Image src={seller.avatar} alt={seller.name} width={28} height={28} className="rounded-full border w-8 h-8" />
+                <span className="font-medium text-gray-800">{seller.name}</span>
+                <span className="text-xs text-gray-400 ml-1">{seller.level}</span>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-col justify-center gap-2 min-w-[180px]">
-            <h2 className="text-xl font-bold mb-1">{gig.title || "Gig"}</h2>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-gray-500 text-sm">Seller:</span>
-              <Image src={seller.avatar} alt={seller.name} width={28} height={28} className="rounded-full border w-8 h-8" />
-              <span className="font-medium text-gray-800">{seller.name}</span>
-              <span className="text-xs text-gray-400 ml-1">{seller.level}</span>
+          <div className="flex flex-col gap-2 min-w-[220px] md:items-end">
+            <div className="mb-2">{getStatusBadge(order.order_status)}</div>
+            <div className="flex flex-col gap-1 text-sm text-gray-600">
+              <div className="flex justify-between gap-2">
+                <span>Order Date:</span>
+                <span className="font-medium text-gray-900">{order.order_date ? format(new Date(order.order_date), "MMM d, yyyy") : "-"}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span>Delivery Date:</span>
+                <span className="font-medium text-gray-900">{order.delivery_deadline ? format(new Date(order.delivery_deadline), "MMM d, yyyy") : "-"}</span>
+              </div>
+            </div>
+            <div className="mt-2 text-lg font-bold text-emerald-700 flex items-center gap-2">
+              <span>Total:</span>
+              <span className="text-2xl">${order.total_price}</span>
             </div>
           </div>
         </div>
-        <div className="flex flex-col gap-2 min-w-[220px] md:items-end">
-          <div className="mb-2">{getStatusBadge(order.order_status)}</div>
-          <div className="flex flex-col gap-1 text-sm text-gray-600">
-            <div className="flex justify-between gap-2">
-              <span>Order Date:</span>
-              <span className="font-medium text-gray-900">{order.order_date ? format(new Date(order.order_date), "MMM d, yyyy") : "-"}</span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span>Delivery Date:</span>
-              <span className="font-medium text-gray-900">{order.delivery_deadline ? format(new Date(order.delivery_deadline), "MMM d, yyyy") : "-"}</span>
-            </div>
-          </div>
-          <div className="mt-2 text-lg font-bold text-emerald-700 flex items-center gap-2">
-            <span>Total:</span>
-            <span className="text-2xl">${order.total_price}</span>
-          </div>
-        </div>
-      </div>
-      <CardFooter className="flex flex-wrap justify-between gap-2 mt-6 px-0">
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/orders/${order.id}`}>View Details</Link>
-        </Button>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="flex items-center gap-1">
-            <MessageSquare className="h-4 w-4" />
-            Message Seller
+        <CardFooter className="flex flex-wrap justify-between gap-2 mt-6 px-0">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/orders/${order.id}`}>View Details</Link>
           </Button>
-          {order.order_status !== "cancelled" && getActionButtons(order.order_status)}
-        </div>
-      </CardFooter>
-    </Card>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={handleMessageSeller}>
+              <MessageSquare className="h-4 w-4" />
+              Message Seller
+            </Button>
+            {order.order_status !== "cancelled" && getActionButtons(order.order_status)}
+          </div>
+        </CardFooter>
+      </Card>
+      <Dialog open={!!showDialog} onOpenChange={v => setShowDialog(v ? showDialog : null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {showDialog === "confirm" ? "Confirm Payment" : "Cancel Order"}
+            </DialogTitle>
+            <DialogDescription>
+              {showDialog === "confirm"
+                ? "Are you sure you want to confirm payment for this order?"
+                : "Are you sure you want to cancel this order?"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              className={showDialog === "confirm" ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-red-500 text-white hover:bg-red-600"}
+              onClick={() => {
+                if (pendingAction) pendingAction();
+              }}
+              disabled={loadingCancel || loadingConfirm}
+            >
+              {showDialog === "confirm"
+                ? loadingConfirm ? "Confirming..." : "Confirm Payment"
+                : loadingCancel ? "Cancelling..." : "Cancel Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
