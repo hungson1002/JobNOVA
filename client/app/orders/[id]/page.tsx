@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link"
 import { ArrowLeft, Calendar, Clock, Download, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { useState } from "react"
 
 export default function OrderDetailsPage({ params }: { params: { id: string } }) {
   // Mock order data
@@ -27,6 +30,8 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
     deliverables: [] as FileAttachment[],
     messages: 8,
   }
+
+  const [orderState, setOrderState] = useState(order.status)
 
   // Helper function to render status badge
   const renderStatusBadge = (status: string) => {
@@ -66,6 +71,33 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
     }
   }
 
+  // Handler xác nhận thanh toán
+  const handleConfirmPayment = async () => {
+    try {
+      const res = await fetch(`http://localhost:8800/api/orders/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.id }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.success) setOrderState("completed");
+    } catch {}
+  };
+
+  // Handler hủy đơn
+  const handleCancelOrder = async () => {
+    try {
+      const res = await fetch(`http://localhost:8800/api/orders/${order.id}/cancel`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.success) setOrderState("completed");
+    } catch {}
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex items-center mb-6">
@@ -75,7 +107,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
           </Button>
         </Link>
         <h1 className="text-2xl font-bold">Order Details</h1>
-        <div className="ml-auto">{renderStatusBadge(order.status)}</div>
+        <div className="ml-auto">{renderStatusBadge(orderState)}</div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -187,7 +219,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                 </Button>
               </Link>
 
-              {order.status === "delivered" && (
+              {orderState === "delivered" && (
                 <div className="mt-4">
                   <Button variant="outline" className="w-full">
                     Accept Delivery
@@ -198,10 +230,21 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                 </div>
               )}
 
-              {order.status === "in_progress" && (
+              {orderState === "in_progress" && (
                 <div className="mt-4">
                   <Button variant="outline" className="w-full">
                     Request Modification
+                  </Button>
+                </div>
+              )}
+
+              {orderState === "pending" && (
+                <div className="mt-4 flex flex-col gap-2">
+                  <Button variant="outline" className="w-full" onClick={handleConfirmPayment}>
+                    Confirm Payment
+                  </Button>
+                  <Button variant="destructive" className="w-full" onClick={handleCancelOrder}>
+                    Cancel Order
                   </Button>
                 </div>
               )}

@@ -90,9 +90,9 @@ export const handleVNPayReturn = async (req, res) => {
     });
     // Chuyển hướng theo kết quả
     if (payment_status === "completed") {
-      // Cập nhật trạng thái đơn hàng
-      order.order_status = "completed";
-      await order.save();
+      // KHÔNG cập nhật trạng thái đơn hàng, chỉ lưu trạng thái thanh toán
+      // order.order_status = "completed";
+      // await order.save();
       return res.redirect("http://localhost:3000/checkout/success");
     } else {
       return res.redirect("http://localhost:3000/checkout/failure");

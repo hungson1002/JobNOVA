@@ -13,6 +13,17 @@ const messageSocketHandler = (io) => {
       console.log(`Client ${socket.id} joined room order_${orderId}`);
     });
 
+    socket.on("joinDirect", ({ room }) => {
+      socket.join(room);
+      console.log(`Client ${socket.id} joined room ${room}`);
+    });
+
+    socket.on("joinUser", ({ userId }) => {
+      if (!userId) return;
+      socket.join(`user_${userId}`);
+      console.log(`Client ${socket.id} joined room user_${userId}`);
+    });
+
     socket.on("sendMessage", async (messageData, callback) => {
       try {
         if ((!(messageData.order_id || messageData.is_direct_message)) ||
@@ -25,6 +36,7 @@ const messageSocketHandler = (io) => {
         if (!newMessage.success) throw new Error(newMessage.message);
         const room = messageData.order_id ? `order_${messageData.order_id}` : `direct_${[messageData.sender_clerk_id, messageData.receiver_clerk_id].sort().join("_")}`;
         io.to(room).emit("newMessage", newMessage);
+        io.to(`user_${messageData.receiver_clerk_id}`).emit("newMessage", newMessage);
         callback({ success: true, message: newMessage });
       } catch (error) {
         console.error("Error sending message:", error.message);

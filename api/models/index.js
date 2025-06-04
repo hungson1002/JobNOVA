@@ -4,7 +4,6 @@ import Category from "./category.model.js";
 import ContactForm from "./contactForm.model.js";
 import ExperienceDetail from "./experienceDetail.model.js";
 import Gig from "./gig.model.js";
-import GigExtra from "./gigExtra.model.js";
 import GigFaq from "./gigFAQ.model.js";
 import GigRequirementTemplate from "./gigReqTemplate.model.js";
 import GigRequirements from "./gigRequirement.model.js";
@@ -16,7 +15,6 @@ import JobType from "./jobType.model.js";
 import Message from "./message.model.js";
 import Notification from "./notification.model.js";
 import Order from "./order.model.js";
-import OrderExtra from "./orderExtra.model.js";
 import Payment from "./payment.model.js";
 import Portfolio from "./portfolio.model.js";
 import Report from "./report.model.js";
@@ -57,8 +55,6 @@ export default {
   GigRequirementTemplate,
   ReviewHelpfulVote,
   BannerSlide,
-  GigExtra,
-  OrderExtra,
   Portfolio,
   Report,
   Education,

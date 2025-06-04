@@ -17,19 +17,21 @@ function MessagesPage() {
     avatar: "/placeholder.svg",
     online: true,
   });
-  const [selectedMessages, setSelectedMessages] = useState<Message[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const searchParams = useSearchParams();
 
 const messageParams = useMemo(() => {
   if (!selectedTicket || !userId) return null;
+  // Xác định id người đối diện (otherId)
+  let otherId = null;
+  if (selectedTicket.is_direct) {
+    otherId = selectedTicket.buyer_clerk_id === userId
+      ? selectedTicket.seller_clerk_id
+      : selectedTicket.buyer_clerk_id;
+  }
   return {
     orderId: selectedTicket.order_id ?? null,
-    receiverId: selectedTicket.is_direct
-      ? (selectedTicket.buyer_clerk_id === userId
-          ? selectedTicket.seller_clerk_id
-          : selectedTicket.buyer_clerk_id)
-      : undefined,
+    receiverId: otherId,
     isDirect: selectedTicket.is_direct ?? false,
   };
 }, [selectedTicket, userId]);
@@ -43,13 +45,25 @@ const {
   fetchMessagesData,
   fetchTicketsData,
   markMessagesAsRead,
+  setTickets,
 } = useMessages(messageParams || {});
+
+// Xác định key của hội thoại hiện tại giống hệt logic trong handleNewMessage
+const key = messageParams
+  ? messageParams.isDirect && messageParams.receiverId
+    ? `direct_${messageParams.receiverId}`
+    : messageParams.orderId
+    ? `order_${messageParams.orderId}`
+    : ""
+  : "";
+
+const messages = messagesMap[key] || [];
 
 useEffect(() => {
   const type = searchParams.get("type");
   const id = searchParams.get("id");
 
-  if (tickets.length > 0) {
+  if (tickets.length > 0 && !selectedTicket) {
     let foundTicket = null;
     if (type === "direct") {
       foundTicket = tickets.find(t => {
@@ -62,11 +76,12 @@ useEffect(() => {
 
     if (foundTicket) {
       setSelectedTicket(foundTicket);
-    } else if (!selectedTicket) {
+    } else if (!type && !id) {
       setSelectedTicket(tickets[0]);
     }
   }
-}, [tickets, userId]);
+  // Nếu đã có selectedTicket thì không làm gì cả, kể cả tickets thay đổi
+}, [tickets, userId, selectedTicket, searchParams.get("type"), searchParams.get("id")]);
 
   useEffect(() => {
     if (!loading) {
@@ -118,36 +133,6 @@ useEffect(() => {
     fetchRecipient();
   }, [selectedTicket, userId]);
 
-  // Mỗi lần đổi hội thoại, luôn fetch lại messages cho hội thoại đó
-  useEffect(() => {
-    if (!selectedTicket || !userId) return;
-    const fetchMsgs = async () => {
-      if (selectedTicket.order_id) {
-        // Ưu tiên fetch theo order_id nếu có
-        console.log("DEBUG fetch order:", { userId, orderId: selectedTicket.order_id, selectedTicket });
-        const msgs = await fetchMessagesData(String(selectedTicket.order_id), undefined);
-        console.log("DEBUG order response:", msgs);
-        setSelectedMessages(msgs);
-      } else if (selectedTicket.is_direct) {
-        // Nếu không có order_id, fetch direct
-        const receiverId = selectedTicket.buyer_clerk_id === userId
-          ? selectedTicket.seller_clerk_id
-          : selectedTicket.buyer_clerk_id;
-        if (!receiverId || receiverId === userId) {
-          setSelectedMessages([]);
-          return;
-        }
-        console.log("DEBUG fetch direct:", { userId, receiverId, selectedTicket });
-        const msgs = await fetchMessagesData(undefined, receiverId);
-        console.log("DEBUG direct response:", msgs);
-        setSelectedMessages(msgs);
-      } else {
-        setSelectedMessages([]);
-      }
-    };
-    fetchMsgs();
-  }, [selectedTicket, userId, fetchMessagesData]);
-
   const selectedTicketId = useMemo(() => {
     if (!selectedTicket) return null;
     return selectedTicket.is_direct
@@ -179,7 +164,7 @@ useEffect(() => {
         <div className="flex flex-1 flex-col h-full min-h-0 overflow-y-auto">
           {selectedTicket ? (
             <MessageThread
-              messages={selectedMessages}
+              messages={messages}
               recipient={recipientInfo}
               onSendMessage={async (content) => {
                 const receiverId = selectedTicket.is_direct

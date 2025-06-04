@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Ticket as OriginalTicket } from "@/hooks/useMessages";
 import { useEffect, useState } from "react";
 import { fetchUser } from "@/lib/api";
+import { useMessages } from "@/hooks/useMessages";
 
 type Message = {
   message_content: string;
@@ -36,6 +37,7 @@ interface UserInfo {
 export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId }: MessageListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [userInfoMap, setUserInfoMap] = useState<Record<string, UserInfo>>({});
+  const { markMessagesAsRead } = useMessages({});
 
   useEffect(() => {
     // Fetch avatar và tên cho tất cả user liên quan đến ticket
@@ -136,17 +138,8 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
                 : (ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id);
               const userInfo = getUserInfo(otherUserId);
 
-              // Fix linter: kiểm tra ticket.messages tồn tại và là mảng, nếu không thì fallback chỉ dùng last_message
-              // Thêm type cho msg là any để tránh lỗi TS
-              let unreadCount = 0;
-              const anyTicket = ticket as any;
-              if (anyTicket.messages && Array.isArray(anyTicket.messages)) {
-                unreadCount = anyTicket.messages.filter(
-                  (msg: any) => msg.receiver_clerk_id === userId && !msg.is_read
-                ).length;
-              } else if (ticket.message_count > 0 && ticket.last_message && !ticket.last_message.is_read && (ticket.last_message as any).receiver_clerk_id === userId) {
-                unreadCount = 1;
-              }
+              // Thay vì tính unreadCount từ messages, chỉ lấy từ ticket.unread_count
+              const unreadCount = ticket.unread_count || 0;
 
               return (
                 <div
@@ -154,7 +147,16 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
                   className={`flex cursor-pointer items-center gap-3 rounded-xl mb-2 px-3 py-3 transition-all border border-transparent hover:border-emerald-200 hover:bg-emerald-50/60 dark:hover:bg-gray-800/60 shadow-sm ${
                     selectedTicketId === String(isDirect ? otherUserId : ticket.order_id) ? "border-emerald-400 bg-emerald-50/80 dark:bg-gray-800/80" : "bg-white dark:bg-gray-900"
                   }`}
-                  onClick={() => onSelectTicket({ ...ticket, last_message: ticket.last_message ?? undefined })}
+                  onClick={() => {
+                    // Gọi markMessagesAsRead khi click vào ticket
+                    if (ticket.order_id) {
+                      markMessagesAsRead(String(ticket.order_id), undefined);
+                    } else if (ticket.is_direct) {
+                      const receiverId = ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id;
+                      markMessagesAsRead(undefined, receiverId);
+                    }
+                    onSelectTicket({ ...ticket, last_message: ticket.last_message ?? undefined });
+                  }}
                 >
                   <div className="relative group">
                     <Image
@@ -190,9 +192,10 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
                     </div>
                   </div>
                   {unreadCount > 0 && (
-                    <span className="ml-2 flex items-center justify-center h-6 w-6 rounded-full bg-emerald-500 text-white text-xs font-bold shadow border-2 border-white dark:border-gray-900">
-                      {unreadCount}
-                    </span>
+                    <span
+                      className="ml-2 flex items-center justify-center h-3 w-3 rounded-full bg-emerald-500 shadow border-2 border-white dark:border-gray-900"
+                      title="Có tin nhắn chưa đọc"
+                    />
                   )}
                 </div>
               );

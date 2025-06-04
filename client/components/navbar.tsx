@@ -280,7 +280,7 @@ function useAdminRedirect(
 ) {
   useEffect(() => {
     if (isLoaded && isSignedIn && isAdmin) {
-      if (pathname !== "/admin/admin-dashboard" && pathname !== "/select-role") {
+      if (pathname === "/admin") {
         router.push("/admin/admin-dashboard");
       }
     }
@@ -341,7 +341,7 @@ export function Navbar({ isVisible = true }: NavbarProps) {
   const router = useRouter()
   const { isSignedIn, isLoaded, user } = useUser()
   const { userId, getToken } = useAuth();
-  const { unreadCount, tickets, loading: loadingMessages, fetchTicketsData } = useMessages({});
+  const { unreadCount, tickets, loading: loadingMessages, markMessagesAsRead } = useMessages({});
   const { notifications, markAllAsRead, markAsRead, fetchNotifications, loading: loadingNotifications, addNotification } = useNotification();
 
   // Custom hooks
@@ -635,8 +635,8 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                                     <div className="h-3 w-1/2 bg-gray-200 rounded" />
                                     <div className="h-2 w-1/3 bg-gray-100 rounded" />
                                   </div>
-                                </div>
-                              ))}
+                              </div>
+                            ))}
                             </div>
                           ) : notifications.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -684,21 +684,20 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                             className="text-emerald-600 hover:underline w-full text-center text-sm font-medium"
                           >
                             Mark all as read
-                          </button>
-                        </div>
+                              </button>
+                            </div>
                       </div>
                     )}
                   </div>
 
                   {/* Message Dropdown giống notification */}
                   <div className="relative flex items-center" ref={msgRef}>
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
                           <Button
                             onClick={() => {
                               setOpenMsg(!openMsg);
-                              if (!openMsg) fetchTicketsData();
                             }}
                             variant="ghost"
                             size="icon"
@@ -715,12 +714,12 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                               </span>
                             )}
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Messages</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Messages</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                     {openMsg && (
                       <div className="absolute top-full right-0 z-50 w-80 bg-white shadow-lg rounded-[4px] flex flex-col h-[467px]">
                         <div className="font-semibold px-4 py-2 border-b">Messages</div>
@@ -755,9 +754,17 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                               const timeAgo = lastMsg?.sent_at ? formatDistanceToNow(new Date(lastMsg.sent_at), { addSuffix: true }) : "";
                               const isUnread = !!(lastMsg && (lastMsg as any).is_read === false && (lastMsg as any).receiver_clerk_id === userId);
                               return (
-                                <div key={isDirect ? `direct_${otherUserId}` : `order_${ticket.order_id}`}
+                                <div
+                                  key={isDirect ? `direct_${otherUserId}` : `order_${ticket.order_id}`}
                                   className={`relative flex gap-3 items-start whitespace-normal py-3 px-4 cursor-pointer transition-colors hover:bg-emerald-100 border-l-4 border-transparent ${isUnread ? 'bg-emerald-50 font-semibold' : 'bg-white'}`}
-                                  onClick={() => router.push(`/messages?type=${isDirect ? "direct" : "order"}&id=${isDirect ? otherUserId : ticket.order_id}`)}
+                                  onClick={() => {
+                                    if (isDirect) {
+                                      markMessagesAsRead(undefined, otherUserId);
+                                    } else {
+                                      markMessagesAsRead(String(ticket.order_id), undefined);
+                                    }
+                                    router.push(`/messages?type=${isDirect ? "direct" : "order"}&id=${isDirect ? otherUserId : ticket.order_id}`);
+                                  }}
                                 >
                                   <div className="flex-shrink-0 mt-1">
                                     <img src={avatar} alt={name} className="h-8 w-8 rounded-full border border-emerald-100 object-cover" />
@@ -832,45 +839,45 @@ export function Navbar({ isVisible = true }: NavbarProps) {
 
         {/* Subnavbar - Categories */}
         { !pathname.startsWith("/messages") && (
-          <div className="border-t bg-white">
-            <div className="container relative">
-              {showLeftButton && (
-                <button 
-                  className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-r-lg shadow-md z-10 hidden md:flex items-center justify-center transition-opacity duration-200"
-                  onClick={scrollLeft}
-                  aria-label="Scroll left"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-              )}
-              <div className="overflow-hidden">
-                <nav 
-                  ref={categoriesRef}
-                  className="flex items-center space-x-4 overflow-x-auto py-2 whitespace-nowrap touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                >
-                  {categories.map((category) => (
-                    <Link
-                      key={category.id}
-                      href={`/search?category=${category.id}`}
-                      className="flex items-center space-x-1 text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors whitespace-nowrap"
-                    >
-                      {categoryIcons[category.name] || <Palette className="h-4 w-4" />}
-                      <span>{category.name}</span>
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-              {showRightButton && (
-                <button 
-                  className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-l-lg shadow-md z-10 hidden md:flex items-center justify-center transition-opacity duration-200"
-                  onClick={scrollRight}
-                  aria-label="Scroll right"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              )}
+        <div className="border-t bg-white">
+          <div className="container relative">
+            {showLeftButton && (
+              <button 
+                className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-r-lg shadow-md z-10 hidden md:flex items-center justify-center transition-opacity duration-200"
+                onClick={scrollLeft}
+                aria-label="Scroll left"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            )}
+            <div className="overflow-hidden">
+              <nav 
+                ref={categoriesRef}
+                className="flex items-center space-x-4 overflow-x-auto py-2 whitespace-nowrap touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+              >
+                {categories.map((category) => (
+                  <Link
+                    key={category.id}
+                    href={`/search?category=${category.id}`}
+                    className="flex items-center space-x-1 text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors whitespace-nowrap"
+                  >
+                    {categoryIcons[category.name] || <Palette className="h-4 w-4" />}
+                    <span>{category.name}</span>
+                  </Link>
+                ))}
+              </nav>
             </div>
+            {showRightButton && (
+              <button 
+                className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-l-lg shadow-md z-10 hidden md:flex items-center justify-center transition-opacity duration-200"
+                onClick={scrollRight}
+                aria-label="Scroll right"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            )}
           </div>
+        </div>
         )}
       </header>
 

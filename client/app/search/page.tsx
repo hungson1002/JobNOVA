@@ -44,6 +44,8 @@ interface Gig {
   };
   rating?: number;
   review_count?: number;
+  isToprate?: number;
+  created_at?: string;
 }
 
 function mapGigToServiceCard(gig: Gig): any {
@@ -60,6 +62,16 @@ function mapGigToServiceCard(gig: Gig): any {
     categoryName = gig.category.name;
   }
 
+  // Badge logic
+  const badges = [];
+  if (gig.created_at) {
+    const createdAt = new Date(gig.created_at);
+    const isNew = Date.now() - createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
+    if (isNew) badges.push("new");
+  }
+  const isToprateNum = typeof gig.isToprate === 'string' ? Number(gig.isToprate) : gig.isToprate;
+  if (isToprateNum === 1) badges.push("top_rated");
+
   return {
     id: gig.id,
     title: gig.title,
@@ -75,8 +87,9 @@ function mapGigToServiceCard(gig: Gig): any {
     reviewCount: typeof gig.review_count === "number" ? gig.review_count : 0,
     category: categoryName || "Uncategorized",
     deliveryTime: gig.delivery_time,
-    badges: [],
+    badges,
     isSaved: false,
+    isToprate: gig.isToprate,
   }
 }
 
@@ -263,6 +276,11 @@ export default function SearchPage() {
       })
     }
 
+    // Filter by top rate
+    if (sellerLevels.includes("top_rated")) {
+      services = services.filter((service) => service.isToprate === 1)
+    }
+
     // Sort results
     switch (sortOption) {
       case "rating":
@@ -275,12 +293,9 @@ export default function SearchPage() {
         services.sort((a, b) => b.price - a.price)
         break
       case "newest":
-        // In a real app, you'd sort by date
-        // Here we'll just reverse the array as a simple simulation
         services.reverse()
         break
       default:
-        // relevance - keep default order
         break
     }
 
@@ -600,7 +615,7 @@ export default function SearchPage() {
 
               <AccordionItem value="sellerDetails" className="border-b-0">
                 <AccordionTrigger className="py-3 text-base font-medium hover:no-underline dark:text-white">
-                  Seller Details
+                  Top Rate
                 </AccordionTrigger>
                 <AccordionContent className="pt-2 pb-4">
                   <div className="space-y-3">
@@ -614,46 +629,7 @@ export default function SearchPage() {
                         htmlFor="seller-topRated"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
                       >
-                        Top Rated Seller
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id="seller-level2"
-                        checked={sellerLevels.includes("level_2")}
-                        onCheckedChange={(checked) => handleSellerLevelChange("level_2", checked as boolean)}
-                      />
-                      <label
-                        htmlFor="seller-level2"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
-                      >
-                        Level 2 Seller
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id="seller-level1"
-                        checked={sellerLevels.includes("level_1")}
-                        onCheckedChange={(checked) => handleSellerLevelChange("level_1", checked as boolean)}
-                      />
-                      <label
-                        htmlFor="seller-level1"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
-                      >
-                        Level 1 Seller
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id="seller-new"
-                        checked={sellerLevels.includes("new_seller")}
-                        onCheckedChange={(checked) => handleSellerLevelChange("new_seller", checked as boolean)}
-                      />
-                      <label
-                        htmlFor="seller-new"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
-                      >
-                        New Seller
+                        Top Rated Only
                       </label>
                     </div>
                   </div>

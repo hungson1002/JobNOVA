@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 
 export interface Notification {
@@ -12,6 +12,7 @@ export interface Notification {
   gig_id?: number;
   is_read?: boolean;
   notification_type?: string;
+  created_at?: string;
 }
 
 interface NotificationContextType {
@@ -30,7 +31,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(false);
   const { userId, getToken } = useAuth();
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     try {
@@ -40,14 +41,16 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       });
       const data = await res.json();
       if (data.success) setNotifications(
-        data.notifications.sort((a, b) => new Date(b.time || b.created_at).getTime() - new Date(a.time || a.created_at).getTime())
+        data.notifications.sort((a: Notification, b: Notification) =>
+          new Date(b.time || b.created_at || '').getTime() - new Date(a.time || a.created_at || '').getTime()
+        )
       );
     } catch (err) {
       console.error("Lỗi fetch thông báo:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, getToken]);
 
   const addNotification = (n: Notification) => setNotifications((prev) => [n, ...prev]);
 
@@ -98,7 +101,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     if (userId) {
       fetchNotifications();
     }
-  }, [userId]);
+  }, [userId, fetchNotifications]);
 
   return (
     <NotificationContext.Provider

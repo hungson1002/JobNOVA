@@ -231,7 +231,6 @@ export const confirmOrder = async (req, res, next) => {
 
     // Kiểm tra quyền: chỉ buyer của đơn hàng được xác nhận
     if (test === 'true') {
-      // Chế độ test: Lấy buyer_clerk_id từ body
       if (!buyer_clerk_id) {
         return next(createError(400, 'buyer_clerk_id is required in test mode'));
       }
@@ -239,7 +238,6 @@ export const confirmOrder = async (req, res, next) => {
         return next(createError(403, 'You are not authorized to confirm this order'));
       }
     } else {
-      // Chế độ bình thường: Yêu cầu xác thực
       if (!req.user || !req.user.clerk_id) {
         return next(createError(401, 'User authentication information is missing'));
       }
@@ -248,8 +246,13 @@ export const confirmOrder = async (req, res, next) => {
       }
     }
 
-    // Cập nhật trạng thái đơn hàng
-    order.order_status = 'in_progress';
+    // Nếu order đang pending, xác nhận sẽ chuyển sang completed
+    if (order.order_status === 'pending') {
+      order.order_status = 'completed';
+    } else {
+      // Nếu không phải pending, giữ logic cũ (nếu cần)
+      order.order_status = 'in_progress';
+    }
     await order.save();
 
     console.log(`Order confirmed: orderId=${order.id}`);
@@ -359,7 +362,7 @@ export const cancelOrder = async (req, res, next) => {
       return next(createError(400, 'Cannot cancel a completed order'));
     }
 
-    // Cập nhật trạng thái đơn hàng
+    // Luôn set trạng thái cancelled khi hủy
     order.order_status = 'cancelled';
     await order.save();
 
