@@ -250,10 +250,8 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
           },
         ]);
       }
-      
       // Đảm bảo chat window không bị minimize
       setMinimizedWindows((prev) => prev.filter(id => id !== gig.seller_clerk_id));
-      
       // Join chat room
       if (socketRef.current) {
         socketRef.current.emit("joinChat", { 
@@ -261,6 +259,8 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
           sellerId: gig.seller_clerk_id 
         });
       }
+      // MỞ LUÔN CHAT BUBBLE
+      setShowChatBubble(true);
     } catch (err) {
     }
   };
