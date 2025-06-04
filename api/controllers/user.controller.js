@@ -142,5 +142,98 @@ export const banUser = async (req, res, next) => {
   }
 };
 
+// Lấy thông tin hồ sơ user
+export const getUserProfile = async (req, res, next) => {
+  try {
+    const { clerk_id } = req.params;
+    const user = await models.User.findOne({
+      where: { clerk_id },
+      include: [models.Education, models.Certification],
+    });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Cập nhật thông tin hồ sơ user (chỉ user đó được sửa)
+export const updateUserProfile = async (req, res, next) => {
+  try {
+    const { clerk_id } = req.params;
+    if (req.user.clerk_id !== clerk_id) {
+      return res.status(403).json({ message: "Forbidden: You can only update your own profile." });
+    }
+    const updateData = req.body;
+    await models.User.update(updateData, { where: { clerk_id } });
+    const user = await models.User.findOne({ where: { clerk_id } });
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// CRUD cho Education
+export const addEducation = async (req, res, next) => {
+  try {
+    if (req.user.clerk_id !== req.params.clerk_id) {
+      return res.status(403).json({ message: "Forbidden: You can only add education to your own profile." });
+    }
+    const edu = await models.Education.create({ ...req.body, clerk_id: req.params.clerk_id });
+    res.status(201).json(edu);
+  } catch (err) { next(err); }
+};
+export const updateEducation = async (req, res, next) => {
+  try {
+    const edu = await models.Education.findByPk(req.params.edu_id);
+    if (!edu || edu.clerk_id !== req.user.clerk_id) {
+      return res.status(403).json({ message: "Forbidden: You can only update your own education." });
+    }
+    await edu.update(req.body);
+    res.json(edu);
+  } catch (err) { next(err); }
+};
+export const deleteEducation = async (req, res, next) => {
+  try {
+    const edu = await models.Education.findByPk(req.params.edu_id);
+    if (!edu || edu.clerk_id !== req.user.clerk_id) {
+      return res.status(403).json({ message: "Forbidden: You can only delete your own education." });
+    }
+    await edu.destroy();
+    res.json({ message: "Education deleted" });
+  } catch (err) { next(err); }
+};
+
+// CRUD cho Certification
+export const addCertification = async (req, res, next) => {
+  try {
+    if (req.user.clerk_id !== req.params.clerk_id) {
+      return res.status(403).json({ message: "Forbidden: You can only add certification to your own profile." });
+    }
+    const cert = await models.Certification.create({ ...req.body, clerk_id: req.params.clerk_id });
+    res.status(201).json(cert);
+  } catch (err) { next(err); }
+};
+export const updateCertification = async (req, res, next) => {
+  try {
+    const cert = await models.Certification.findByPk(req.params.cert_id);
+    if (!cert || cert.clerk_id !== req.user.clerk_id) {
+      return res.status(403).json({ message: "Forbidden: You can only update your own certification." });
+    }
+    await cert.update(req.body);
+    res.json(cert);
+  } catch (err) { next(err); }
+};
+export const deleteCertification = async (req, res, next) => {
+  try {
+    const cert = await models.Certification.findByPk(req.params.cert_id);
+    if (!cert || cert.clerk_id !== req.user.clerk_id) {
+      return res.status(403).json({ message: "Forbidden: You can only delete your own certification." });
+    }
+    await cert.destroy();
+    res.json({ message: "Certification deleted" });
+  } catch (err) { next(err); }
+};
+
 
 

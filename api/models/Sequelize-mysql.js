@@ -36,10 +36,6 @@ Object.values(initializedModels).forEach((model) => {
 // Định nghĩa quan hệ
 const defineRelations = (models) => {
 
-  // User-SeekerProfile: 1-to-1 (one user can have one seeker profile)
-  models.User.hasOne(models.SeekerProfile, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
-  models.SeekerProfile.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
-
   // User-ExperienceDetail: 1-to-many (one user can have multiple experience details)
   models.User.hasMany(models.ExperienceDetail, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
   models.ExperienceDetail.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
@@ -276,6 +272,13 @@ const defineRelations = (models) => {
   models.Review.hasMany(models.ReviewHelpfulVote, { foreignKey: "review_id" });
   models.ReviewHelpfulVote.belongsTo(models.Review, { foreignKey: "review_id" });
   
+  // User-Education: 1-to-many
+  models.User.hasMany(models.Education, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
+  models.Education.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
+
+  // User-Certification: 1-to-many
+  models.User.hasMany(models.Certification, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
+  models.Certification.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
 
 };
 

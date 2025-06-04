@@ -137,6 +137,7 @@ export function PortfolioForm({ categories, userGigs, clerkId }: PortfolioFormPr
           username = userData.username;
         } catch (e) {
           // fallback nếu không lấy được username
+          console.error('Error fetching user data:', e);
         }
       }
       if (username) {

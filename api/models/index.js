@@ -23,11 +23,12 @@ import Report from "./report.model.js";
 import Review from "./review.model.js";
 import ReviewHelpfulVote from "./reviewHelpfulVote.model.js";
 import SavedGig from "./savedGigs.model.js";
-import SeekerProfile from "./seekerProfile.model.js";
 import SeekerSkill from "./seekerSkill.model.js";
 import Skills from "./skills.model.js";
 import User from "./user.model.js";
 import UserSearchHistory from "./userSearchHistory.model.js";
+import Education from "./education.model.js";
+import Certification from "./certification.model.js";
 
 
 export default {
@@ -35,7 +36,6 @@ export default {
   Category,
   Skills,
   User,
-  SeekerProfile,
   ExperienceDetail,
   Gig,
   Order,
@@ -61,6 +61,8 @@ export default {
   OrderExtra,
   Portfolio,
   Report,
+  Education,
+  Certification,
 }
 
 //index.js, init-db.js, mySQL-db.js dành cho việc khởi tạo database và models của MySQL 

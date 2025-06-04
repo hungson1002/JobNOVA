@@ -29,6 +29,19 @@ router.get("/:clerk_id", async (req, res, next) => {
   }
 });
 
+// Get user by username
+router.get("/by-username/:username", async (req, res, next) => {
+  try {
+    const user = await models.User.findOne({ where: { username: req.params.username } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Delete user
 router.delete("/:id", async (req, res, next) => {
   try {

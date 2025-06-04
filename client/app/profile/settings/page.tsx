@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Save, Upload, Bell, Lock, User, CreditCard, Shield } from "lucide-react"
 
@@ -15,10 +15,26 @@ import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import CertificationSection from "@/components/profile/CertificationSection"
+import EducationSection from "@/components/profile/EducationSection"
+import SkillsSection from "@/components/profile/SkillsSection"
 
 export default function ProfileSettingsPage() {
   const [profileImage, setProfileImage] = useState("/placeholder.svg?height=120&width=120")
   const [saving, setSaving] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [isSeller, setIsSeller] = useState(false)
+  const clerkId = user?.clerk_id || ""
+
+  useEffect(() => {
+    // Giả sử đã có API lấy user hiện tại, thay thế bằng logic thực tế nếu cần
+    fetch("/api/auth/me")
+      .then(res => res.json())
+      .then(data => {
+        setUser(data)
+        setIsSeller(data?.user_roles?.includes("seller"))
+      })
+  }, [])
 
   const handleSave = () => {
     setSaving(true)
@@ -173,6 +189,14 @@ export default function ProfileSettingsPage() {
                 </Button>
               </CardFooter>
             </Card>
+
+            {isSeller && (
+              <div className="md:col-span-2 space-y-6">
+                <EducationSection clerkId={clerkId} />
+                <CertificationSection clerkId={clerkId} />
+                <SkillsSection clerkId={clerkId} />
+              </div>
+            )}
 
             <Card>
               <CardHeader>

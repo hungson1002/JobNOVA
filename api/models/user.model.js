@@ -67,6 +67,34 @@ const User = (sequelize) => {
         allowNull: false,
         defaultValue: false,
       },
+      languages: {
+        type: DataTypes.JSON,
+        allowNull: true,
+      },
+      location: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      plan_to_use: {
+        type: DataTypes.JSON,
+        allowNull: true,
+      },
+      checklist_status: {
+        type: DataTypes.JSON,
+        allowNull: true,
+      },
+      preferred_days: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      preferred_hours: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      timezone: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
     },
     {
       tableName: "user_account",

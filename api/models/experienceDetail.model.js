@@ -53,10 +53,6 @@ const ExperienceDetail = (sequelize) =>
         type: DataTypes.STRING(50),
         allowNull: false,
       },
-      company_name: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-      },
       location: {
         type: DataTypes.STRING(100),
         allowNull: true,
