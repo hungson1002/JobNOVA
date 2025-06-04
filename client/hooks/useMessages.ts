@@ -79,7 +79,9 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
       const msg = (newMessage && (newMessage as any).message) ? (newMessage as any).message : newMessage;
       if (!msg.id || !msg.sent_at) return;
       if (msg.sender_clerk_id === userId || msg.receiver_clerk_id === userId) {
-        const key = msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`;
+        // Lấy id người đối diện
+        const otherId = msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id;
+        const key = msg.is_direct_message ? `direct_${otherId}` : `order_${msg.order_id}`;
         setMessagesMap(prev => {
           const exists = (prev[key] || []).some(m => m.id === msg.id);
           if (exists) return prev;
@@ -325,28 +327,25 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
 
       return new Promise((resolve) => {
         messageSocket.emit("sendMessage", messageData, (response: any) => {
-          // Nếu response.message là object lồng, lấy object con
-          const msg = (response && response.message && response.message.message) ? response.message.message : response.message;
-          if (response.success && msg && msg.id && msg.sent_at) {
-            setMessagesMap(prev => ({
-              ...prev,
-              [`${msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`}`]: [...(prev[`${msg.is_direct_message ? `direct_${msg.receiver_clerk_id}` : `order_${msg.order_id}`}`] || []), msg]
-            }));
-            setChatWindows((prev) =>
-              prev.map((w) =>
-                w.userId === receiverId
-                  ? {
-                      ...w,
-                      messages: [...w.messages, msg],
-                    }
-                  : w
-              )
-            );
-            resolve(response);
-          } else {
+          if (!response.success) {
             setError(response.message || "Không thể gửi tin nhắn");
-            resolve(response);
+          } else {
+            // Cập nhật messagesMap ngay cho sender
+            const msg = response.message && response.message.message ? response.message.message : response.message;
+            if (msg) {
+              const otherId = msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id;
+              const key = msg.is_direct_message ? `direct_${otherId}` : `order_${msg.order_id}`;
+              setMessagesMap(prev => {
+                const exists = (prev[key] || []).some(m => m.id === msg.id);
+                if (exists) return prev;
+                return {
+                  ...prev,
+                  [key]: [...(prev[key] || []), msg]
+                };
+              });
+            }
           }
+          resolve(response);
         });
       });
     } catch (err) {

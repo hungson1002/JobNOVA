@@ -21,7 +21,6 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { ChatAvatar } from "@/components/message/chatAvatar";
 import { ChatBubble } from "@/components/message/chatBubble";
 import { ContactMeButton } from "@/components/message/contactMeButton";
 import { PriceDisplay } from "@/components/price-display";
@@ -61,7 +60,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
   const { isSaved, isLoading: isSaving, error: saveError, toggleSave } = useSavedGigs(gigId);
   const { user, isSignedIn } = useUser();
   const { userId, isLoaded, getToken } = useAuth();
-  const { chatWindows, setChatWindows, sendMessage, markMessagesAsRead } = useMessages({ isDirect: true });
+  const { chatWindows, setChatWindows, sendMessage, markMessagesAsRead, messagesMap } = useMessages({ isDirect: true });
   const [gig, setGig] = useState<any>(null);
   const [loadingGig, setLoadingGig] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -622,11 +621,15 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                   />
                 )}
                 {showChatBubble && (
-                  <div className="fixed bottom-4 left-4 flex flex-col gap-2 z-[9999]">
+            <div className="fixed bottom-4 left-4 flex flex-col gap-2 z-[9999]">
+                {(() => {
+                  const otherId = chatWindows[0].userId;
+                  const chatKey = `direct_${otherId}`;
+                  return (
                     <ChatBubble
                       key={chatWindows[0].userId}
                       userId={userId || ""}
-                      messages={chatWindows[0].messages}
+                      messages={messagesMap[chatKey] || []}
                       avatar={chatWindows[0].avatar}
                       name={chatWindows[0].name}
                       onSendMessage={(content) => handleSendMessage(content, chatWindows[0].userId)}
@@ -634,7 +637,9 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                       isMinimized={false}
                       onToggleMinimize={() => setShowChatBubble(false)}
                     />
-                  </div>
+                  );
+                })()}
+            </div>
                 )}
               </>
             )}

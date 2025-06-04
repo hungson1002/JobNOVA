@@ -106,11 +106,11 @@ const MessageThreadComponent = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {messages.map((message) => {
+            {messages.map((message, index) => {
               const isMe = message.sender_clerk_id !== recipient.id;
               return (
                 <div
-                  key={`${message.id}-${message.sent_at}`}
+                  key={`${message.id}-${index}`}
                   className={`flex items-end ${
                     isMe ? "justify-end" : "justify-start"
                   }`}
