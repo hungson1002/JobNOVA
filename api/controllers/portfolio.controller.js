@@ -75,7 +75,8 @@ export const createPortfolio = async (req, res) => {
 // Get portfolios by seller_clerk_id
 export const getPortfoliosByClerkId = async (req, res) => {
   try {
-    const { seller_clerk_id, limit } = req.query;
+    const seller_clerk_id = req.params.seller_clerk_id;
+    const { limit } = req.query;
     const queryOptions = {
       where: { seller_clerk_id },
       include: [

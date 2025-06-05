@@ -726,9 +726,9 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
               <h2 className="mb-4 text-xl font-semibold">My Portfolio</h2>
               <PortfolioGrid
                 portfolios={portfolios}
-                clerkId={gig?.seller_clerk_id}
-                isOwner={userId === gig?.seller_clerk_id}
-                isSeller={userId === gig?.seller_clerk_id}
+                clerkId={gig?.seller_clerk_id}  
+                isSeller={true}
+                username={seller.username || ""}
               />
             </div>
 

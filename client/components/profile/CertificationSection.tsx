@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import Modal from '../ui/Modal';
+import SidebarEdit from './SidebarEdit';
+import { Plus, Edit2, Trash2, Award } from 'lucide-react';
 
 interface Certification {
   id: number;
@@ -13,88 +14,68 @@ export default function CertificationSection({ clerkId }: { clerkId: string }) {
   const [certs, setCerts] = useState<Certification[]>([]);
   const [open, setOpen] = useState(false);
   const [editCert, setEditCert] = useState<Certification | null>(null);
-  const [form, setForm] = useState({ name: '', organization: '', year: '', description: '' });
 
-  // Fetch certifications
-  useEffect(() => {
-    fetch(`/api/users/${clerkId}/profile`)
-      .then(res => res.json())
-      .then(data => setCerts(data.Certifications || []));
-  }, [clerkId, open]);
+  const fetchCerts = async () => {
+    const res = await fetch(`/api/users/${clerkId}`);
+    const data = await res.json();
+    setCerts(data.Certifications || []);
+  };
 
-  // Open modal for add or edit
+  useEffect(() => { fetchCerts(); }, [clerkId, open]);
+
   const handleEdit = (cert: Certification) => {
     setEditCert(cert);
-    setForm({
-      name: cert.name || '',
-      organization: cert.organization || '',
-      year: cert.year ? String(cert.year) : '',
-      description: cert.description || '',
-    });
     setOpen(true);
   };
-
   const handleAdd = () => {
     setEditCert(null);
-    setForm({ name: '', organization: '', year: '', description: '' });
     setOpen(true);
   };
 
-  // Submit add or edit
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-    const method = editCert ? 'PUT' : 'POST';
-    const url = editCert
-      ? `/api/users/${clerkId}/certifications/${editCert.id}`
-      : `/api/users/${clerkId}/certifications`;
-    await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...form,
-        year: form.year ? parseInt(form.year) : undefined,
-      }),
-    });
-    setOpen(false);
-  };
-
-  // Delete certification
-  const handleDelete = async (id: number) => {
-    await fetch(`/api/users/${clerkId}/certifications/${id}`, { method: 'DELETE' });
-    setOpen(false);
-  };
+  // SidebarEdit fields
+  const fields = [
+    { name: "name", label: "Name", type: "text" as const, value: editCert?.name || "" },
+    { name: "organization", label: "Organization", type: "text" as const, value: editCert?.organization || "" },
+    { name: "year", label: "Year", type: "text" as const, value: editCert?.year ? String(editCert.year) : "" },
+    { name: "description", label: "Description", type: "textarea" as const, value: editCert?.description || "" }
+  ];
 
   return (
-    <section>
-      <h3 className="font-semibold text-lg mb-2 flex items-center justify-between">
-        Certifications
-        <button className="text-emerald-600 text-sm" onClick={handleAdd}>+ Add</button>
-      </h3>
-      <ul>
-        {certs.length === 0 && <li className="text-gray-400">No certifications yet.</li>}
+    <section className="mb-6">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-lg flex items-center gap-2"><Award className="w-5 h-5 text-amber-500" /> Certifications</h3>
+        <button className="text-emerald-600 text-sm flex items-center gap-1 hover:underline" onClick={handleAdd}>
+          <Plus className="w-4 h-4" /> Add
+        </button>
+      </div>
+      <ul className="space-y-3">
+        {certs.length === 0 && <li className="text-gray-400 italic">No certifications yet.</li>}
         {certs.map(cert => (
-          <li key={cert.id} className="flex items-center gap-2">
-            <span>
-              <b>{cert.name}</b> {cert.organization && <>({cert.organization})</>} {cert.year}
-              {cert.description && <span className="text-gray-500"> - {cert.description}</span>}
+          <li key={cert.id} className="flex items-center gap-3 p-3 rounded border bg-gray-50 shadow-sm">
+            <span className="flex-1">
+              <b>{cert.name}</b> {cert.organization && <span className="text-gray-500">({cert.organization})</span>}
+              {cert.year && <span className="ml-2 inline-block px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">{cert.year}</span>}
+              {cert.description && <span className="block text-gray-500 text-sm mt-1">{cert.description}</span>}
             </span>
-            <button className="text-xs text-blue-500" onClick={() => handleEdit(cert)}>Edit</button>
-            <button className="text-xs text-red-500" onClick={() => handleDelete(cert.id)}>Delete</button>
+            <button className="text-blue-500 hover:bg-blue-50 p-1 rounded" onClick={() => handleEdit(cert)} title="Edit"><Edit2 className="w-4 h-4" /></button>
+            <button className="text-red-500 hover:bg-red-50 p-1 rounded" onClick={async () => {
+              await fetch(`/api/users/${clerkId}/delete-certification/${cert.id}`, { method: 'DELETE' });
+              fetchCerts();
+            }} title="Delete"><Trash2 className="w-4 h-4" /></button>
           </li>
         ))}
       </ul>
-      <Modal open={open} onClose={() => setOpen(false)}>
-        <form onSubmit={handleSubmit} className="space-y-2">
-          <input className="input" placeholder="Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
-          <input className="input" placeholder="Organization" value={form.organization} onChange={e => setForm(f => ({ ...f, organization: e.target.value }))} />
-          <input className="input" placeholder="Year" type="number" value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))} />
-          <textarea className="input" placeholder="Description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-          <div className="flex gap-2 mt-2">
-            <button type="button" onClick={() => setOpen(false)} className="px-3 py-1 bg-gray-200 rounded">Cancel</button>
-            <button type="submit" className="px-3 py-1 bg-emerald-600 text-white rounded">{editCert ? 'Save' : 'Add'}</button>
-          </div>
-        </form>
-      </Modal>
+      <SidebarEdit
+        open={open}
+        onClose={() => setOpen(false)}
+        title={editCert ? "Edit Certification" : "Add Certification"}
+        fields={fields}
+        apiUrl={editCert
+          ? `/api/users/${clerkId}/update-certification/${editCert.id}`
+          : `/api/users/${clerkId}/add-certification`}
+        method={editCert ? "PATCH" : "POST"}
+        onSaved={() => { setOpen(false); fetchCerts(); }}
+      />
     </section>
   );
 }

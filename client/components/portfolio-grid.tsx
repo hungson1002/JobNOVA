@@ -27,6 +27,7 @@ interface PortfolioGridProps {
   clerkId: string;
   isOwner?: boolean;
   isSeller?: boolean;
+  username: string;
 }
 
 export function PortfolioGrid({ 
@@ -34,6 +35,7 @@ export function PortfolioGrid({
   clerkId, 
   isOwner = false, 
   isSeller = false,
+  username,
 }: PortfolioGridProps) {
   // Calculate how many placeholders needed
   const maxSlots = 4;
@@ -43,11 +45,26 @@ export function PortfolioGrid({
 
   // Modal state
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const openModal = (idx: number) => setSelectedIndex(idx);
   const closeModal = () => setSelectedIndex(null);
   const prevPortfolio = () => setSelectedIndex((prev) => prev === null ? null : (prev - 1 + portfoliosToShow.length) % portfoliosToShow.length);
   const nextPortfolio = () => setSelectedIndex((prev) => prev === null ? null : (prev + 1) % portfoliosToShow.length);
+
+  const prevImage = () => {
+    if (selectedIndex !== null) {
+      const images = portfoliosToShow[selectedIndex].portfolio_images;
+      setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+    }
+  };
+
+  const nextImage = () => {
+    if (selectedIndex !== null) {
+      const images = portfoliosToShow[selectedIndex].portfolio_images;
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    }
+  };
 
   if (!portfoliosToShow.length) {
     return <div className="text-gray-500">No portfolio found for this gig.</div>;
@@ -126,18 +143,30 @@ export function PortfolioGrid({
           <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 p-8 relative flex flex-col items-center">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-sm text-gray-500">Made by</span>
-              <Link href={`/users/${clerkId}`} className="font-semibold hover:underline">User</Link>
+              <Link href={`/users/${clerkId}`} className="font-semibold hover:underline">{username}</Link>
             </div>
+
+            
+            
+            
             <h2 className="text-2xl font-bold mb-2">{portfoliosToShow[selectedIndex].title}</h2>
             <p className="text-gray-600 mb-4">{portfoliosToShow[selectedIndex].description}</p>
             <div className="w-full flex justify-center mb-4">
               <Image
-                src={portfoliosToShow[selectedIndex].portfolio_images[0] || '/placeholder.svg'}
+                src={portfoliosToShow[selectedIndex].portfolio_images[currentImageIndex] || '/placeholder.svg'}
                 alt={portfoliosToShow[selectedIndex].title}
                 width={400}
                 height={300}
                 className="object-contain rounded-lg max-h-[400px]"
               />
+            </div>
+            <div className="flex justify-center gap-2 mb-4">
+            <button onClick={prevImage} className="bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700">
+              <ChevronLeft className="h-6 w-6 text-white" />
+            </button>
+            <button onClick={nextImage} className="bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700">
+              <ChevronRight className="h-6 w-6 text-white" />
+            </button>
             </div>
             {portfoliosToShow[selectedIndex].category && (
               <div className="mb-2">

@@ -56,7 +56,9 @@ sequelize.authenticate()
   .then(() => console.log("Đã kết nối MySQL với Sequelize"))
   .catch((err) => console.error("Lỗi kết nối MySQL:", err.message));
 
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(cors({ origin: "http://localhost:3000", 
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  credentials: true }));
 
 app.use("/api/users", userRoute);
 

@@ -143,21 +143,59 @@ export const banUser = async (req, res, next) => {
 };
 
 
+
+
 // Cập nhật thông tin hồ sơ user (chỉ user đó được sửa)
 export const updateUserProfile = async (req, res, next) => {
   try {
     const { clerk_id } = req.params;
-    if (req.user.clerk_id !== clerk_id) {
-      return res.status(403).json({ message: "Forbidden: You can only update your own profile." });
+    
+    // Kiểm tra req.user
+    if (!req.user || !req.user.clerk_id) {
+      return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
+
+    if (req.user.clerk_id !== clerk_id) {
+      return res.status(403).json({ message: "Forbidden: You can only update your own profile" });
+    }
+
     const updateData = req.body;
-    await models.User.update(updateData, { where: { clerk_id } });
+    if (!updateData || typeof updateData !== 'object') {
+      return res.status(400).json({ message: "Invalid request body" });
+    }
+
+    // Kiểm tra các trường hợp lệ
+    const validFields = [
+      'username', 'firstname', 'lastname', 'avatar', 'description', 'date_of_birth',
+      'gender', 'contact_number', 'languages', 'location', 'plan_to_use',
+      'checklist_status', 'preferred_days', 'preferred_hours', 'timezone'
+    ];
+    const filteredData = {};
+    Object.keys(updateData).forEach(key => {
+      if (validFields.includes(key)) {
+        filteredData[key] = updateData[key];
+      }
+    });
+
+    if (Object.keys(filteredData).length === 0) {
+      return res.status(400).json({ message: "No valid fields provided for update" });
+    }
+
+    const [updatedRows] = await models.User.update(filteredData, { where: { clerk_id } });
+    if (updatedRows === 0) {
+      return res.status(404).json({ message: "User not found or no changes applied" });
+    }
+
     const user = await models.User.findOne({ where: { clerk_id } });
+    console.log(`User profile updated: clerk_id=${clerk_id}, data=`, filteredData);
     res.json(user);
   } catch (err) {
+    console.error(`Error updating user profile (clerk_id=${req.params.clerk_id}):`, err.message);
     next(err);
   }
 };
+
+
 
 // CRUD cho Education
 export const addEducation = async (req, res, next) => {

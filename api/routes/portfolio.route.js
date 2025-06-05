@@ -15,7 +15,7 @@ const router = express.Router();
 router.post('/', requireAuth, authenticateAndLoadUser, createPortfolio);
 
 // Get portfolios by clerk_id (public or authenticated)
-router.get('/:clerk_id', getPortfoliosByClerkId);
+router.get('/:seller_clerk_id', getPortfoliosByClerkId);
 
 // Update a portfolio (seller-only)
 router.put('/:id', requireAuth, updatePortfolio);
