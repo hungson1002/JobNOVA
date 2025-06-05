@@ -1,5 +1,5 @@
 import express from 'express';
-import { handleClerkWebhook, banUser } from '../controllers/user.controller.js';
+import { handleClerkWebhook, banUser, updateUserProfile, addEducation, updateEducation, deleteEducation, addCertification, updateCertification, deleteCertification } from '../controllers/user.controller.js';
 import { models } from "../models/Sequelize-mysql.js";
 
 const router = express.Router();
@@ -29,19 +29,6 @@ router.get("/:clerk_id", async (req, res, next) => {
   }
 });
 
-// Get user by username
-router.get("/by-username/:username", async (req, res, next) => {
-  try {
-    const user = await models.User.findOne({ where: { username: req.params.username } });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.status(200).json(user);
-  } catch (err) {
-    next(err);
-  }
-});
-
 // Delete user
 router.delete("/:id", async (req, res, next) => {
   try {
@@ -58,5 +45,29 @@ router.delete("/:id", async (req, res, next) => {
 
 // Ban/Unban user
 router.patch('/:clerk_id/ban', banUser);
+
+
+// Get user by username
+router.get("/by-username/:username", async (req, res, next) => {
+  try {
+    const user = await models.User.findOne({ where: { username: req.params.username } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/:clerk_id/update-profile", updateUserProfile);
+
+router.post("/:clerk_id/add-education", addEducation);
+router.patch("/:clerk_id/update-education/:edu_id", updateEducation);
+router.delete("/:clerk_id/delete-education/:edu_id", deleteEducation);
+
+router.post("/:clerk_id/add-certification", addCertification);
+router.patch("/:clerk_id/update-certification/:cert_id", updateCertification);
+router.delete("/:clerk_id/delete-certification/:cert_id", deleteCertification);
 
 export default router;

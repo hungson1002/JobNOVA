@@ -142,20 +142,6 @@ export const banUser = async (req, res, next) => {
   }
 };
 
-// Lấy thông tin hồ sơ user
-export const getUserProfile = async (req, res, next) => {
-  try {
-    const { clerk_id } = req.params;
-    const user = await models.User.findOne({
-      where: { clerk_id },
-      include: [models.Education, models.Certification],
-    });
-    if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
-  } catch (err) {
-    next(err);
-  }
-};
 
 // Cập nhật thông tin hồ sơ user (chỉ user đó được sửa)
 export const updateUserProfile = async (req, res, next) => {
