@@ -109,6 +109,13 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId 
     return true;
   });
 
+  // Sắp xếp uniqueTickets theo thời gian last_message.sent_at giảm dần (mới nhất lên trên)
+  uniqueTickets.sort((a, b) => {
+    const aTime = a.last_message?.sent_at ? new Date(a.last_message.sent_at).getTime() : 0;
+    const bTime = b.last_message?.sent_at ? new Date(b.last_message.sent_at).getTime() : 0;
+    return bTime - aTime;
+  });
+
   return (
     <div className="w-full border-r lg:w-80 bg-gradient-to-b from-white via-gray-50 to-emerald-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 h-full rounded-l-2xl shadow-lg">
       <div className="border-b p-4 bg-white/80 dark:bg-gray-900/80 rounded-tl-2xl">

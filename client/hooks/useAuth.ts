@@ -26,6 +26,10 @@ export function useAuth() {
           const data = await response.json();
           setUser(data.user);
           setError(null);
+          if (typeof window !== 'undefined' && data.user) {
+            if (data.user.username) localStorage.setItem('username', data.user.username);
+            if (data.user.clerk_id) localStorage.setItem('clerk_id', data.user.clerk_id);
+          }
         } else if (response.status === 404) {
           // User not authenticated is not an error
           setUser(null);

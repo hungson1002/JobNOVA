@@ -464,6 +464,13 @@ export function Navbar({ isVisible = true }: NavbarProps) {
     return true;
   });
 
+  // Sắp xếp uniqueDropdownTickets theo thời gian last_message.sent_at giảm dần (mới nhất lên trên)
+  uniqueDropdownTickets.sort((a, b) => {
+    const aTime = a.last_message?.sent_at ? new Date(a.last_message.sent_at).getTime() : 0;
+    const bTime = b.last_message?.sent_at ? new Date(b.last_message.sent_at).getTime() : 0;
+    return bTime - aTime;
+  });
+
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

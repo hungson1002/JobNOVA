@@ -27,8 +27,10 @@ export default function ProfileSettingsPage() {
   const clerkId = user?.clerk_id || ""
 
   useEffect(() => {
-    // Giả sử đã có API lấy user hiện tại, thay thế bằng logic thực tế nếu cần
-    fetch("/api/auth/me")
+    // Lấy clerkId từ local/session hoặc auth context nếu có
+    const storedClerkId = typeof window !== 'undefined' ? localStorage.getItem('clerk_id') : null;
+    if (!storedClerkId) return;
+    fetch(`http://localhost:8800/api/users/${storedClerkId}`)
       .then(res => res.json())
       .then(data => {
         setUser(data)
