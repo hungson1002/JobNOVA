@@ -13,6 +13,7 @@ import CertificationSection from '@/components/profile/CertificationSection';
 import EducationSection from '@/components/profile/EducationSection';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import SkillsSection from '@/components/profile/SkillsSection';
+import LanguageSection from '@/components/profile/LanguageSection';
 
 async function getUser(username: string): Promise<any> {
   try {
@@ -30,21 +31,16 @@ async function getPortfolios(clerkId: string): Promise<any[]> {
     const res = await fetch(`http://localhost:8800/api/portfolios/${clerkId}`);
     if (!res.ok) return [];
     const data = await res.json();
-    let portfoliosData: any[] = [];
-    if (Array.isArray(data.portfolios)) {
-      portfoliosData = data.portfolios;
-    } else if (Array.isArray(data.data)) {
-      portfoliosData = data.data;
-    } else if (Array.isArray(data)) {
-      portfoliosData = data;
-    }
+    // Only expect data.portfolios as per controller logic
+    const portfoliosData: any[] = Array.isArray(data.portfolios) ? data.portfolios : [];
+    // Ensure portfolio_images is always an array
     return portfoliosData.map((p: any) => ({
       id: p.id,
       title: p.title,
       description: p.description,
-      portfolio_images: p.portfolio_images || [],
-      category: p.category ? { id: p.category.id, name: p.category.name } : (p.Category ? { id: p.Category.id, name: p.Category.name } : undefined),
-      gig: p.gig ? { id: p.gig.id, title: p.gig.title } : (p.Gig ? { id: p.Gig.id, title: p.Gig.title } : undefined),
+      portfolio_images: Array.isArray(p.portfolio_images) ? p.portfolio_images : [],
+      category: p.category ? { id: p.category.id, name: p.category.name } : undefined,
+      gig: p.gig ? { id: p.gig.id, title: p.gig.title } : undefined,
     }));
   } catch (error) {
     console.error('Error fetching portfolios:', error);
@@ -152,31 +148,19 @@ export default function SellerProfilePage() {
             </div>
             {/* Languages */}
             <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-xl font-bold">Languages</h2>
-              {profileUser.languages?.length > 0 ? (
-                <ul className="space-y-3">
-                  {profileUser.languages.map((language: any) => (
-                    <li key={language.name} className="flex justify-between">
-                      <span>{language.name}</span>
-                      <span className="text-gray-600">{language.level}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500">No languages specified</p>
-              )}
+              <LanguageSection clerkId={profileUser.clerk_id} isOwner={isOwner} />
             </div>
             {/* Skills Section */}
             <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
-              <SkillsSection clerkId={profileUser.clerk_id} />
+              <SkillsSection clerkId={profileUser.clerk_id} isOwner={isOwner} />
             </div>
             {/* Education Section */}
             <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
-              <EducationSection clerkId={profileUser.clerk_id} />
+              <EducationSection clerkId={profileUser.clerk_id} isOwner={isOwner} />
             </div>
             {/* Certifications Section */}
             <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
-              <CertificationSection clerkId={profileUser.clerk_id} />
+              <CertificationSection clerkId={profileUser.clerk_id} isOwner={isOwner} />
             </div>
           </div>
 
@@ -255,4 +239,4 @@ export default function SellerProfilePage() {
       </div>
     </main>
   );
-} 
+}

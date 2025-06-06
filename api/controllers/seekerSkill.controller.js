@@ -7,10 +7,23 @@ export const createSeekerSkill = async (req, res, next) => {
     if (!clerk_id || !skill_id) {
       return res.status(400).json({ success: false, message: 'Missing required fields: clerk_id and skill_id' });
     }
+    
+    // Check if skill already exists for this user
+    const existingSkill = await models.SeekerSkill.findOne({
+      where: { clerk_id, skill_id }
+    });
+    
+    if (existingSkill) {
+      return res.status(409).json({ success: false, message: 'Skill already added to your profile' });
+    }
+    
     const seekerSkill = await models.SeekerSkill.create({ clerk_id, skill_id });
     console.log(`SeekerSkill created: clerk_id=${clerk_id}, skill_id=${skill_id}`);
     return res.status(201).json({ success: true, message: 'SeekerSkill created successfully', seekerSkill });
   } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ success: false, message: 'Skill already added to your profile' });
+    }
     console.error('Error creating SeekerSkill:', error.message);
     return res.status(500).json({ success: false, message: 'Error creating SeekerSkill', error: error.message });
   }
@@ -81,10 +94,21 @@ export const deleteSeekerSkill = async (req, res, next) => {
 export const getSkillsByClerkId = async (req, res, next) => {
   try {
     const { clerk_id } = req.params;
-    const seekerSkills = await models.SeekerSkill.findAll({ where: { clerk_id } });
+    console.log('Fetching skills for clerk_id:', clerk_id);
+    
+    const seekerSkills = await models.SeekerSkill.findAll({ 
+      where: { clerk_id },
+      include: [{
+        model: models.Skills,
+        attributes: ['id', 'name']
+      }]
+    });
+    
+    console.log('Found seekerSkills:', JSON.stringify(seekerSkills, null, 2));
     return res.status(200).json({ success: true, seekerSkills });
   } catch (error) {
     console.error('Error fetching skills by clerk_id:', error.message);
+    console.error('Full error:', error);
     return res.status(500).json({ success: false, message: 'Error fetching skills by clerk_id', error: error.message });
   }
 };

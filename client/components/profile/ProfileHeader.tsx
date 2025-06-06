@@ -1,6 +1,10 @@
 import Image from 'next/image';
-import { Star, MapPin, Flag, MessageSquare } from 'lucide-react';
+import { Star, MapPin, Flag, MessageSquare, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SidebarEdit from './SidebarEdit';
+import { useAuth } from '@clerk/nextjs';
+import { toast } from 'sonner';
+import React, { useState, useEffect } from 'react';
 
 interface ProfileHeaderProps {
   profile: any;
@@ -22,7 +26,19 @@ export default function ProfileHeader({ profile, isOwner }: ProfileHeaderProps) 
   // Xử lý các trường preferred_days, preferred_hours, plan_to_use
   const preferredDays = profile.preferred_days || 'preferred working days';
   const preferredHours = profile.preferred_hours || 'preferred working hours';
-  const planToUse = profile.plan_to_use || "doesn't set plan";
+  // Render plan_to_use as a string for display
+  let planToUse = "doesn't set plan";
+  if (profile.plan_to_use && typeof profile.plan_to_use === 'object' && Object.values(profile.plan_to_use).some(Boolean)) {
+    const planMap: Record<string, string> = {
+      primary: 'Primary job/business',
+      secondary: 'Secondary business',
+      non_business: 'Non-business needs',
+    };
+    planToUse = Object.entries(profile.plan_to_use)
+      .filter(([_, v]) => v)
+      .map(([k]) => planMap[k] || k)
+      .join(', ');
+  }
 
   const roles = Array.isArray(profile.user_roles)
     ? profile.user_roles
@@ -30,14 +46,86 @@ export default function ProfileHeader({ profile, isOwner }: ProfileHeaderProps) 
       ? [profile.user_roles]
       : [];
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { getToken } = useAuth();
+  const [localProfile, setLocalProfile] = useState({
+    firstname: profile.firstname || '',
+    lastname: profile.lastname || '',
+  });
+
+  // Update localProfile if profile changes
+  // (prevents stale state if user switches profile)
+  useEffect(() => {
+    setLocalProfile({
+      firstname: profile.firstname || '',
+      lastname: profile.lastname || '',
+    });
+  }, [profile.firstname, profile.lastname]);
+
+  const handleEditName = () => setSidebarOpen(true);
+
+  const handleSaveName = async (form: any) => {
+    setSaving(true);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication error: Unable to get token');
+      // Allow either field to be empty
+      const firstname = form.firstname?.trim() || '';
+      const lastname = form.lastname?.trim() || '';
+      const fullName = [firstname, lastname].filter(Boolean).join(' ');
+      // Only send fields that are present
+      const body: any = {};
+      if (firstname) body.firstname = firstname;
+      if (lastname) body.lastname = lastname;
+      body.name = fullName;
+      const response = await fetch(`http://localhost:8800/api/users/${profile.clerk_id}/update-profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to update name');
+      }
+      setLocalProfile({ firstname, lastname });
+      // Update the profile object in-place so UI updates immediately
+      if (profile) {
+        profile.firstname = firstname;
+        profile.lastname = lastname;
+        profile.name = fullName;
+      }
+      toast.success('Name updated successfully');
+      setSidebarOpen(false);
+    } catch (error) {
+      toast.error((error as Error).message || 'An error occurred while updating name');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="w-full rounded-lg border bg-white p-6 shadow-sm flex flex-col gap-6 md:flex-row items-center justify-between">
       <div className="flex items-center gap-6 w-full">
         <div className="relative h-32 w-32 overflow-hidden rounded-full border-4 border-white shadow-md">
-          <Image src={profile.avatar || "/placeholder.svg"} alt={profile.name || 'User'} fill className="object-cover" />
+          <Image src={profile.avatar || "/placeholder.svg"} alt={profile.firstname + ' ' + profile.lastname || 'User'} fill className="object-cover" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold truncate">{profile.name || 'No Name'}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold truncate mb-0">
+              {(!profile.firstname && !profile.lastname)
+                ? 'No Name'
+                : [profile.firstname, profile.lastname].filter(Boolean).join(' ')}
+            </h1>
+            {isOwner && (
+              <button className="ml-1 p-1 rounded-full hover:bg-gray-100" onClick={handleEditName} title="Edit name">
+                <Pencil className="w-4 h-4 text-gray-500" />
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-lg text-gray-600 truncate mb-0">@{profile.username || 'No Username'}</p>
             {/* Role badges ngang hàng username */}
@@ -97,7 +185,12 @@ export default function ProfileHeader({ profile, isOwner }: ProfileHeaderProps) 
       </div>
       <div className="flex flex-col gap-2 md:ml-auto md:mt-0 min-w-fit">
         {isOwner ? (
-          <Button className="bg-emerald-500 hover:bg-emerald-600">Edit Profile</Button>
+            <Button
+            className="bg-emerald-500 hover:bg-emerald-600"
+            onClick={() => window.location.href = '/profile/settings'}
+            >
+            Setting Account
+            </Button>
         ) : (
           <>
             <Button className="bg-emerald-500 hover:bg-emerald-600">
@@ -111,6 +204,16 @@ export default function ProfileHeader({ profile, isOwner }: ProfileHeaderProps) 
           </>
         )}
       </div>
+      <SidebarEdit
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        title="Edit Name"
+        fields={[
+          { name: 'firstname', label: 'First Name', value: localProfile.firstname },
+          { name: 'lastname', label: 'Last Name', value: localProfile.lastname },
+        ]}
+        onSaved={handleSaveName}
+      />
     </div>
   );
 }

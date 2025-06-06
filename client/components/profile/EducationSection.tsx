@@ -13,7 +13,7 @@ interface Education {
   country?: string;
 }
 
-export default function EducationSection({ clerkId }: { clerkId: string }) {
+export default function EducationSection({ clerkId, isOwner = false }: { clerkId: string, isOwner?: boolean }) {
   const [list, setList] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editEdu, setEditEdu] = useState<any>(null);
@@ -47,10 +47,38 @@ export default function EducationSection({ clerkId }: { clerkId: string }) {
     setEditEdu(edu);
     setOpen(true);
   };
+
   const handleAdd = () => {
     console.log('Add button clicked');
     setEditEdu(null);
     setOpen(true);
+  };
+
+  const handleDelete = async (eduId: number) => {
+    try {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication error: Unable to get token');
+      }
+
+      const response = await fetch(`http://localhost:8800/api/users/${clerkId}/delete-education/${eduId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete education');
+      }
+
+      toast.success('Education deleted successfully');
+      fetchEducations();
+    } catch (error) {
+      console.error('Error deleting education:', error);
+      toast.error((error as Error).message || 'An error occurred while deleting education');
+    }
   };
 
   const handleSave = async (form: any) => {
@@ -90,7 +118,7 @@ export default function EducationSection({ clerkId }: { clerkId: string }) {
           throw new Error(data.message || 'Failed to update education');
         }
         toast.success('Education updated successfully');
-      } else if (editEdu === null) {
+      } else{
         // Add new education
         response = await fetch(`http://localhost:8800/api/users/${clerkId}/add-education`, {
           method: 'POST',
@@ -105,22 +133,7 @@ export default function EducationSection({ clerkId }: { clerkId: string }) {
           throw new Error(data.message || 'Failed to add education');
         }
         toast.success('Education added successfully');
-      }else{
-        //delete education
-        response = await fetch(`http://localhost:8800/api/users/${clerkId}/delete-education/${editEdu.id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }); 
-        data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to delete education');
-        }
-        toast.success('Education deleted successfully');
       }
-
-      
       setOpen(false);
       fetchEducations();
     } catch (error) {
@@ -147,13 +160,16 @@ export default function EducationSection({ clerkId }: { clerkId: string }) {
     <section className="mb-6">
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-semibold text-lg flex items-center gap-2"><GraduationCap className="w-5 h-5 text-blue-500" /> Education</h3>
-        <button
-          className="text-emerald-600 text-sm disabled:opacity-50"
-          onClick={handleAdd}
-          disabled={loading}
-        >
-          <Plus className="w-4 h-4" /> Add
-        </button>
+        {isOwner && (
+          <button
+            className="text-emerald-600 text-sm flex items-center gap-1 hover:underline disabled:opacity-50"
+            onClick={handleAdd}
+            disabled={loading}
+            title="Add education"
+          >
+            <Plus className="w-4 h-4" /> Add
+          </button>
+        )}
       </div>
       {loading ? (
         <div className="text-gray-400 italic">Loading...</div>
@@ -173,17 +189,16 @@ export default function EducationSection({ clerkId }: { clerkId: string }) {
               {edu.year_of_graduation && (
                 <div className="text-gray-500 text-sm">Graduated {edu.year_of_graduation}</div>
               )}
-              <div className="mt-2 flex gap-2">
-                <button className="px-3 py-1 border rounded text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-1" onClick={() => handleEdit(edu)} title="Edit education">
-                  <Edit2 className="w-4 h-4" /> Edit education
-                </button>
-                <button className="px-3 py-1 border rounded text-sm text-red-600 hover:bg-red-50 flex items-center gap-1" onClick={async () => {
-                  await fetch(`/api/users/${clerkId}/delete-education/${edu.id}`, { method: 'DELETE' });
-                  fetchEducations();
-                }} title="Delete education">
-                  <Trash2 className="w-4 h-4" /> Delete
-                </button>
-              </div>
+              {isOwner && (
+                <div className="mt-2 flex gap-2">
+                  <button className="px-3 py-1 border rounded text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-1" onClick={() => handleEdit(edu)} title="Edit education">
+                    <Edit2 className="w-4 h-4" /> Edit education
+                  </button>
+                  <button className="px-3 py-1 border rounded text-sm text-red-600 hover:bg-red-50 flex items-center gap-1" onClick={() => handleDelete(edu.id)} title="Delete education">
+                    <Trash2 className="w-4 h-4" /> Delete
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>

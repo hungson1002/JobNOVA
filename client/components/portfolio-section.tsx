@@ -29,9 +29,8 @@ export function PortfolioSection({ clerkId }: PortfolioSectionProps) {
         const response = await fetch(`http://localhost:8800/api/portfolios/${clerkId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch portfolios');
-        }
-        const data = await response.json();
-        setPortfolios(data);
+        }        const data = await response.json();
+        setPortfolios(Array.isArray(data.portfolios) ? data.portfolios : []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load portfolios');
       } finally {

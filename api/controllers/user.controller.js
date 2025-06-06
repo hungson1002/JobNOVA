@@ -144,7 +144,6 @@ export const banUser = async (req, res, next) => {
 
 
 
-
 // Cập nhật thông tin hồ sơ user (chỉ user đó được sửa)
 export const updateUserProfile = async (req, res, next) => {
   try {
@@ -159,7 +158,16 @@ export const updateUserProfile = async (req, res, next) => {
       return res.status(403).json({ message: "Forbidden: You can only update your own profile" });
     }
 
-    const updateData = req.body;
+    // Handle express.raw() body (Buffer) for PATCH requests
+    let updateData = req.body;
+    if (Buffer.isBuffer(updateData)) {
+      try {
+        updateData = JSON.parse(updateData.toString('utf8'));
+      } catch (err) {
+        return res.status(400).json({ message: "Invalid JSON body" });
+      }
+    }
+
     if (!updateData || typeof updateData !== 'object') {
       return res.status(400).json({ message: "Invalid request body" });
     }
@@ -176,6 +184,17 @@ export const updateUserProfile = async (req, res, next) => {
         filteredData[key] = updateData[key];
       }
     });
+
+    // Special PATCH logic for plan_to_use: merge with existing
+    if (filteredData.plan_to_use) {
+      const user = await models.User.findOne({ where: { clerk_id } });
+      if (user && user.plan_to_use && typeof user.plan_to_use === 'object') {
+        filteredData.plan_to_use = {
+          ...user.plan_to_use,
+          ...filteredData.plan_to_use
+        };
+      }
+    }
 
     if (Object.keys(filteredData).length === 0) {
       return res.status(400).json({ message: "No valid fields provided for update" });
@@ -197,13 +216,29 @@ export const updateUserProfile = async (req, res, next) => {
 
 
 
+// Helper: parse req.body if Buffer (for express.raw)
+function parseBodyIfBuffer(body) {
+  if (Buffer.isBuffer(body)) {
+    try {
+      return JSON.parse(body.toString('utf8'));
+    } catch (err) {
+      return null;
+    }
+  }
+  return body;
+}
+
 // CRUD cho Education
 export const addEducation = async (req, res, next) => {
   try {
     if (req.user.clerk_id !== req.params.clerk_id) {
       return res.status(403).json({ message: "Forbidden: You can only add education to your own profile." });
     }
-    const edu = await models.Education.create({ ...req.body, clerk_id: req.params.clerk_id });
+    let body = parseBodyIfBuffer(req.body);
+    if (!body || typeof body !== 'object') {
+      return res.status(400).json({ message: "Invalid request body" });
+    }
+    const edu = await models.Education.create({ ...body, clerk_id: req.params.clerk_id });
     res.status(201).json(edu);
   } catch (err) { next(err); }
 };
@@ -213,7 +248,11 @@ export const updateEducation = async (req, res, next) => {
     if (!edu || edu.clerk_id !== req.user.clerk_id) {
       return res.status(403).json({ message: "Forbidden: You can only update your own education." });
     }
-    await edu.update(req.body);
+    let body = parseBodyIfBuffer(req.body);
+    if (!body || typeof body !== 'object') {
+      return res.status(400).json({ message: "Invalid request body" });
+    }
+    await edu.update(body);
     res.json(edu);
   } catch (err) { next(err); }
 };
@@ -234,7 +273,11 @@ export const addCertification = async (req, res, next) => {
     if (req.user.clerk_id !== req.params.clerk_id) {
       return res.status(403).json({ message: "Forbidden: You can only add certification to your own profile." });
     }
-    const cert = await models.Certification.create({ ...req.body, clerk_id: req.params.clerk_id });
+    let body = parseBodyIfBuffer(req.body);
+    if (!body || typeof body !== 'object') {
+      return res.status(400).json({ message: "Invalid request body" });
+    }
+    const cert = await models.Certification.create({ ...body, clerk_id: req.params.clerk_id });
     res.status(201).json(cert);
   } catch (err) { next(err); }
 };
@@ -244,7 +287,11 @@ export const updateCertification = async (req, res, next) => {
     if (!cert || cert.clerk_id !== req.user.clerk_id) {
       return res.status(403).json({ message: "Forbidden: You can only update your own certification." });
     }
-    await cert.update(req.body);
+    let body = parseBodyIfBuffer(req.body);
+    if (!body || typeof body !== 'object') {
+      return res.status(400).json({ message: "Invalid request body" });
+    }
+    await cert.update(body);
     res.json(cert);
   } catch (err) { next(err); }
 };

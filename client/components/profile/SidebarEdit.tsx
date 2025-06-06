@@ -1,4 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
+import { Button } from "../ui/button";
+import { Label } from "../ui/label";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 
 interface Field {
   name: string;
@@ -42,6 +47,7 @@ export default function SidebarEdit({
       await fetch(apiUrl, {
         method,
         headers: { 'Content-Type': 'application/json' },
+        // Send as string for express.raw compatibility
         body: JSON.stringify(form),
       });
     }
@@ -57,30 +63,44 @@ export default function SidebarEdit({
         <form onSubmit={handleSubmit} className="space-y-6">
           {fields.map(f => (
             <div key={f.name}>
-              <label className="block font-medium mb-2 text-gray-700">{f.label}</label>
+              <Label htmlFor={f.name}>{f.label}</Label>
               {f.type === "textarea" ? (
-                <textarea
-                  className="input w-full rounded border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
+                <Textarea
+                  id={f.name}
                   value={form[f.name]}
                   onChange={e => handleChange(f.name, e.target.value)}
                   rows={5}
                   required
                 />
               ) : f.type === 'select' && f.options ? (
-                <select
-                  className="input w-full rounded border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
-                  value={form[f.name]}
-                  onChange={e => handleChange(f.name, e.target.value)}
-                  required
-                >
-                  <option value="">Select {f.label.toLowerCase()}</option>
-                  {f.options.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between"
+                      id={f.name}
+                    >
+                      {form[f.name]
+                        ? f.options.find(opt => opt.value === form[f.name])?.label || 'Select ' + f.label.toLowerCase()
+                        : 'Select ' + f.label.toLowerCase()}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-full">
+                    {f.options.map(opt => (
+                      <DropdownMenuItem
+                        key={opt.value}
+                        onSelect={() => handleChange(f.name, String(opt.value))}
+                        className={form[f.name] === String(opt.value) ? 'bg-emerald-100 font-semibold' : ''}
+                      >
+                        {opt.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
-                <input
-                  className="input w-full rounded border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition"
+                <Input
+                  id={f.name}
                   value={form[f.name]}
                   onChange={e => handleChange(f.name, e.target.value)}
                   required
@@ -89,11 +109,11 @@ export default function SidebarEdit({
             </div>
           ))}
           <div className="flex gap-3 mt-6 justify-end">
-            <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition flex items-center gap-2" disabled={loading}>
+            <Button type="button" onClick={onClose} variant="outline">Cancel</Button>
+            <Button type="submit" disabled={loading}>
               {loading && <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>}
               {loading ? "Saving..." : "Save"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

@@ -148,10 +148,13 @@ const defineRelations = (models) => {
   models.AdminLog.belongsTo(models.User, { foreignKey: 'admin_clerk_id', targetKey: 'clerk_id' });
   models.AdminLog.belongsTo(models.User, { foreignKey: 'target_clerk_id', targetKey: 'clerk_id' });
   models.AdminLog.belongsTo(models.Gig, { foreignKey: 'gig_id' });
-
   // User-SeekerSkill: 1-to-many (one user can have multiple skills)
   models.SeekerSkill.belongsTo(models.User, { foreignKey: 'clerk_id', targetKey: 'clerk_id' });
   models.User.hasMany(models.SeekerSkill, { foreignKey: 'clerk_id', sourceKey: 'clerk_id' });
+
+  // Skills-SeekerSkill: 1-to-many (one skill can be used by multiple seekers)
+  models.SeekerSkill.belongsTo(models.Skills, { foreignKey: 'skill_id' });
+  models.Skills.hasMany(models.SeekerSkill, { foreignKey: 'skill_id' });
 
   // Gig-Skills: Many-to-many (one gig can have multiple skills, one skill can apply to multiple gigs)
   models.Gig.belongsToMany(models.Skills, { through: models.GigSkill, foreignKey: 'gig_id' });

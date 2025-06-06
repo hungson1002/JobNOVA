@@ -38,8 +38,9 @@ export function PortfolioGrid({
   username,
 }: PortfolioGridProps) {
   // Calculate how many placeholders needed
-  const maxSlots = 4;
+  const maxSlots = 4; // Total slots in the grid
   const showAdd = isOwner && isSeller;
+  // Always show the grid with the add button and placeholders, even if portfolios is empty
   const portfoliosToShow = portfolios.slice(0, maxSlots - (showAdd ? 1 : 0));
   const placeholders = Array(maxSlots - portfoliosToShow.length - (showAdd ? 1 : 0)).fill(null);
 
@@ -66,10 +67,7 @@ export function PortfolioGrid({
     }
   };
 
-  if (!portfoliosToShow.length) {
-    return <div className="text-gray-500">No portfolio found for this gig.</div>;
-  }
-
+  // Always render the grid, even if portfoliosToShow is empty
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -125,7 +123,6 @@ export function PortfolioGrid({
           </Link>
         </Button>
       </div>
-
       {/* Modal chi tiết portfolio */}
       {selectedIndex !== null && portfoliosToShow[selectedIndex] && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
@@ -145,10 +142,6 @@ export function PortfolioGrid({
               <span className="text-sm text-gray-500">Made by</span>
               <Link href={`/users/${clerkId}`} className="font-semibold hover:underline">{username}</Link>
             </div>
-
-            
-            
-            
             <h2 className="text-2xl font-bold mb-2">{portfoliosToShow[selectedIndex].title}</h2>
             <p className="text-gray-600 mb-4">{portfoliosToShow[selectedIndex].description}</p>
             <div className="w-full flex justify-center mb-4">
@@ -184,4 +177,4 @@ export function PortfolioGrid({
       )}
     </div>
   );
-} 
+}
