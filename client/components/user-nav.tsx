@@ -56,11 +56,6 @@ export function UserNav() {
         {isAdmin ? (
           <>
             <DropdownMenuItem>
-              <Link href="/dashboard/admin" className="w-full">
-                Dashboard
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
               <Link href="/admin/manage-gigs" className="w-full">
                 Manage Gigs
               </Link>

@@ -496,9 +496,7 @@ export default function Home() {
                 <div className="flex flex-wrap gap-4">
                   {user?.publicMetadata?.isAdmin ? (
                     <>
-                      <Button asChild size="lg" className="bg-white text-emerald-600 hover:bg-gray-100">
-                        <Link href="/dashboard/admin">Admin Dashboard</Link>
-                      </Button>
+                      {/* Đã xoá nút Admin Dashboard */}
                       <Button asChild size="lg" variant="outline" className="border-white text-black hover:bg-white/10">
                         <Link href="/admin/manage-gigs">Manage Services</Link>
                       </Button>

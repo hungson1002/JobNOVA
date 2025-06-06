@@ -78,11 +78,6 @@ export function DashboardSidebar() {
 
   const adminLinks = [
     {
-      title: "Admin Dashboard",
-      href: "/admin",
-      icon: <LayoutDashboard className="h-5 w-5" />,
-    },
-    {
       title: "Manage Users",
       href: "/admin?tab=users",
       icon: <Users className="h-5 w-5" />,
