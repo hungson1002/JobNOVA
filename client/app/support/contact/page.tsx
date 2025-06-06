@@ -167,9 +167,9 @@ export default function ContactPage() {
       </section>
 
       {/* FAQ Section */}
-      <section className="mb-16">
-        <h2 className="text-3xl font-bold mb-8 text-center">Frequently Asked Questions</h2>
-        <div className="grid md:grid-cols-2 gap-6">
+      <section className="mb-8 sm:mb-16">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-center">Frequently Asked Questions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {[
             {
               question: "How can I contact customer support?",
@@ -189,9 +189,9 @@ export default function ContactPage() {
             }
           ].map((faq, index) => (
             <Card key={index}>
-              <CardContent className="p-6">
-                <h3 className="text-lg font-bold mb-2">{faq.question}</h3>
-                <p className="text-muted-foreground">{faq.answer}</p>
+              <CardContent className="p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-bold mb-2">{faq.question}</h3>
+                <p className="text-sm sm:text-base text-muted-foreground">{faq.answer}</p>
               </CardContent>
             </Card>
           ))}
@@ -199,9 +199,9 @@ export default function ContactPage() {
       </section>
 
       {/* Map Section */}
-      <section className="mb-16">
-        <div className="bg-muted rounded-xl p-8">
-          <h2 className="text-3xl font-bold mb-8 text-center">Our Location</h2>
+      <section className="mb-8 sm:mb-16">
+        <div className="bg-muted rounded-xl p-4 sm:p-8">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-center">Our Location</h2>
           <div className="aspect-video w-full bg-muted-foreground/20 rounded-lg">
             {/* Add Google Maps or interactive map here */}
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">

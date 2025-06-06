@@ -85,7 +85,7 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
   const goPrev = () => setCurrentIndex((prev) => (prev - 1 + mediaList.length) % mediaList.length)
 
   return (
-    <Link href={`/gigs/${service.id}`} className="block w-[250px]">
+    <Link href={`/gigs/${service.id}`} className="block w-full sm:w-[250px]">
       <div
         className="group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-gray-200/50 bg-white transition-all duration-300  hover:shadow-xl hover:shadow-gray-200/50 dark:border-gray-800 dark:bg-gray-900 dark:hover:shadow-gray-900/30"
         onMouseEnter={() => {

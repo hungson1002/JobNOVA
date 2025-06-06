@@ -480,7 +480,22 @@ export function Navbar({ isVisible = true }: NavbarProps) {
             </Link>
           </div>
 
-          <div className="flex flex-1 items-center gap-4" suppressHydrationWarning>
+          {/* Hamburger button for mobile */}
+          <button
+            className="md:hidden ml-auto p-2 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-label="Open menu"
+            type="button"
+          >
+            {isMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            )}
+          </button>
+
+          {/* Main nav content (hidden on mobile) */}
+          <div className="flex flex-1 items-center gap-4 md:flex hidden" suppressHydrationWarning>
             <form onSubmit={(e) => handleSearch(e, searchQuery, goToSearch)} className="relative flex-1 mx-4 flex">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
@@ -846,6 +861,7 @@ export function Navbar({ isVisible = true }: NavbarProps) {
         { !pathname.startsWith("/messages") && (
         <div className="border-t bg-white">
           <div className="container relative">
+            {/* Nút scroll trái chỉ hiện trên desktop */}
             {showLeftButton && (
               <button 
                 className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-r-lg shadow-md z-10 hidden md:flex items-center justify-center transition-opacity duration-200"
@@ -855,7 +871,8 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                 <ChevronLeft className="h-5 w-5" />
               </button>
             )}
-            <div className="overflow-hidden">
+            {/* Luôn cho phép scroll ngang trên mobile và desktop */}
+            <div className="overflow-x-auto">
               <nav 
                 ref={categoriesRef}
                 className="flex items-center space-x-4 overflow-x-auto py-2 whitespace-nowrap touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
@@ -872,6 +889,7 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                 ))}
               </nav>
             </div>
+            {/* Nút scroll phải chỉ hiện trên desktop */}
             {showRightButton && (
               <button 
                 className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-l-lg shadow-md z-10 hidden md:flex items-center justify-center transition-opacity duration-200"
@@ -885,6 +903,70 @@ export function Navbar({ isVisible = true }: NavbarProps) {
         </div>
         )}
       </header>
+
+      {/* Overlay menu for mobile */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/40 md:hidden" onClick={() => setIsMenuOpen(false)}>
+          <div className="absolute top-0 right-0 w-3/4 max-w-xs h-full bg-white shadow-lg p-6 flex flex-col gap-6" onClick={e => e.stopPropagation()}>
+            <form onSubmit={(e) => handleSearch(e, searchQuery, goToSearch)} className="relative flex-1 flex mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                ref={inputRef}
+                type="search"
+                placeholder="Search services..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
+                className="w-full h-10 pl-10 pr-12 text-base rounded-md bg-background placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-emerald-500 border"
+              />
+              <Button
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-3 bg-emerald-500 text-white hover:bg-emerald-600 rounded-md"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </form>
+            <div className="flex flex-col gap-4">
+              {isSignedIn ? (
+                <>
+                  <Link href={user?.username ? `/users/${user.username}` : "/profile"} className="flex items-center gap-2 py-2 px-3 rounded hover:bg-emerald-50">
+                    <User className="h-5 w-5" /> <span>Profile</span>
+                  </Link>
+                  {isSeller && (
+                    <Link href="/my-gigs" className="flex items-center gap-2 py-2 px-3 rounded hover:bg-emerald-50">
+                      <FolderKanban className="h-5 w-5" /> <span>My Job</span>
+                    </Link>
+                  )}
+                  <Link href="/saved" className="flex items-center gap-2 py-2 px-3 rounded hover:bg-emerald-50">
+                    <Heart className="h-5 w-5" /> <span>Favorites Jobs</span>
+                  </Link>
+                  <Link href="/orders" className="flex items-center gap-2 py-2 px-3 rounded hover:bg-emerald-50">
+                    <ShoppingCart className="h-5 w-5" /> <span>Cart</span>
+                  </Link>
+                  <Link href="/messages" className="flex items-center gap-2 py-2 px-3 rounded hover:bg-emerald-50">
+                    <MessageSquare className="h-5 w-5" /> <span>Messages</span>
+                  </Link>
+                  <Link href="#" className="flex items-center gap-2 py-2 px-3 rounded hover:bg-emerald-50" onClick={() => setOpenNotify(true)}>
+                    <Bell className="h-5 w-5" /> <span>Notifications</span>
+                  </Link>
+                  <LanguageCurrencySwitcher />
+                  <UserButton />
+                </>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <SignInButton mode="modal">
+                    <Button variant="ghost" className="w-full">Đăng nhập</Button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <Button className="w-full">Đăng ký</Button>
+                  </SignUpButton>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal chi tiết notification system */}
       <Dialog open={openSystemModal} onOpenChange={setOpenSystemModal}>
