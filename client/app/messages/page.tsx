@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, memo, useMemo } from "react";
+import { useState, useEffect, memo, useMemo, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { fetchUser } from "@/lib/api";
 import { useMessages, Message } from "@/hooks/useMessages";
@@ -19,95 +19,59 @@ function MessagesPage() {
   });
   const [initialLoading, setInitialLoading] = useState(true);
   const searchParams = useSearchParams();
+  const [firstTicket, setFirstTicket] = useState<any>(null);
 
-const messageParams = useMemo(() => {
-  if (!selectedTicket || !userId) return null;
-  // Xác định id người đối diện (otherId)
-  let otherId = null;
-  if (selectedTicket.is_direct) {
-    otherId = selectedTicket.buyer_clerk_id === userId
-      ? selectedTicket.seller_clerk_id
-      : selectedTicket.buyer_clerk_id;
-  }
-  return {
-    orderId: selectedTicket.order_id ?? null,
-    receiverId: otherId,
-    isDirect: selectedTicket.is_direct ?? false,
-  };
-}, [selectedTicket, userId]);
-
-const {
-  tickets,
-  messagesMap,
-  loading,
-  error,
-  sendMessage,
-  fetchMessagesData,
-  fetchTicketsData,
-  markMessagesAsRead,
-  setTickets,
-} = useMessages(messageParams || {});
-
-// Xác định key của hội thoại hiện tại giống hệt logic trong handleNewMessage
-const key = messageParams
-  ? messageParams.isDirect && messageParams.receiverId
-    ? `direct_${messageParams.receiverId}`
-    : messageParams.orderId
-    ? `order_${messageParams.orderId}`
-    : ""
-  : "";
-
-const messages = messagesMap[key] || [];
-
-useEffect(() => {
-  const type = searchParams.get("type");
-  const id = searchParams.get("id");
-
-  if (tickets.length > 0 && !selectedTicket) {
-    let foundTicket = null;
-    if (type === "direct") {
-      foundTicket = tickets.find(t => {
-        const otherUser = t.buyer_clerk_id === userId ? t.seller_clerk_id : t.buyer_clerk_id;
-        return otherUser === id;
-      });
-    } else if (type === "order") {
-      foundTicket = tickets.find(t => String(t.order_id) === id);
+  const messageParams = useMemo(() => {
+    if (!selectedTicket || !userId) return null;
+    // Xác định id người đối diện (otherId)
+    let otherId = null;
+    if (selectedTicket.is_direct) {
+      otherId = selectedTicket.buyer_clerk_id === userId
+        ? selectedTicket.seller_clerk_id
+        : selectedTicket.buyer_clerk_id;
     }
+    return {
+      orderId: selectedTicket.order_id ?? null,
+      receiverId: otherId,
+      isDirect: selectedTicket.is_direct ?? false,
+    };
+  }, [selectedTicket, userId]);
 
-    if (foundTicket) {
-      setSelectedTicket(foundTicket);
-    } else if (!type && !id) {
-      setSelectedTicket(tickets[0]);
+  const {
+    tickets,
+    messagesMap,
+    loading,
+    error,
+    sendMessage,
+    fetchMessagesData,
+    fetchTicketsData,
+    markMessagesAsRead,
+    setTickets,
+  } = useMessages(messageParams || {});
+
+  // Xác định key của hội thoại hiện tại giống hệt logic trong handleNewMessage
+  const key = messageParams
+    ? messageParams.isDirect && messageParams.receiverId
+      ? `direct_${messageParams.receiverId}`
+      : messageParams.orderId
+      ? `order_${messageParams.orderId}`
+      : ""
+    : "";
+
+  const messages = messagesMap[key] || [];
+
+  useEffect(() => {
+    if (!selectedTicket && firstTicket) {
+      setSelectedTicket(firstTicket);
     }
-  }
-  // Nếu đã có selectedTicket thì không làm gì cả, kể cả tickets thay đổi
-}, [tickets, userId, selectedTicket, searchParams.get("type"), searchParams.get("id")]);
+    // Nếu đã có selectedTicket thì không làm gì cả, kể cả tickets thay đổi
+  }, [firstTicket, selectedTicket, searchParams]);
 
   useEffect(() => {
     if (!loading) {
       setInitialLoading(false);
     }
   }, [loading]);
-
-  useEffect(() => {
-    if (tickets.length > 0 && !selectedTicket) {
-      setSelectedTicket(tickets[0]);
-      const t = tickets[0];
-      if (t && userId) {
-        const isDirect = t.is_direct;
-        const receiverId = isDirect
-          ? t.buyer_clerk_id === userId
-            ? t.seller_clerk_id
-            : t.buyer_clerk_id
-          : null;
-        let key = isDirect && receiverId ? `direct_${receiverId}` : `order_${t.order_id}`;
-        if (!messagesMap[key]) {
-          if (isDirect && receiverId) fetchMessagesData(undefined, receiverId);
-          else fetchMessagesData(String(t.order_id), undefined);
-        }
-      }
-    }
-  }, [tickets, selectedTicket, userId]);
 
   useEffect(() => {
     const fetchRecipient = async () => {
@@ -160,6 +124,7 @@ useEffect(() => {
           selectedTicketId={selectedTicketId}
           onSelectTicket={setSelectedTicket}
           userId={userId}
+          setFirstTicket={setFirstTicket}
         />
         <div className="flex flex-1 flex-col h-full min-h-0 overflow-y-auto">
           {selectedTicket ? (

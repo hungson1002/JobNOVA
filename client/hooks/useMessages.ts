@@ -130,14 +130,22 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
       setTickets((prev) => {
         const updated = prev.map((t) => {
           if (orderId && t.order_id === Number(orderId)) {
-            return { ...t, unread_count: 0 };
+            return {
+              ...t,
+              unread_count: 0,
+              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
+            };
           }
           if (
             receiverId &&
             t.is_direct &&
             (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)
           ) {
-            return { ...t, unread_count: 0 };
+            return {
+              ...t,
+              unread_count: 0,
+              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
+            };
           }
           return t;
         });
@@ -360,11 +368,26 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
     if (!messageSocket) return;
     if (orderId) {
       const orderIdNum = Number(orderId);
-      // Luôn set unread_count về 0 khi gọi, không cần kiểm tra unread
-      setTickets(prev => prev.map(t => t.order_id === orderIdNum ? { ...t, unread_count: 0 } : t));
+      setTickets(prev => prev.map(t =>
+        t.order_id === orderIdNum
+          ? {
+              ...t,
+              unread_count: 0,
+              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
+            }
+          : t
+      ));
       messageSocket.emit("viewChat", { orderId, userId });
     } else if (receiverId) {
-      setTickets(prev => prev.map(t => (t.is_direct && (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)) ? { ...t, unread_count: 0 } : t));
+      setTickets(prev => prev.map(t =>
+        t.is_direct && (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)
+          ? {
+              ...t,
+              unread_count: 0,
+              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
+            }
+          : t
+      ));
       messageSocket.emit("viewChat", { receiverId, userId });
     }
   }, 400);

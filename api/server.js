@@ -60,7 +60,7 @@ app.use(cors({ origin: "http://localhost:3000",
   methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   credentials: true }));
 
-app.use("/api/users", userRoute);
+app.use("/api/users", express.raw({ type: 'application/json' }), userRoute);
 
 app.use(express.json());
 

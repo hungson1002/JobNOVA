@@ -12,12 +12,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Message } from "@/hooks/useMessages";
+import io from "socket.io-client";
 
 interface MessageThreadProps {
   messages: Message[];
   recipient: { id: string; name: string; avatar: string; online?: boolean };
   onSendMessage: (content: string) => void;
 }
+
+const socket = io("http://localhost:8800");
 
 const MessageThreadComponent = ({
   messages,
@@ -27,6 +30,27 @@ const MessageThreadComponent = ({
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<number | null>(null);
+  const [online, setOnline] = useState(!!recipient.online);
+
+  // Realtime online status
+  useEffect(() => {
+    if (!recipient.id) return;
+    // Lắng nghe event online/offline
+    const handleOnline = ({ userId }: { userId: string }) => {
+      if (userId === recipient.id) setOnline(true);
+    };
+    const handleOffline = ({ userId }: { userId: string }) => {
+      if (userId === recipient.id) setOnline(false);
+    };
+    socket.on("userOnline", handleOnline);
+    socket.on("userOffline", handleOffline);
+    // Hỏi trạng thái online khi mount
+    socket.emit("checkOnline", { userId: recipient.id }, (isOnline: boolean) => setOnline(isOnline));
+    return () => {
+      socket.off("userOnline", handleOnline);
+      socket.off("userOffline", handleOffline);
+    };
+  }, [recipient.id]);
 
   // Scroll xuống cuối nếu có tin nhắn mới thực sự
   useEffect(() => {
@@ -69,11 +93,6 @@ const MessageThreadComponent = ({
             height={56}
             className="rounded-full border-2 border-emerald-100 shadow-md group-hover:scale-105 transition-transform duration-200"
           />
-          <span
-            className={`absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-white dark:border-gray-900 ${
-              recipient.online ? "bg-emerald-500" : "bg-gray-400"
-            }`}
-          ></span>
         </div>
         <div>
           <h3 className="font-bold text-lg text-gray-900 dark:text-white group-hover:underline cursor-pointer">
@@ -82,11 +101,11 @@ const MessageThreadComponent = ({
           <div className="flex items-center gap-2 mt-1">
             <span
               className={`h-2 w-2 rounded-full ${
-                recipient.online ? "bg-emerald-500" : "bg-gray-400"
+                online ? "bg-emerald-500" : "bg-gray-400"
               }`}
             ></span>
             <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              {recipient.online ? "Online" : "Offline"}
+              {online ? "Online" : "Offline"}
             </span>
           </div>
         </div>
@@ -175,13 +194,13 @@ const MessageThreadComponent = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Đính kèm file</p>
+                <p>Attach file</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
           <Input
             type="text"
-            placeholder="Nhập tin nhắn..."
+            placeholder="Type a message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             className="flex-1 rounded-full border-2 border-gray-200 focus:border-emerald-500 px-4 py-2 text-base bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:focus:border-emerald-500 transition"
@@ -200,7 +219,7 @@ const MessageThreadComponent = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Thêm emoji</p>
+                <p>Insert emoji</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
