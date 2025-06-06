@@ -125,12 +125,14 @@ function MessagesPage() {
           onSelectTicket={setSelectedTicket}
           userId={userId}
           setFirstTicket={setFirstTicket}
+          messagesMap={messagesMap}
         />
         <div className="flex flex-1 flex-col h-full min-h-0 overflow-y-auto">
           {selectedTicket ? (
             <MessageThread
               messages={messages}
               recipient={recipientInfo}
+              userId={userId}
               onSendMessage={async (content) => {
                 const receiverId = selectedTicket.is_direct
                   ? selectedTicket.buyer_clerk_id === userId

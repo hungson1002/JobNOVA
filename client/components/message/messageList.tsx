@@ -26,6 +26,7 @@ interface MessageListProps {
   onSelectTicket: (ticket: Ticket) => void;
   userId: string;
   setFirstTicket?: (ticket: Ticket | null) => void;
+  messagesMap: Record<string, Message[]>;
 }
 
 interface UserInfo {
@@ -38,7 +39,7 @@ interface UserInfo {
 
 const socket = io("http://localhost:8800");
 
-export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId, setFirstTicket }: MessageListProps) {
+export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId, setFirstTicket, messagesMap }: MessageListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [userInfoMap, setUserInfoMap] = useState<Record<string, UserInfo & { online?: boolean }>>({});
   const { markMessagesAsRead } = useMessages({});
@@ -121,10 +122,32 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId,
     return true;
   });
 
-  // Sắp xếp uniqueTickets theo thời gian last_message.sent_at giảm dần (mới nhất lên trên)
+  // Helper lấy last message đúng cặp user (đặt trước khi dùng trong sort)
+  const getLastMessage = (otherUserId: string, orderId?: string | number | null) => {
+    let key = orderId ? `order_${String(orderId)}` : `direct_${otherUserId}`;
+    const messages = messagesMap && messagesMap[key] ? messagesMap[key] : [];
+    const filtered = messages.filter(
+      (msg: any) =>
+        (msg.sender_clerk_id === userId && msg.receiver_clerk_id === otherUserId) ||
+        (msg.sender_clerk_id === otherUserId && msg.receiver_clerk_id === userId)
+    );
+    return filtered.length > 0 ? filtered[filtered.length - 1] : undefined;
+  };
+
+  // Sắp xếp uniqueTickets theo thời gian lastMsg.sent_at giảm dần (mới nhất lên trên)
   uniqueTickets.sort((a, b) => {
-    const aTime = a.last_message?.sent_at ? new Date(a.last_message.sent_at).getTime() : 0;
-    const bTime = b.last_message?.sent_at ? new Date(b.last_message.sent_at).getTime() : 0;
+    const isDirectA = a.is_direct || !a.order_id;
+    const isDirectB = b.is_direct || !b.order_id;
+    const otherUserIdA = isDirectA
+      ? (a.buyer_clerk_id === userId ? a.seller_clerk_id : a.buyer_clerk_id)
+      : (a.buyer_clerk_id === userId ? a.seller_clerk_id : a.buyer_clerk_id);
+    const otherUserIdB = isDirectB
+      ? (b.buyer_clerk_id === userId ? b.seller_clerk_id : b.buyer_clerk_id)
+      : (b.buyer_clerk_id === userId ? b.seller_clerk_id : b.buyer_clerk_id);
+    const lastMsgA = getLastMessage(otherUserIdA, a.order_id);
+    const lastMsgB = getLastMessage(otherUserIdB, b.order_id);
+    const aTime = lastMsgA?.sent_at ? new Date(lastMsgA.sent_at).getTime() : 0;
+    const bTime = lastMsgB?.sent_at ? new Date(lastMsgB.sent_at).getTime() : 0;
     return bTime - aTime;
   });
 
@@ -188,6 +211,8 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId,
               // Thay vì tính unreadCount từ messages, chỉ lấy từ ticket.unread_count
               const unreadCount = ticket.unread_count || 0;
 
+              const lastMsg = getLastMessage(otherUserId, ticket.order_id);
+
               return (
                 <div
                   key={isDirect ? `direct_${otherUserId}` : `order_${ticket.order_id}`}
@@ -222,11 +247,11 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId,
                         {isDirect ? userInfo.name : `Order #${ticket.order_id}`}
                       </h3>
                       <span className="text-xs text-gray-400 font-semibold">
-                        {ticket.last_message?.sent_at ? formatDate(ticket.last_message.sent_at) : ""}
+                        {lastMsg?.sent_at ? formatDate(lastMsg.sent_at) : ""}
                       </span>
                     </div>
                     <p className="truncate text-sm text-gray-600 dark:text-gray-300 mt-1">
-                      {ticket.last_message?.message_content || <span className="italic text-gray-400">No messages yet</span>}
+                      {lastMsg?.message_content || <span className="italic text-gray-400">No messages yet</span>}
                     </p>
                     <div className="mt-1 flex items-center gap-2">
                       {!isDirect && ticket.order_status && (
@@ -252,6 +277,7 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId,
                 : (ticket.buyer_clerk_id === userId ? ticket.seller_clerk_id : ticket.buyer_clerk_id);
               const userInfo = getUserInfo(otherUserId);
               const unreadCount = ticket.unread_count || 0;
+              const lastMsg = getLastMessage(otherUserId, ticket.order_id);
               return (
                 <div
                   key={isDirect ? `direct_${otherUserId}` : `order_${ticket.order_id}`}
@@ -286,11 +312,11 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId,
                         {isDirect ? userInfo.name : `Order #${ticket.order_id}`}
                       </h3>
                       <span className="text-xs text-gray-400 font-semibold">
-                        {ticket.last_message?.sent_at ? formatDate(ticket.last_message.sent_at) : ""}
+                        {lastMsg?.sent_at ? formatDate(lastMsg.sent_at) : ""}
                       </span>
                     </div>
                     <p className="truncate text-sm text-gray-600 dark:text-gray-300 mt-1">
-                      {ticket.last_message?.message_content || <span className="italic text-gray-400">No messages yet</span>}
+                      {lastMsg?.message_content || <span className="italic text-gray-400">No messages yet</span>}
                     </p>
                     <div className="mt-1 flex items-center gap-2">
                       {!isDirect && ticket.order_status && (
