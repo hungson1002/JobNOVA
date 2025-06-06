@@ -618,6 +618,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     name={chatWindows[0].name}
                     status={"Online"}
                     onClick={() => setShowChatBubble(true)}
+                    userId={gig?.seller_clerk_id}
                   />
                 )}
                 {showChatBubble && (
@@ -629,6 +630,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     <ChatBubble
                       key={chatWindows[0].userId}
                       userId={userId || ""}
+                      recipientId={gig?.seller_clerk_id}
                       messages={messagesMap[chatKey] || []}
                       avatar={chatWindows[0].avatar}
                       name={chatWindows[0].name}

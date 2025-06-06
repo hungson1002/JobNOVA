@@ -127,6 +127,7 @@ export const getAllGigs = async (req, res, next) => {
 
     const gigsRows = await Promise.all(gigs.rows.map(async (gig) => {
       const gigData = gig.toJSON();
+      gigData.isToprate = Boolean(Number(gigData.isToprate));
 
       if (gigData.gig_images) {
         try {
@@ -215,6 +216,7 @@ export const getGigById = async (req, res, next) => {
       gigData.requirements = [];
     }
     gigData.order_count = await models.Order.count({ where: { gig_id: gigData.id } });
+    gigData.isToprate = Boolean(Number(gigData.isToprate));
     return res.status(200).json({ success: true, gig: gigData });
   } catch (error) {
     console.error('Error fetching gig:', error.message);
@@ -250,7 +252,9 @@ export const updateGig = async (req, res, next) => {
       ...(topRateValue !== undefined ? { isToprate: topRateValue } : {})
     });
     console.log(`Gig updated: id=${id}, isToprate=${topRateValue}`);
-    return res.status(200).json({ success: true, message: 'Gig updated successfully', gig });
+    const gigData = gig.toJSON();
+    gigData.isToprate = Boolean(Number(gigData.isToprate));
+    return res.status(200).json({ success: true, message: 'Gig updated successfully', gig: gigData });
   } catch (error) {
     console.error('Error updating gig:', error.message);
     return res.status(500).json({ success: false, message: 'Error updating gig', error: error.message });

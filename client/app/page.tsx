@@ -443,6 +443,12 @@ export default function Home() {
     localStorage.removeItem('searchHistory');
   };
 
+  useEffect(() => {
+    if (isClient && isSignedIn && user?.publicMetadata?.isAdmin) {
+      router.replace("/admin/manage-users");
+    }
+  }, [isClient, isSignedIn, user]);
+
   if (isClient && isSignedIn && isBanned) {
     return <BannedOverlay />;
   }
