@@ -143,18 +143,19 @@ export const getAllGigs = async (req, res, next) => {
 
       if (gigData.seller) {
         gigData.seller = {
-          name:
-            gigData.seller.firstname && gigData.seller.lastname
-              ? gigData.seller.firstname + ' ' + gigData.seller.lastname
-              : gigData.seller.firstname || gigData.seller.username || 'Người dùng',
+          firstname: gigData.seller.firstname || '',
+          lastname: gigData.seller.lastname || '',
+          username: gigData.seller.username || '',
+          clerk_id: gigData.seller.clerk_id || '',
           avatar: gigData.seller.avatar || '/placeholder.svg',
-          level: 'Seller',
         };
       } else {
         gigData.seller = {
-          name: 'Người dùng',
+          firstname: '',
+          lastname: '',
+          username: '',
+          clerk_id: '',
           avatar: '/placeholder.svg',
-          level: 'Seller',
         };
       }
 
@@ -253,7 +254,8 @@ export const updateGig = async (req, res, next) => {
       city,
       country,
       status,
-      ...(topRateValue !== undefined ? { isToprate: topRateValue } : {})
+      ...(topRateValue !== undefined ? { isToprate: topRateValue } : {}),
+      gig_images: req.body.gig_images ? JSON.stringify(req.body.gig_images) : null,
     });
     console.log(`Gig updated: id=${id}, isToprate=${topRateValue}`);
     const gigData = gig.toJSON();
@@ -320,8 +322,8 @@ export const deleteGig = async (req, res, next) => {
       try {
         const notification = await models.Notification.create({
           clerk_id: sellerClerkId,
-          title: "Gig deleted",
-          message: `Your gig \"${gigTitle}\" was deleted by admin.${reason ? ` Reason: ${reason}` : ""}`,
+          title: "Your gig has been deleted",
+          message: `Your gig \"${gigTitle}\" was deleted by an admin.${reason ? ` Reason: ${reason}` : ""}`,
           is_read: false,
           gig_id: null, // gig đã bị xóa nên để null
           notification_type: "system",

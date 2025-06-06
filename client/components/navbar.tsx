@@ -515,11 +515,11 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                   onMouseDown={() => (clickedInsideDropdownRef.current = true)}
                   className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto"
                   >
-                  <div className="px-4 py-2 text-xs italic text-gray-500 border-b bg-gray-50 rounded-t-xl">Lịch sử tìm kiếm</div>
+                  <div className="px-4 py-2 text-xs italic text-gray-500 border-b bg-gray-50 rounded-t-xl">Search history</div>
                   {loadingHistory ? (
-                    <div className="p-4 text-center text-gray-500 text-sm">Đang tải...</div>
+                    <div className="p-4 text-center text-gray-500 text-sm">Loading...</div>
                   ) : searchHistory.length === 0 ? (
-                    <div className="p-4 text-center text-gray-400 text-sm">Không có lịch sử tìm kiếm</div>
+                    <div className="p-4 text-center text-gray-400 text-sm">No search history</div>
                   ) : (
                     <>
                       <ul>
@@ -549,7 +549,7 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                         className="w-full text-center text-xs text-red-500 hover:bg-red-50 py-2 border-t border-gray-100 font-semibold"
                         onClick={handleDeleteAllHistory}
                       >
-                        Xóa tất cả lịch sử
+                        Clear all history
                       </button>
                     </>
                   )}
@@ -838,10 +838,10 @@ export function Navbar({ isVisible = true }: NavbarProps) {
               ) : (
                 <div className="flex items-center gap-2" suppressHydrationWarning>
                   <SignInButton mode="modal">
-                    <Button variant="ghost">Đăng nhập</Button>
+                    <Button variant="ghost">Sign In</Button>
                   </SignInButton>
                   <SignUpButton mode="modal">
-                    <Button>Đăng ký</Button>
+                    <Button>Sign Up</Button>
                   </SignUpButton>
                 </div>
               )}
@@ -948,10 +948,10 @@ export function Navbar({ isVisible = true }: NavbarProps) {
               ) : (
                 <div className="flex flex-col gap-2">
                   <SignInButton mode="modal">
-                    <Button variant="ghost" className="w-full">Đăng nhập</Button>
+                    <Button variant="ghost" className="w-full">Sign In</Button>
                   </SignInButton>
                   <SignUpButton mode="modal">
-                    <Button className="w-full">Đăng ký</Button>
+                    <Button className="w-full">Sign Up</Button>
                   </SignUpButton>
                 </div>
               )}

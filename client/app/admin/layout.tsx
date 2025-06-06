@@ -26,12 +26,12 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/comp
 
 const sidebarItems = [
   { 
-    label: "Manager User", 
+    label: "User Management", 
     href: "/admin/manage-users",
     icon: <Users className="h-5 w-5" />
   },
   { 
-    label: "Manager Service", 
+    label: "Service Management", 
     href: "/admin/manage-gigs",
     icon: <Briefcase className="h-5 w-5" />
   },
@@ -51,7 +51,7 @@ const sidebarItems = [
     icon: <FolderKanban className="h-5 w-5" />
   },
   {
-    label: "Banner Slides",
+    label: "Banner Management",
     href: "/admin/manage-slides",
     icon: <Images className="h-5 w-5" />
   },
@@ -161,16 +161,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Main content */}
       <main className="flex-1 overflow-y-auto transition-colors duration-300">
         <div className="max-w-7xl mx-auto p-8">
-          {/* Header */}
-          <div className="flex justify-end items-center mb-8">
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 rounded-full shadow hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              aria-label="Toggle dark mode"
-            >
-              {darkMode ? <Sun className="h-5 w-5 text-yellow-400" /> : <Moon className="h-5 w-5 text-gray-700" />}
-            </button>
-          </div>
+          {/* Header (removed dark mode toggle) */}
+          <div className="mb-8"></div>
           {children}
         </div>
       </main>

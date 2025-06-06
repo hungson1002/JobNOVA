@@ -226,11 +226,11 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
           ...directTickets
         ]);
       } else {
-        setError("Không thể tải danh sách tin nhắn");
+        setError("Cannot load message list");
       }
     } catch (err) {
       console.error("Fetch messages error:", err);
-      setError("Lỗi kết nối mạng hoặc server không phản hồi");
+      setError("Network error or server not responding");
     } finally {
       setLoading(false);
     }
@@ -264,12 +264,12 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
         setMessagesMap(prev => ({ ...prev, [key]: msgs }));
         return msgs;
       } else {
-        setError(data.message || "Không thể tải tin nhắn");
+        setError(data.message || "Cannot load messages");
         return [];
       }
     } catch (err) {
       console.error("Fetch messages error:", err);
-      setError("Lỗi kết nối mạng hoặc server không phản hồi");
+      setError("Network error or server not responding");
       return [];
     } finally {
       setLoading(false);
@@ -336,7 +336,7 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
       return new Promise((resolve) => {
         messageSocket.emit("sendMessage", messageData, (response: any) => {
           if (!response.success) {
-            setError(response.message || "Không thể gửi tin nhắn");
+            setError(response.message || "Cannot send message");
           } else {
             // Cập nhật messagesMap ngay cho sender
             const msg = response.message && response.message.message ? response.message.message : response.message;
@@ -357,9 +357,9 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
         });
       });
     } catch (err) {
-      setError("Lỗi gửi tin nhắn");
+      setError("Failed to send message");
       console.error("Send message error:", err);
-      return { success: false, message: "Lỗi gửi tin nhắn" };
+      return { success: false, message: "Failed to send message" };
     }
   };
 

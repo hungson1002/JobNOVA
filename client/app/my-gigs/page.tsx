@@ -285,8 +285,11 @@ export default function MyGigsPage() {
                   <td className="py-2 px-4 text-center gig-actions">
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button size="icon" variant="ghost" className="h-8 w-8">
-                          <MoreVertical className="h-5 w-5" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                        >
+                          <MoreVertical className="w-5 h-5" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent align="end" className="w-32 p-1">
@@ -295,17 +298,7 @@ export default function MyGigsPage() {
                           onClick={e => {
                             e.preventDefault();
                             e.stopPropagation();
-                            setShowEditModal(true);
-                            setSelectedGig(gig);
-                            setEditForm({
-                              title: gig.title,
-                              description: gig.description,
-                              starting_price: gig.starting_price.toString(),
-                              delivery_time: gig.delivery_time.toString(),
-                              city: gig.city,
-                              country: gig.country,
-                              gig_images: gig.gig_images || []
-                            });
+                            router.push(`/my-gigs/edit?id=${gig.id}`);
                           }}
                         >
                           <Pencil className="h-4 w-4" /> Edit

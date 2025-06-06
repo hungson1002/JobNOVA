@@ -50,8 +50,8 @@ export const createReview = async (req, res, next) => {
       // 1. Lưu notification vào DB
       const notification = await models.Notification.create({
         clerk_id: gig.seller_clerk_id,
-        title: "Bạn có đánh giá mới",
-        message: `Gig của bạn vừa nhận được đánh giá ${rating} sao.`,
+        title: "New review received",
+        message: `Your gig has received a new review with ${rating} stars.`,
         is_read: false,
         gig_id,
         notification_type: "review",
@@ -362,11 +362,11 @@ export const updateSellerResponse = async (req, res, next) => {
     try {
       const reviewerId = review.reviewer_clerk_id;
       const gigId = review.gig_id;
-      const gigTitle = review.gig?.title || "Gig bạn đã đánh giá";
+      const gigTitle = review.gig?.title || "The gig you reviewed";
       const notification = await models.Notification.create({
         clerk_id: reviewerId,
-        title: "Phản hồi từ người bán",
-        message: `Người bán đã phản hồi đánh giá của bạn cho gig '${gigTitle}'.`,
+        title: "Seller replied to your review",
+        message: `The seller has replied to your review for gig '${gigTitle}'.`,
         is_read: false,
         gig_id: gigId,
         notification_type: "review_reply",

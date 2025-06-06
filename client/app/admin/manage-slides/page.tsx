@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Pencil, Trash2, MoveUp, MoveDown, Upload, X, Loader2 } from "lucide-react"
+import { Plus, Pencil, Trash2, MoveUp, MoveDown, Upload, X, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import { toast } from "sonner"
 import { useAuth } from "@clerk/nextjs"
@@ -19,6 +19,100 @@ interface BannerSlide {
   subtitle: string
   created_at: string
   cta_link: string
+}
+
+// Add Pagination component
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const maxVisiblePages = 5;
+  let visiblePages = pages;
+  if (totalPages > maxVisiblePages) {
+    const start = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    const end = Math.min(totalPages, start + maxVisiblePages - 1);
+    visiblePages = pages.slice(start - 1, end);
+  }
+  return (
+    <div className="flex flex-col gap-2 py-4 border-t bg-gray-50/50">
+      <div className="flex justify-center">
+        <span className="text-sm font-medium text-gray-600">
+          Page {currentPage} of {totalPages}
+        </span>
+      </div>
+      <div className="flex items-center justify-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="h-8 w-8 p-0 hover:bg-gray-100"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        {visiblePages[0] > 1 && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(1)}
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+            >
+              1
+            </Button>
+            {visiblePages[0] > 2 && (
+              <span className="px-2 text-gray-500">...</span>
+            )}
+          </>
+        )}
+        {visiblePages.map((page) => (
+          <Button
+            key={page}
+            variant={currentPage === page ? "default" : "outline"}
+            size="sm"
+            onClick={() => onPageChange(page)}
+            className={`h-8 w-8 p-0 ${
+              currentPage === page
+                ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                : "hover:bg-gray-100"
+            }`}
+          >
+            {page}
+          </Button>
+        ))}
+        {visiblePages[visiblePages.length - 1] < totalPages && (
+          <>
+            {visiblePages[visiblePages.length - 1] < totalPages - 1 && (
+              <span className="px-2 text-gray-500">...</span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(totalPages)}
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+            >
+              {totalPages}
+            </Button>
+          </>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="h-8 w-8 p-0 hover:bg-gray-100"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export default function ManageSlidesPage() {
@@ -37,6 +131,14 @@ export default function ManageSlidesPage() {
   })
   const { getToken } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Pagination state
+  const PAGE_SIZE = 4;
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => { setCurrentPage(1); }, [slides]);
+  const totalPages = Math.max(1, Math.ceil(slides.length / PAGE_SIZE));
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const slidesToShow = slides.slice(startIdx, startIdx + PAGE_SIZE);
 
   // Fetch slides
   useEffect(() => {
@@ -322,7 +424,7 @@ export default function ManageSlidesPage() {
     <div className="container max-w-5xl mx-auto px-4 py-10">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-10">
         <div>
-          <h1 className="text-4xl font-extrabold text-emerald-700 tracking-tight mb-2">Manage Banner Slides</h1>
+          <h1 className="text-4xl font-extrabold text-emerald-700 tracking-tight mb-2">Banner Slides Management</h1>
           <p className="text-lg text-gray-500">Add, edit, reorder, or remove homepage banner slides. Make your platform more attractive!</p>
         </div>
         <Button onClick={() => setIsAddDialogOpen(true)} className="rounded-xl px-6 py-2 text-base font-semibold bg-amber-400 hover:bg-amber-500 text-white flex items-center gap-2">
@@ -341,8 +443,8 @@ export default function ManageSlidesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {slides.length > 0 ? (
-              slides.map((slide) => (
+            {slidesToShow.length > 0 ? (
+              slidesToShow.map((slide) => (
                 <TableRow key={slide.id} className="hover:bg-amber-50/40 transition group">
                   <TableCell>
                     <div className="w-32 h-20 rounded-xl overflow-hidden border bg-gray-100 flex items-center justify-center">
@@ -384,7 +486,11 @@ export default function ManageSlidesPage() {
           </TableBody>
         </Table>
       </div>
-
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
       {/* Add Slide Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={handleAddDialogOpen}>
         <DialogContent className="max-w-lg rounded-2xl border-2 border-amber-100">

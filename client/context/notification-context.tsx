@@ -46,7 +46,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
         )
       );
     } catch (err) {
-      console.error("Lỗi fetch thông báo:", err);
+      console.error("Failed to fetch notifications:", err);
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
         await fetchNotifications();
       }
     } catch (err) {
-      console.error("Lỗi mark all as read:", err);
+      console.error("Failed to mark all notifications as read:", err);
     }
   };
 
@@ -92,7 +92,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
         );
       }
     } catch (err) {
-      console.error("Lỗi mark as read:", err);
+      console.error("Failed to mark notification as read:", err);
     }
   };
 
