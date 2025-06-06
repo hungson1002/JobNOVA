@@ -599,7 +599,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                       onClick={scrollToReviews}
                       className="ml-1 text-gray-600 hover:text-emerald-600 transition-colors"
                     >
-                      ({ratingSummary?.total || 156})
+                      ({typeof ratingSummary?.total === 'number' ? ratingSummary.total : 0})
                     </button>
                   </div>
                   <span className="text-gray-300">|</span>
@@ -788,7 +788,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     <div className="flex items-center">
                       <span className="text-2xl font-bold">{ratingSummary.average}</span>
                       <span className="ml-2 text-sm text-gray-500">
-                        ({ratingSummary.total} reviews for this Gig)
+                        ({typeof ratingSummary?.total === 'number' ? ratingSummary.total : 0} reviews for this Gig)
                       </span>
                     </div>
                     <div className="flex items-center">

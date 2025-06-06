@@ -20,6 +20,7 @@ function MessagesPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const searchParams = useSearchParams();
   const [firstTicket, setFirstTicket] = useState<any>(null);
+  const [showList, setShowList] = useState(true); // responsive: show/hide list
 
   const messageParams = useMemo(() => {
     if (!selectedTicket || !userId) return null;
@@ -118,35 +119,51 @@ function MessagesPage() {
         <div className="text-gray-500 text-sm mb-4">No messages to display.</div>
       )}
 
-      <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-white lg:flex-row">
-        <MessageList
-          tickets={tickets}
-          selectedTicketId={selectedTicketId}
-          onSelectTicket={setSelectedTicket}
-          userId={userId}
-          setFirstTicket={setFirstTicket}
-          messagesMap={messagesMap}
-        />
-        <div className="flex flex-1 flex-col h-full min-h-0 overflow-y-auto">
+      <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-white lg:flex-row relative">
+        {/* MessageList responsive */}
+        <div className={`h-full w-full md:w-auto md:block ${selectedTicket && !showList ? 'hidden' : 'block'} fixed md:static inset-0 z-30 bg-white md:bg-transparent transition-all duration-200`}>
+          <MessageList
+            tickets={tickets}
+            selectedTicketId={selectedTicketId}
+            onSelectTicket={(ticket) => {
+              setSelectedTicket(ticket);
+              setShowList(false); // ẩn list khi chọn hội thoại trên mobile
+            }}
+            userId={userId}
+            setFirstTicket={setFirstTicket}
+            messagesMap={messagesMap}
+          />
+        </div>
+        {/* MessageThread responsive */}
+        <div className={`flex flex-1 flex-col h-full min-h-0 overflow-y-auto ${selectedTicket ? 'block' : 'hidden'} md:block`}>
           {selectedTicket ? (
-            <MessageThread
-              messages={messages}
-              recipient={recipientInfo}
-              userId={userId}
-              onSendMessage={async (content) => {
-                const receiverId = selectedTicket.is_direct
-                  ? selectedTicket.buyer_clerk_id === userId
-                    ? selectedTicket.seller_clerk_id
-                    : selectedTicket.buyer_clerk_id
-                  : selectedTicket.seller_clerk_id;
-                await sendMessage(
-                  content,
-                  userId,
-                  receiverId,
-                  selectedTicket.order_id ? String(selectedTicket.order_id) : undefined
-                );
-              }}
-            />
+            <div className="relative h-full">
+              {/* Nút back trên mobile */}
+              <button
+                className="md:hidden absolute top-2 left-2 z-40 bg-white rounded-full shadow p-2 border border-gray-200"
+                onClick={() => setShowList(true)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <MessageThread
+                messages={messages}
+                recipient={recipientInfo}
+                userId={userId}
+                onSendMessage={async (content) => {
+                  const receiverId = selectedTicket.is_direct
+                    ? selectedTicket.buyer_clerk_id === userId
+                      ? selectedTicket.seller_clerk_id
+                      : selectedTicket.buyer_clerk_id
+                    : selectedTicket.seller_clerk_id;
+                  await sendMessage(
+                    content,
+                    userId,
+                    receiverId,
+                    selectedTicket.order_id ? String(selectedTicket.order_id) : undefined
+                  );
+                }}
+              />
+            </div>
           ) : (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <div className="mb-4 rounded-full bg-gray-100 p-6">
