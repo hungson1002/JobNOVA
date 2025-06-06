@@ -7,8 +7,9 @@ import { Heart } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import type React from "react"
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
 import { toast } from "sonner"
+import io from "socket.io-client"
 
 interface ServiceCardProps {
   service: {
@@ -30,6 +31,8 @@ interface ServiceCardProps {
   showCategory?: boolean
 }
 
+const socket = io("http://localhost:8800")
+
 export function ServiceCard({ service, showCategory = false }: ServiceCardProps) {
   const { user } = useUser()
   const isLoggedIn = !!user
@@ -37,10 +40,29 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [hovered, setHovered] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [sellerOnline, setSellerOnline] = useState(false)
+  const sellerId = (service.seller as any).id || service.seller.name || service.seller.avatar
 
   const mediaList = service.gig_images && service.gig_images.length > 0 ? service.gig_images : [service.image]
   const currentMedia = mediaList[currentIndex]
   const isVideo = currentMedia.endsWith(".mp4") || currentMedia.includes("/video/")
+
+  useEffect(() => {
+    if (!sellerId) return
+    function handleOnline({ userId }: { userId: string }) {
+      if (userId === sellerId) setSellerOnline(true)
+    }
+    function handleOffline({ userId }: { userId: string }) {
+      if (userId === sellerId) setSellerOnline(false)
+    }
+    socket.on("userOnline", handleOnline)
+    socket.on("userOffline", handleOffline)
+    socket.emit("checkOnline", { userId: sellerId }, (isOnline: boolean) => setSellerOnline(isOnline))
+    return () => {
+      socket.off("userOnline", handleOnline)
+      socket.off("userOffline", handleOffline)
+    }
+  }, [sellerId])
 
   const handleSaveClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -174,6 +196,9 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
               )}
             </div>
           )}
+
+          {/* Badge online realtime */}
+          <div className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white dark:ring-gray-800 ${sellerOnline ? "bg-green-500" : "bg-gray-300"}`}></div>
         </div>
 
         {/* Content */}
@@ -189,7 +214,8 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
                   className="h-full w-full object-cover"
                 />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white bg-green-500 dark:ring-gray-800"></div>
+              {/* Badge online realtime */}
+              <div className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white dark:ring-gray-800 ${sellerOnline ? "bg-green-500" : "bg-gray-300"}`}></div>
             </div>
             <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{service.seller.name}</span>
           </div>

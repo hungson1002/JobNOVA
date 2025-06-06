@@ -79,6 +79,7 @@ function mapGigToServiceCard(gig: Gig): any {
     image: mediaList[0],
     gig_images: mediaList,
     seller: {
+      id: gig.seller_clerk_id,
       name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
       avatar: gig.seller?.avatar || "/placeholder.svg",
       level: gig.seller?.level || "Level 1 Seller",
@@ -278,7 +279,7 @@ export default function SearchPage() {
 
     // Filter by top rate
     if (sellerLevels.includes("top_rated")) {
-      services = services.filter((service) => service.isToprate === 1)
+      services = services.filter((service) => service.isToprate === true || service.isToprate === 1)
     }
 
     // Sort results
@@ -724,7 +725,9 @@ export default function SearchPage() {
               )}
               {sellerLevels.length > 0 && (
                 <Badge variant="secondary" className="flex items-center gap-1 px-3 py-1.5 text-sm">
-                  Seller: {sellerLevels.length} selected
+                  {sellerLevels.length === 1 && sellerLevels[0] === "top_rated"
+                    ? "Top rate service"
+                    : `Seller: ${sellerLevels.length} selected`}
                   <button
                     className="ml-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                     onClick={() => clearFilter("seller")}

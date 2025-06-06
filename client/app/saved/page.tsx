@@ -30,6 +30,7 @@ function mapGigToServiceCard(gig: any) {
     image: mediaList[0], // Ảnh đầu tiên để hiển thị nhanh
     gig_images: mediaList, // Truyền cả mảng media cho gallery
     seller: {
+      id: gig.seller_clerk_id,
       name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
       avatar: gig.seller?.avatar || "/placeholder.svg",
       level: gig.seller?.level || "Level 1 Seller",

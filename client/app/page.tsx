@@ -236,6 +236,7 @@ function mapGigToServiceCard(gig: Gig): any {
     image: mediaList[0],
     gig_images: mediaList,
     seller: {
+      id: gig.seller_clerk_id,
       name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
       avatar: gig.seller?.avatar || "/placeholder.svg",
     },
@@ -818,7 +819,7 @@ export default function Home() {
           <div className="mb-8 flex items-center justify-between">
             <h2 className="text-2xl font-bold dark:text-white">Top Picks</h2>
             <Button variant="ghost" asChild>
-              <Link href="/search" className="flex items-center gap-1">
+              <Link href="/search?seller=top_rated" className="flex items-center gap-1">
                 View All <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
