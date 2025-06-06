@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowLeft, ImageIcon, Plus, Trash2, Upload } from "lucide-react"
+import { ArrowLeft, ImageIcon, Plus, Trash2, Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,13 +10,24 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { toast } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
 
 export default function EditGigPage({ params }: { params: { id: string } }) {
   const [gig, setGig] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(false)
-  const [files, setFiles] = useState<{ url: string; type: 'image' | 'video' }[]>([])
+  const [form, setForm] = useState<any>({
+    title: "",
+    description: "",
+    starting_price: "",
+    delivery_time: "",
+    city: "",
+    country: "",
+    gig_images: [] as string[],
+  })
+  const [imageUploading, setImageUploading] = useState(false)
+  const router = useRouter()
+  const { toast } = useToast()
 
   useEffect(() => {
     // Fetch gig data
@@ -24,60 +35,80 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
       .then(res => res.json())
       .then(data => {
         setGig(data.gig)
-        // Convert existing images to new format
-        if (data.gig.images) {
-          setFiles(data.gig.images.map((url: string) => ({
-            url,
-            type: url.match(/\.(mp4|mov|avi|wmv)$/i) ? 'video' : 'image'
-          })))
-        }
+        setForm({
+          title: data.gig.title || "",
+          description: data.gig.description || "",
+          starting_price: data.gig.starting_price?.toString() || "",
+          delivery_time: data.gig.delivery_time?.toString() || "",
+          city: data.gig.city || "",
+          country: data.gig.country || "",
+          gig_images: data.gig.gig_images || [],
+        })
       })
       .finally(() => setLoading(false))
   }, [params.id])
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return
-    setUploading(true)
-
+    setImageUploading(true)
     try {
       const formData = new FormData()
       Array.from(e.target.files).forEach(file => {
-        formData.append('files', file)
+        formData.append("files", file)
       })
-
-      const res = await fetch('http://localhost:8800/api/cloudinary/upload-multiple', {
-        method: 'POST',
-        body: formData
+      const res = await fetch("http://localhost:8800/api/cloudinary/upload-multiple", {
+        method: "POST",
+        body: formData,
       })
-
       const data = await res.json()
       if (data.success) {
-        const newFiles = data.files.map((file: any) => ({
-          url: file.fileUrl,
-          type: file.type
+        setForm((prev: any) => ({
+          ...prev,
+          gig_images: [...prev.gig_images, ...data.files.map((f: any) => f.fileUrl)],
         }))
-        setFiles(prev => [...prev, ...newFiles])
-        toast({
-          title: "Success",
-          description: "Files uploaded successfully"
-        })
-      } else {
-        throw new Error(data.message || 'Upload failed')
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to upload files",
-        variant: "destructive"
-      })
     } finally {
-      setUploading(false)
+      setImageUploading(false)
     }
   }
 
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index))
+  const handleRemoveImage = (idx: number) => {
+    setForm((prev: any) => ({
+      ...prev,
+      gig_images: prev.gig_images.filter((_: any, i: number) => i !== idx),
+    }))
   }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setForm((prev: any) => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const res = await fetch(`http://localhost:8800/api/gigs/${params.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          starting_price: parseFloat(form.starting_price),
+          delivery_time: parseInt(form.delivery_time),
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: "Gig updated successfully", variant: "default" })
+        router.push(`/gigs/${params.id}`)
+      } else {
+        toast({ title: "Update failed", description: data.message || "Update failed", variant: "destructive" })
+      }
+    } catch (err) {
+      toast({ title: "Update failed", description: "Update failed", variant: "destructive" })
+    }
+  }
+
+  if (loading) return <div className="flex justify-center items-center min-h-screen">Loading...</div>
 
   return (
     <div className="container mx-auto py-10 px-4 md:px-6">
@@ -108,7 +139,7 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                 <label htmlFor="gig-title" className="block font-medium mb-2 dark:text-white">
                   Gig Title
                 </label>
-                <Input id="gig-title" placeholder="I will..." defaultValue={gig?.title} className="max-w-2xl h-12" />
+                <Input id="gig-title" placeholder="I will..." value={form.title} onChange={handleChange} className="max-w-2xl h-12" />
                 <p className="text-xs text-gray-500 mt-2 dark:text-gray-400">
                   Clearly describe what you are offering (max 80 characters)
                 </p>
@@ -269,7 +300,8 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                 <Textarea
                   id="description"
                   placeholder="Describe your service in detail..."
-                  defaultValue={gig?.description}
+                  value={form.description}
+                  onChange={handleChange}
                   className="min-h-[200px]"
                 />
                 <p className="text-xs text-gray-500 mt-2 dark:text-gray-400">
@@ -332,26 +364,18 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
             <CardContent>
               <div className="space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {files.map((file, index) => (
-                    <div key={index} className="relative group">
-                      {file.type === 'image' ? (
-                    <img
-                          src={file.url}
-                          alt={`Gallery item ${index + 1}`}
-                          className="w-full aspect-video object-cover rounded-lg"
-                    />
-                      ) : (
-                        <video
-                          src={file.url}
-                          className="w-full aspect-video object-cover rounded-lg"
-                          controls
-                        />
-                      )}
+                  {form.gig_images.map((url: string, idx: number) => (
+                    <div key={idx} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Gallery item ${idx + 1}`}
+                        className="w-full aspect-video object-cover rounded-lg"
+                      />
                       <button
-                        onClick={() => removeFile(index)}
+                        onClick={() => handleRemoveImage(idx)}
                         className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
@@ -362,21 +386,21 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
                         <span className="font-semibold">Click to upload</span> or drag and drop
                       </p>
                       <p className="text-xs text-gray-500">Images or videos (max 500MB each)</p>
-                  </div>
+                    </div>
                     <input
                       type="file"
                       className="hidden"
                       multiple
-                      accept="image/*,video/*"
-                      onChange={handleFileUpload}
-                      disabled={uploading}
+                      accept="image/*"
+                      onChange={handleImagesChange}
+                      disabled={imageUploading}
                     />
                   </label>
                 </div>
-                {uploading && (
+                {imageUploading && (
                   <div className="text-center text-sm text-gray-500">
                     Uploading files...
-              </div>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -395,7 +419,7 @@ export default function EditGigPage({ params }: { params: { id: string } }) {
           >
             Delete Gig
           </Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700 px-6">Save Changes</Button>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 px-6" onClick={handleSubmit}>Save Changes</Button>
         </div>
       </div>
     </div>

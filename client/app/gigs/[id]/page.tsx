@@ -913,7 +913,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             </div>
 
             {/* Render ReviewForm */}
-            {isSignedIn && userOrder && !userReview && user?.id !== gig?.seller_clerk_id && (
+            {isSignedIn && userOrder && !userOrder.review && user?.id !== gig?.seller_clerk_id && (
               <div className="my-8">
                 <ReviewForm orderId={userOrder.id} gigId={Number(gigId)} buyerInfo={{
                   name: user?.fullName || user?.username || 'User',

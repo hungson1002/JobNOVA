@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Search, ChevronLeft, ChevronRight, X } from "lucide-react"
+import { ArrowLeft, Search, ChevronLeft, ChevronRight, X, Menu } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -101,6 +101,7 @@ export default function SearchPage() {
   const searchParams = useSearchParams()
   const { currency, convertPrice, getCurrencySymbol } = useCurrency()
   const [isLoading, setIsLoading] = useState(false)
+  const [showFilter, setShowFilter] = useState(false)
 
   // Get initial values from URL parameters
   const initialQuery = searchParams.get("q") || ""
@@ -185,27 +186,34 @@ export default function SearchPage() {
 
   // Update URL with all current filters
   const updateSearchParams = () => {
-    // Lấy các tham số URL hiện tại
     const params = new URLSearchParams(searchParams.toString())
-    
-    // Cập nhật các tham số theo trạng thái hiện tại
+  
     if (searchQuery) params.set("q", searchQuery)
     else params.delete("q")
-    
+  
     if (selectedCategory) params.set("category", selectedCategory)
     else params.delete("category")
-    
+  
     params.set("minPrice", priceRange[0].toString())
     params.set("maxPrice", priceRange[1].toString())
-    
+  
     if (deliveryTime.length > 0) params.set("delivery", deliveryTime.join(","))
     else params.delete("delivery")
-    
-    if (sellerLevels.length > 0) params.set("seller", sellerLevels.join(","))
-    else params.delete("seller")
-    
+  
+    if (sellerLevels.length > 0) {
+      params.set("seller", sellerLevels.join(","))
+      if (sellerLevels.includes("top_rated")) {
+        params.set("toprate", "true")
+      } else {
+        params.delete("toprate")
+      }
+    } else {
+      params.delete("seller")
+      params.delete("toprate") 
+    }
+  
     params.set("sort", sortOption)
-
+  
     router.push(`/search?${params.toString()}`)
   }
   
@@ -281,7 +289,7 @@ export default function SearchPage() {
 
     // Filter by top rate
     if (sellerLevels.includes("top_rated")) {
-      services = services.filter((service) => service.isToprate === true)
+      services = services.filter((service) => service.isToprate === true || service.isToprate === 1 || service.isToprate === "1")
     }
 
     // Sort results
@@ -422,7 +430,7 @@ export default function SearchPage() {
   }
 
   return (
-    <main className="container mx-auto px-4 py-10">
+    <main className="container mx-auto px-2 sm:px-4 md:px-8 lg:px-16 py-6 sm:py-10">
       <div className="mb-8 flex items-center">
         <Button variant="ghost" size="sm" className="mr-4" asChild>
           <Link
@@ -436,8 +444,8 @@ export default function SearchPage() {
         <h1 className="text-3xl font-bold dark:text-white">Search Results</h1>
       </div>
 
-      {/* Search Bar */}
-      <form onSubmit={handleSearch} className="mb-10 flex items-center gap-3">
+      {/* Search Bar + Filter Toggle on mobile */}
+      <form onSubmit={handleSearch} className="mb-6 flex items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
@@ -450,200 +458,214 @@ export default function SearchPage() {
         <Button type="submit" className="h-12 px-6 bg-emerald-500 hover:bg-emerald-600">
           Search
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="ml-2 flex lg:hidden items-center gap-2"
+          onClick={() => setShowFilter(true)}
+        >
+          <Menu className="h-5 w-5" />
+          Filters
+        </Button>
       </form>
 
-      <div className="flex flex-col gap-8 lg:flex-row">
-        {/* Filters Sidebar */}
-        <div className="w-full lg:w-72">
-          <div className="sticky top-20 rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-lg font-semibold dark:text-white">Filters</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                onClick={clearAllFilters}
-              >
-                Clear All
-              </Button>
-            </div>
-
-            <Accordion
-              type="multiple"
-              defaultValue={["category", "budget", "deliveryTime", "sellerDetails"]}
-              className="space-y-2"
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Filters Sidebar - responsive */}
+        <div className={`fixed inset-0 z-40 bg-black/30 transition-all duration-200 ${showFilter ? 'block' : 'hidden'} lg:hidden`} onClick={() => setShowFilter(false)} />
+        <div className={`fixed top-0 left-0 bottom-0 z-50 w-80 max-w-full bg-white dark:bg-gray-900 shadow-lg p-5 transition-transform duration-200 ${showFilter ? 'translate-x-0' : '-translate-x-full'} lg:static lg:w-72 lg:max-w-xs lg:translate-x-0 lg:block rounded-xl`}>
+          <div className="flex items-center justify-between mb-5 lg:mb-5">
+            <h2 className="text-lg font-semibold dark:text-white">Filters</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 lg:hidden"
+              onClick={() => setShowFilter(false)}
             >
-              <AccordionItem value="category" className="border-b-0 pt-0">
-                <AccordionTrigger className="py-3 text-base font-medium hover:no-underline dark:text-white">
-                  Category
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-4">
-                  <div className="space-y-3">
-                    {categories.map((cat) => (
-                      <div key={cat.id} className="flex items-center space-x-3">
-                        <Checkbox
-                          id={`category-${cat.id}`}
-                          checked={selectedCategory === (cat.slug || String(cat.id))}
-                          onCheckedChange={(checked) => handleCategoryChange(cat.slug || String(cat.id), checked as boolean)}
-                        />
-                        <label
-                          htmlFor={`category-${cat.id}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
-                        >
-                          {cat.name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="budget" className="border-b-0">
-                <AccordionTrigger className="py-3 text-base font-medium hover:no-underline dark:text-white">
-                  Budget
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-4">
-                  <div className="space-y-5">
-                    <div>
-                      <div className="mb-3 flex justify-between">
-                        <span className="text-sm dark:text-gray-300">
-                          Min: {currencySymbol}{minCurrency}
-                        </span>
-                        <span className="text-sm dark:text-gray-300">
-                          Max: {currencySymbol}{maxCurrency}
-                        </span>
-                      </div>
-                      <Slider
-                        value={priceRange}
-                        min={minCurrency}
-                        max={maxCurrency}
-                        step={currency === 'VND' ? 10000 : 10}
-                        className="my-6"
-                        onValueChange={handlePriceSliderChange}
-                        minStepsBetweenThumbs={1}
-                        defaultValue={[minCurrency, maxCurrency]}
-                      />
-                      <div className="flex items-center justify-between gap-4 mt-4">
-                        <div className="relative flex-1">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                            {currencySymbol}
-                          </span>
-                          <Input
-                            className="pl-7"
-                            type="number"
-                            placeholder="Min"
-                            value={minPrice}
-                            onChange={handleMinPriceChange}
-                          />
-                        </div>
-                        <div className="relative flex-1">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                            {currencySymbol}
-                          </span>
-                          <Input
-                            className="pl-7 min-w-[120px]"
-                            type="number"
-                            placeholder="Max"
-                            value={maxPrice}
-                            onChange={handleMaxPriceChange}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="deliveryTime" className="border-b-0">
-                <AccordionTrigger className="py-3 text-base font-medium hover:no-underline dark:text-white">
-                  Delivery Time
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id="delivery-1"
-                        checked={deliveryTime.includes(1)}
-                        onCheckedChange={(checked) => handleDeliveryTimeChange(1, checked as boolean)}
-                      />
-                      <label
-                        htmlFor="delivery-1"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
-                      >
-                        Up to 1 day
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id="delivery-3"
-                        checked={deliveryTime.includes(3)}
-                        onCheckedChange={(checked) => handleDeliveryTimeChange(3, checked as boolean)}
-                      />
-                      <label
-                        htmlFor="delivery-3"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
-                      >
-                        Up to 3 days
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id="delivery-7"
-                        checked={deliveryTime.includes(7)}
-                        onCheckedChange={(checked) => handleDeliveryTimeChange(7, checked as boolean)}
-                      />
-                      <label
-                        htmlFor="delivery-7"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
-                      >
-                        Up to 7 days
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id="delivery-any"
-                        checked={deliveryTime.includes(0)}
-                        onCheckedChange={(checked) => handleDeliveryTimeChange(0, checked as boolean)}
-                      />
-                      <label
-                        htmlFor="delivery-any"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
-                      >
-                        Any time
-                      </label>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="sellerDetails" className="border-b-0">
-                <AccordionTrigger className="py-3 text-base font-medium hover:no-underline dark:text-white">
-                  Top Rate
-                </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id="seller-topRated"
-                        checked={sellerLevels.includes("top_rated")}
-                        onCheckedChange={(checked) => handleSellerLevelChange("top_rated", checked as boolean)}
-                      />
-                      <label
-                        htmlFor="seller-topRated"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
-                      >
-                        Top Rated Only
-                      </label>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-
-            <Button className="mt-6 w-full bg-emerald-500 hover:bg-emerald-600" onClick={applyFilters}>
-              Apply Filters
+              Close
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hidden lg:block"
+              onClick={clearAllFilters}
+            >
+              Clear All
             </Button>
           </div>
+          <Accordion
+            type="multiple"
+            defaultValue={["category", "budget", "deliveryTime", "sellerDetails"]}
+            className="space-y-2"
+          >
+            <AccordionItem value="category" className="border-b-0 pt-0">
+              <AccordionTrigger className="py-3 text-base font-medium hover:no-underline dark:text-white">
+                Category
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <div className="space-y-3">
+                  {categories.map((cat) => (
+                    <div key={cat.id} className="flex items-center space-x-3">
+                      <Checkbox
+                        id={`category-${cat.id}`}
+                        checked={selectedCategory === (cat.slug || String(cat.id))}
+                        onCheckedChange={(checked) => handleCategoryChange(cat.slug || String(cat.id), checked as boolean)}
+                      />
+                      <label
+                        htmlFor={`category-${cat.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
+                      >
+                        {cat.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="budget" className="border-b-0">
+              <AccordionTrigger className="py-3 text-base font-medium hover:no-underline dark:text-white">
+                Budget
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <div className="space-y-5">
+                  <div>
+                    <div className="mb-3 flex justify-between">
+                      <span className="text-sm dark:text-gray-300">
+                        Min: {currencySymbol}{minCurrency}
+                      </span>
+                      <span className="text-sm dark:text-gray-300">
+                        Max: {currencySymbol}{maxCurrency}
+                      </span>
+                    </div>
+                    <Slider
+                      value={priceRange}
+                      min={minCurrency}
+                      max={maxCurrency}
+                      step={currency === 'VND' ? 10000 : 10}
+                      className="my-6"
+                      onValueChange={handlePriceSliderChange}
+                      minStepsBetweenThumbs={1}
+                      defaultValue={[minCurrency, maxCurrency]}
+                    />
+                    <div className="flex items-center justify-between gap-4 mt-4">
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                          {currencySymbol}
+                        </span>
+                        <Input
+                          className="pl-7"
+                          type="number"
+                          placeholder="Min"
+                          value={minPrice}
+                          onChange={handleMinPriceChange}
+                        />
+                      </div>
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                          {currencySymbol}
+                        </span>
+                        <Input
+                          className="pl-7 min-w-[120px]"
+                          type="number"
+                          placeholder="Max"
+                          value={maxPrice}
+                          onChange={handleMaxPriceChange}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="deliveryTime" className="border-b-0">
+              <AccordionTrigger className="py-3 text-base font-medium hover:no-underline dark:text-white">
+                Delivery Time
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="delivery-1"
+                      checked={deliveryTime.includes(1)}
+                      onCheckedChange={(checked) => handleDeliveryTimeChange(1, checked as boolean)}
+                    />
+                    <label
+                      htmlFor="delivery-1"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
+                    >
+                      Up to 1 day
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="delivery-3"
+                      checked={deliveryTime.includes(3)}
+                      onCheckedChange={(checked) => handleDeliveryTimeChange(3, checked as boolean)}
+                    />
+                    <label
+                      htmlFor="delivery-3"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
+                    >
+                      Up to 3 days
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="delivery-7"
+                      checked={deliveryTime.includes(7)}
+                      onCheckedChange={(checked) => handleDeliveryTimeChange(7, checked as boolean)}
+                    />
+                    <label
+                      htmlFor="delivery-7"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
+                    >
+                      Up to 7 days
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="delivery-any"
+                      checked={deliveryTime.includes(0)}
+                      onCheckedChange={(checked) => handleDeliveryTimeChange(0, checked as boolean)}
+                    />
+                    <label
+                      htmlFor="delivery-any"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
+                    >
+                      Any time
+                    </label>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="sellerDetails" className="border-b-0">
+              <AccordionTrigger className="py-3 text-base font-medium hover:no-underline dark:text-white">
+                Top Rate
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4">
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="seller-topRated"
+                      checked={sellerLevels.includes("top_rated")}
+                      onCheckedChange={(checked) => handleSellerLevelChange("top_rated", checked as boolean)}
+                    />
+                    <label
+                      htmlFor="seller-topRated"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
+                    >
+                      Top Rated Only
+                    </label>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          <Button className="mt-6 w-full bg-emerald-500 hover:bg-emerald-600" onClick={() => { applyFilters(); setShowFilter(false); }}>
+            Apply Filters
+          </Button>
         </div>
 
         {/* Search Results */}
@@ -756,7 +778,7 @@ export default function SearchPage() {
               <p className="text-gray-500 dark:text-gray-400">Loading results...</p>
             </div>
           ) : paginatedResults.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
               {paginatedResults.map((service) => (
                 <ServiceCard
                   key={service.id}

@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil, Trash2, MoreVertical } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, MoreVertical, Upload, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -56,8 +56,10 @@ export default function MyGigsPage() {
     starting_price: "",
     delivery_time: "",
     city: "",
-    country: ""
+    country: "",
+    gig_images: [] as string[]
   });
+  const [imageUploading, setImageUploading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -80,7 +82,8 @@ export default function MyGigsPage() {
       starting_price: gig.starting_price.toString(),
       delivery_time: gig.delivery_time.toString(),
       city: gig.city,
-      country: gig.country
+      country: gig.country,
+      gig_images: gig.gig_images || []
     });
     setShowEditModal(true);
   };
@@ -102,7 +105,8 @@ export default function MyGigsPage() {
         body: JSON.stringify({
           ...editForm,
           starting_price: parseFloat(editForm.starting_price),
-          delivery_time: parseInt(editForm.delivery_time)
+          delivery_time: parseInt(editForm.delivery_time),
+          gig_images: editForm.gig_images
         }),
       });
       const data = await response.json();
@@ -118,7 +122,8 @@ export default function MyGigsPage() {
             starting_price: parseFloat(editForm.starting_price),
             delivery_time: parseInt(editForm.delivery_time),
             city: editForm.city,
-            country: editForm.country
+            country: editForm.country,
+            gig_images: editForm.gig_images
           } : gig
         ));
         setShowEditModal(false);
@@ -153,6 +158,37 @@ export default function MyGigsPage() {
         description: "Failed to delete gig",
       });
     }
+  };
+
+  const handleEditImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      Array.from(e.target.files).forEach(file => {
+        formData.append("files", file);
+      });
+      const res = await fetch("http://localhost:8800/api/cloudinary/upload-multiple", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditForm(prev => ({
+          ...prev,
+          gig_images: [...(prev.gig_images || []), ...data.files.map((f: any) => f.fileUrl)]
+        }));
+      }
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleRemoveEditImage = (idx: number) => {
+    setEditForm(prev => ({
+      ...prev,
+      gig_images: (prev.gig_images || []).filter((_, i) => i !== idx)
+    }));
   };
 
   if (!isLoaded) return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
@@ -261,7 +297,15 @@ export default function MyGigsPage() {
                             e.stopPropagation();
                             setShowEditModal(true);
                             setSelectedGig(gig);
-                            setEditForm({ title: gig.title, description: gig.description, starting_price: gig.starting_price.toString(), delivery_time: gig.delivery_time.toString(), city: gig.city, country: gig.country });
+                            setEditForm({
+                              title: gig.title,
+                              description: gig.description,
+                              starting_price: gig.starting_price.toString(),
+                              delivery_time: gig.delivery_time.toString(),
+                              city: gig.city,
+                              country: gig.country,
+                              gig_images: gig.gig_images || []
+                            });
                           }}
                         >
                           <Pencil className="h-4 w-4" /> Edit
@@ -349,6 +393,33 @@ export default function MyGigsPage() {
                   onChange={(e) => setEditForm(prev => ({ ...prev, country: e.target.value }))}
                   placeholder="Enter country"
                 />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Images</label>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleEditImagesChange}
+                className="mb-2"
+                disabled={imageUploading}
+              />
+              {imageUploading && <div className="text-xs text-gray-500 animate-pulse">Uploading...</div>}
+              <div className="flex flex-wrap gap-2">
+                {(editForm.gig_images || []).map((url, idx) => (
+                  <div key={idx} className="relative group w-24 h-16">
+                    <img src={url} className="w-full h-full object-cover rounded" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEditImage(idx)}
+                      className="absolute top-1 right-1 bg-white bg-opacity-80 rounded-full p-1 text-red-500 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                      title="Xóa ảnh"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

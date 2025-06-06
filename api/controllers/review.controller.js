@@ -358,6 +358,25 @@ export const updateSellerResponse = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Only the seller can update the response" });
     }
     await review.update({ sellerResponse });
+    // Gửi thông báo cho reviewer
+    try {
+      const reviewerId = review.reviewer_clerk_id;
+      const gigId = review.gig_id;
+      const gigTitle = review.gig?.title || "Gig bạn đã đánh giá";
+      const notification = await models.Notification.create({
+        clerk_id: reviewerId,
+        title: "Phản hồi từ người bán",
+        message: `Người bán đã phản hồi đánh giá của bạn cho gig '${gigTitle}'.`,
+        is_read: false,
+        gig_id: gigId,
+        notification_type: "review_reply",
+      });
+      if (req.io) {
+        req.io.to(reviewerId).emit("new_notification", notification);
+      }
+    } catch (notifyErr) {
+      console.error("Error sending notification to reviewer:", notifyErr);
+    }
     console.log(`Seller response updated: reviewId=${id}`);
     return res.status(200).json({ success: true, message: "Seller response updated successfully", review });
   } catch (error) {

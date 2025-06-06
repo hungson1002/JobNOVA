@@ -89,7 +89,7 @@ export const createGig = async (req, res, next) => {
 // Lấy tất cả gig 
 export const getAllGigs = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, category_id, status } = req.query;
+    const { page = 1, limit = 10, category_id, status, toprate } = req.query;
     const offset = (page - 1) * limit;
     const where = {};
 
@@ -99,6 +99,10 @@ export const getAllGigs = async (req, res, next) => {
       where.seller_clerk_id = req.query.seller_clerk_id;
     } else {
       where.status = status || "active";
+    }
+
+    if (toprate === "true") {
+      where.isToprate = 1;
     }
 
     const gigs = await models.Gig.findAndCountAll({

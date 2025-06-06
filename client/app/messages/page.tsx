@@ -62,11 +62,39 @@ function MessagesPage() {
   const messages = messagesMap[key] || [];
 
   useEffect(() => {
+    // Ưu tiên direct nếu có ?seller trên URL
+    const sellerParam = searchParams.get('seller');
+    if (sellerParam && tickets.length > 0) {
+      // Tìm direct ticket với seller này
+      const directTicket = tickets.find(t => t.is_direct && (t.buyer_clerk_id === sellerParam || t.seller_clerk_id === sellerParam));
+      if (directTicket) {
+        setSelectedTicket(directTicket);
+        setShowList(false);
+        return;
+      } else {
+        // Nếu chưa có, tạo ticket tạm thời để chat trực tiếp
+        const tempTicket = {
+          ticket_id: `direct_${userId}_${sellerParam}`,
+          order_id: null,
+          buyer_clerk_id: userId,
+          seller_clerk_id: sellerParam,
+          order_status: null,
+          status: 'open',
+          last_message: null,
+          message_count: 0,
+          unread_count: 0,
+          is_direct: true,
+        };
+        setSelectedTicket(tempTicket);
+        setShowList(false);
+        return;
+      }
+    }
     if (!selectedTicket && firstTicket) {
       setSelectedTicket(firstTicket);
     }
     // Nếu đã có selectedTicket thì không làm gì cả, kể cả tickets thay đổi
-  }, [firstTicket, selectedTicket, searchParams]);
+  }, [firstTicket, selectedTicket, searchParams, tickets, userId]);
 
   useEffect(() => {
     if (!loading) {

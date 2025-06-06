@@ -637,60 +637,52 @@ export function Navbar({ isVisible = true }: NavbarProps) {
 
                     {openNotify && (
                       <div
-                        className="absolute top-full right-0 z-50 w-80 bg-white shadow-lg rounded-[4px]"
-                        onWheel={e => e.stopPropagation()}
+                        className="absolute top-full right-0 z-50 w-96 bg-white shadow-2xl rounded-xl border border-gray-200"
+                        style={{ minWidth: 340, maxWidth: 400 }}
                       >
-                        <div className="font-semibold px-4 py-2 border-b">Notifications</div>
-                        <div
-                          className="h-96 overflow-y-auto divide-y divide-gray-100"
-                          onWheel={e => e.stopPropagation()}
-                          onScroll={e => e.stopPropagation()}
-                        >
+                        <div className="font-bold px-5 py-3 border-b text-lg bg-gray-50 rounded-t-xl">Notifications</div>
+                        <div className="h-96 overflow-y-auto divide-y divide-gray-100 custom-scrollbar">
                           {loadingNotifications ? (
-                            <div className="flex flex-col gap-3 p-4">
-                              {[...Array(3)].map((_, i) => (
-                                <div key={i} className="flex gap-3 items-center animate-pulse">
-                                  <div className="w-8 h-8 rounded-full bg-gray-200" />
-                                  <div className="flex-1 space-y-2">
-                                    <div className="h-3 w-1/2 bg-gray-200 rounded" />
-                                    <div className="h-2 w-1/3 bg-gray-100 rounded" />
-                                  </div>
-                              </div>
-                            ))}
+                            <div className="flex flex-col gap-3 p-6">
+                              {/* Skeleton loading */}
                             </div>
                           ) : notifications.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 text-center">
-                              <Bell className="mb-2 h-10 w-10 text-gray-300" />
-                              <p className="text-sm text-gray-500">No notifications yet</p>
+                            <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
+                              <Bell className="mb-2 h-12 w-12" />
+                              <p className="text-base">No notifications yet</p>
                             </div>
                           ) : (
                             notifications.map((item, idx) => {
                               const isUnread = !item.is_read;
-                              let icon = <Bell className="h-5 w-5 text-gray-400" />;
-                              if (item.notification_type === "review") icon = <Star className="h-5 w-5 text-yellow-500" />;
-                              if (item.notification_type === "message") icon = <MessageSquare className="h-5 w-5 text-blue-500" />;
+                              let icon = <Bell className="h-6 w-6 text-gray-400" />;
+                              if (item.notification_type === "review") icon = <Star className="h-6 w-6 text-yellow-500 bg-yellow-100 rounded-full p-1" />;
+                              if (item.notification_type === "message") icon = <MessageSquare className="h-6 w-6 text-blue-500 bg-blue-100 rounded-full p-1" />;
+                              if (item.notification_type === "review_reply") icon = <Bell className="h-6 w-6 text-emerald-600 bg-emerald-100 rounded-full p-1" />;
                               const timeAgo = item.time ? formatDistanceToNow(new Date(item.time), { addSuffix: true }) : "";
-                              const isSystem = item.notification_type === "system";
                               return (
                                 <div
                                   key={idx}
-                                  className={`relative flex gap-3 items-start whitespace-normal py-3 px-4 cursor-pointer transition-colors ${isUnread ? 'bg-emerald-50 font-semibold' : 'bg-white'} hover:bg-emerald-100 border-l-4 ${isUnread ? 'border-emerald-500' : 'border-transparent'}`}
+                                  className={`relative flex gap-3 items-start py-4 px-5 cursor-pointer transition-all rounded-lg
+                                    ${isUnread ? 'bg-emerald-50 font-semibold' : 'bg-white'}
+                                    hover:bg-emerald-100`}
                                   onClick={() => {
                                     if (isUnread) markAsRead(item.id);
-                                    if (isSystem) {
+                                    if (item.notification_type === "system") {
                                       setSelectedNotification(item);
                                       setOpenSystemModal(true);
-                                    } else if (item.gig_id && item.notification_type === "review") {
+                                    } else if (item.gig_id && (item.notification_type === "review" || item.notification_type === "review_reply")) {
                                       router.push(`/gigs/${item.gig_id}`);
                                     }
                                   }}
+                                  style={{ minHeight: 64 }}
                                 >
-                                  {/* Dấu chấm xanh cho chưa đọc */}
-                                  {isUnread && <span className="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-2 h-2 rounded-full bg-emerald-500" />}
+                                  {isUnread && <span className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500" />}
                                   <div className="flex-shrink-0 mt-1">{icon}</div>
                                   <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-sm truncate">{item.title}</div>
-                                    <div className="text-xs text-gray-400 mb-1">{timeAgo}</div>
+                                    <div className="flex justify-between items-center">
+                                      <div className="font-medium text-base truncate">{item.title}</div>
+                                      <div className="text-xs text-gray-400 ml-2">{timeAgo}</div>
+                                    </div>
                                     <div className="text-sm text-gray-700 truncate">{item.message}</div>
                                   </div>
                                 </div>
@@ -698,14 +690,14 @@ export function Navbar({ isVisible = true }: NavbarProps) {
                             })
                           )}
                         </div>
-                        <div className="border-t px-4 py-2 bg-white sticky bottom-0 rounded-b-[4px]">
+                        <div className="border-t px-5 py-3 bg-gray-50 rounded-b-xl text-center">
                           <button
+                            className="text-emerald-600 font-semibold hover:underline hover:text-emerald-800 transition"
                             onClick={markAllAsRead}
-                            className="text-emerald-600 hover:underline w-full text-center text-sm font-medium"
                           >
                             Mark all as read
-                              </button>
-                            </div>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
