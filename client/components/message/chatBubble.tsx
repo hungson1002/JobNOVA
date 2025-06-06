@@ -1,13 +1,15 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import { X, Send, Paperclip, Smile, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Message } from "@/hooks/useMessages";
+import io from "socket.io-client";
 
 interface ChatBubbleProps {
   userId: string;
+  recipientId?: string;
   messages: Message[];
   avatar: string;
   name: string;
@@ -19,6 +21,7 @@ interface ChatBubbleProps {
 
 export function ChatBubble({
   userId,
+  recipientId,
   messages,
   avatar,
   name,
@@ -29,6 +32,26 @@ export function ChatBubble({
 }: ChatBubbleProps) {
   const [newMessage, setNewMessage] = useState("");
   const chatRef = useRef<HTMLDivElement>(null);
+  const [isOnline, setIsOnline] = useState(false);
+
+  useEffect(() => {
+    const socket = io("http://localhost:8800");
+    const id = recipientId || userId;
+    function handleOnline({ userId: idCheck }: { userId: string }) {
+      if (idCheck === id) setIsOnline(true);
+    }
+    function handleOffline({ userId: idCheck }: { userId: string }) {
+      if (idCheck === id) setIsOnline(false);
+    }
+    socket.on("userOnline", handleOnline);
+    socket.on("userOffline", handleOffline);
+    socket.emit("checkOnline", { userId: id }, (online: boolean) => setIsOnline(online));
+    return () => {
+      socket.off("userOnline", handleOnline);
+      socket.off("userOffline", handleOffline);
+      socket.disconnect();
+    };
+  }, [recipientId, userId]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,9 +78,9 @@ export function ChatBubble({
           />
           <div>
             <div className="font-semibold text-gray-900 text-base leading-tight">{name}</div>
-            <div className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1"></span>
-              Online
+            <div className="text-xs font-medium flex items-center gap-1">
+              <span className={`inline-block w-2 h-2 rounded-full mr-1 ${isOnline ? "bg-emerald-500" : "bg-gray-300"}`}></span>
+              {isOnline ? "Online" : "Offline"}
             </div>
           </div>
         </div>

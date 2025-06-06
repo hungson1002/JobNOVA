@@ -69,8 +69,10 @@ function mapGigToServiceCard(gig: Gig): any {
     const isNew = Date.now() - createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
     if (isNew) badges.push("new");
   }
-  const isToprateNum = typeof gig.isToprate === 'string' ? Number(gig.isToprate) : gig.isToprate;
-  if (isToprateNum === 1) badges.push("top_rated");
+  const isToprateStr = gig.isToprate as string | undefined;
+  if (typeof gig.isToprate === 'boolean' && gig.isToprate === true) {
+    badges.push("top_rated");
+  }
 
   return {
     id: gig.id,
@@ -279,7 +281,7 @@ export default function SearchPage() {
 
     // Filter by top rate
     if (sellerLevels.includes("top_rated")) {
-      services = services.filter((service) => service.isToprate === true || service.isToprate === 1)
+      services = services.filter((service) => service.isToprate === true)
     }
 
     // Sort results
