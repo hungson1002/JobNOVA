@@ -47,6 +47,7 @@ export function PortfolioGrid({
   // Modal state
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showAll, setShowAll] = useState(false);
 
   const openModal = (idx: number) => setSelectedIndex(idx);
   const closeModal = () => setSelectedIndex(null);
@@ -118,7 +119,15 @@ export function PortfolioGrid({
       </div>
       <div className="text-left mt-2">
         <Button variant="link" asChild>
-          <Link href={`/users/${clerkId}/portfolio`} className="text-emerald-600 font-medium">
+          <Link 
+            href="#" 
+            className="text-emerald-600 font-medium"
+            onClick={e => {
+              e.preventDefault();
+              setSelectedIndex(null); // Close any open modal
+              setShowAll(true); // Trigger show all portfolios modal
+            }}
+          >
             See Projects &rarr;
           </Link>
         </Button>
@@ -172,6 +181,48 @@ export function PortfolioGrid({
               </div>
             )}
             <Button className="mt-4" onClick={closeModal}>Close</Button>
+          </div>
+        </div>
+      )}
+      {/* Modal hiển thị tất cả portfolio */}
+      {showAll && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full mx-4 p-8 relative">
+            <button onClick={() => setShowAll(false)} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 rounded-full p-2">
+              <X className="h-6 w-6 text-gray-700" />
+            </button>
+            <h2 className="text-2xl font-bold mb-6">All Projects by {username}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {portfolios.map((portfolio, idx) => (
+                <Card key={portfolio.id} className="relative overflow-hidden group cursor-pointer" onClick={() => { setSelectedIndex(idx); setShowAll(false); }}>
+                  <div className="aspect-video relative">
+                    <Image
+                      src={portfolio.portfolio_images[0] || '/placeholder.svg'}
+                      alt={portfolio.title}
+                      fill
+                      className="object-cover transition-transform group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="text-white text-center p-4">
+                        <h3 className="font-semibold mb-2">{portfolio.title}</h3>
+                        {portfolio.description && (
+                          <p className="text-sm line-clamp-2">{portfolio.description}</p>
+                        )}
+                        {portfolio.gig && (
+                          <Link
+                            href={`/gigs/${portfolio.gig.id}`}
+                            className="inline-flex items-center mt-2 text-sm hover:underline"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            View Related Gig
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       )}

@@ -202,7 +202,7 @@ export const getGigById = async (req, res, next) => {
         {
           model: models.User,
           as: 'seller',
-          attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar'],
+          attributes: ['firstname', 'lastname', 'username', 'clerk_id', 'avatar', 'description'],
         },
       ],
     });

@@ -48,6 +48,7 @@ import { PortfolioSection } from "@/components/portfolio-section";
 import { PortfolioForm } from "@/components/portfolio-form";
 import { PortfolioGrid } from "@/components/portfolio-grid";
 import { ChatPrompt } from "@/components/message/ChatPrompt";
+import AboutSection from '@/components/profile/AboutSection';
 
 interface PageParams {
   id: string;
@@ -737,9 +738,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             {/* About The Seller */}
             <div className="mb-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-xl font-semibold">About The Seller</h2>
-              <div className="prose max-w-none">
-                <p>{seller.bio}</p>
-              </div>
+              <AboutSection profile={seller} isOwner={false} />
             </div>
 
             {/* FAQ */}
@@ -1021,6 +1020,8 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             </div>
           </div>
         </div>
+
+        
       </div>
 
       {/* Lightbox */}
