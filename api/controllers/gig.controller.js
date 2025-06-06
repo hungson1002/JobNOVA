@@ -89,7 +89,7 @@ export const createGig = async (req, res, next) => {
 // Lấy tất cả gig 
 export const getAllGigs = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, category_id, status } = req.query;
+    const { page = 1, limit = 10, category_id, status, toprate } = req.query;
     const offset = (page - 1) * limit;
     const where = {};
 
@@ -99,6 +99,10 @@ export const getAllGigs = async (req, res, next) => {
       where.seller_clerk_id = req.query.seller_clerk_id;
     } else {
       where.status = status || "active";
+    }
+
+    if (toprate === "true") {
+      where.isToprate = 1;
     }
 
     const gigs = await models.Gig.findAndCountAll({
@@ -127,6 +131,7 @@ export const getAllGigs = async (req, res, next) => {
 
     const gigsRows = await Promise.all(gigs.rows.map(async (gig) => {
       const gigData = gig.toJSON();
+      gigData.isToprate = Boolean(Number(gigData.isToprate));
 
       if (gigData.gig_images) {
         try {
@@ -138,18 +143,19 @@ export const getAllGigs = async (req, res, next) => {
 
       if (gigData.seller) {
         gigData.seller = {
-          name:
-            gigData.seller.firstname && gigData.seller.lastname
-              ? gigData.seller.firstname + ' ' + gigData.seller.lastname
-              : gigData.seller.firstname || gigData.seller.username || 'Người dùng',
+          firstname: gigData.seller.firstname || '',
+          lastname: gigData.seller.lastname || '',
+          username: gigData.seller.username || '',
+          clerk_id: gigData.seller.clerk_id || '',
           avatar: gigData.seller.avatar || '/placeholder.svg',
-          level: 'Seller',
         };
       } else {
         gigData.seller = {
-          name: 'Người dùng',
+          firstname: '',
+          lastname: '',
+          username: '',
+          clerk_id: '',
           avatar: '/placeholder.svg',
-          level: 'Seller',
         };
       }
 
@@ -215,6 +221,7 @@ export const getGigById = async (req, res, next) => {
       gigData.requirements = [];
     }
     gigData.order_count = await models.Order.count({ where: { gig_id: gigData.id } });
+    gigData.isToprate = Boolean(Number(gigData.isToprate));
     return res.status(200).json({ success: true, gig: gigData });
   } catch (error) {
     console.error('Error fetching gig:', error.message);
@@ -247,10 +254,13 @@ export const updateGig = async (req, res, next) => {
       city,
       country,
       status,
-      ...(topRateValue !== undefined ? { isToprate: topRateValue } : {})
+      ...(topRateValue !== undefined ? { isToprate: topRateValue } : {}),
+      gig_images: req.body.gig_images ? JSON.stringify(req.body.gig_images) : null,
     });
     console.log(`Gig updated: id=${id}, isToprate=${topRateValue}`);
-    return res.status(200).json({ success: true, message: 'Gig updated successfully', gig });
+    const gigData = gig.toJSON();
+    gigData.isToprate = Boolean(Number(gigData.isToprate));
+    return res.status(200).json({ success: true, message: 'Gig updated successfully', gig: gigData });
   } catch (error) {
     console.error('Error updating gig:', error.message);
     return res.status(500).json({ success: false, message: 'Error updating gig', error: error.message });
@@ -312,8 +322,8 @@ export const deleteGig = async (req, res, next) => {
       try {
         const notification = await models.Notification.create({
           clerk_id: sellerClerkId,
-          title: "Gig deleted",
-          message: `Your gig \"${gigTitle}\" was deleted by admin.${reason ? ` Reason: ${reason}` : ""}`,
+          title: "Your gig has been deleted",
+          message: `Your gig \"${gigTitle}\" was deleted by an admin.${reason ? ` Reason: ${reason}` : ""}`,
           is_read: false,
           gig_id: null, // gig đã bị xóa nên để null
           notification_type: "system",

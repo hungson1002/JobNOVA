@@ -19,8 +19,9 @@ export function RoleCheck({ children }: RoleCheckProps) {
       const isSeller = user?.publicMetadata?.isSeller
       const isBuyer = user?.publicMetadata?.isBuyer
 
+      // Nếu là admin thì chuyển hướng vào trang admin
       if (isAdmin && !pathname.startsWith("/admin")) {
-        router.push("/admin/admin-dashboard");
+        router.push("/admin/manage-users")
         return;
       }
 

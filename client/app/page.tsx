@@ -236,6 +236,7 @@ function mapGigToServiceCard(gig: Gig): any {
     image: mediaList[0],
     gig_images: mediaList,
     seller: {
+      id: gig.seller_clerk_id,
       name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
       avatar: gig.seller?.avatar || "/placeholder.svg",
     },
@@ -442,6 +443,12 @@ export default function Home() {
     localStorage.removeItem('searchHistory');
   };
 
+  useEffect(() => {
+    if (isClient && isSignedIn && user?.publicMetadata?.isAdmin) {
+      router.replace("/admin/manage-users");
+    }
+  }, [isClient, isSignedIn, user]);
+
   if (isClient && isSignedIn && isBanned) {
     return <BannedOverlay />;
   }
@@ -496,9 +503,7 @@ export default function Home() {
                 <div className="flex flex-wrap gap-4">
                   {user?.publicMetadata?.isAdmin ? (
                     <>
-                      <Button asChild size="lg" className="bg-white text-emerald-600 hover:bg-gray-100">
-                        <Link href="/dashboard/admin">Admin Dashboard</Link>
-                      </Button>
+                      {/* Đã xoá nút Admin Dashboard */}
                       <Button asChild size="lg" variant="outline" className="border-white text-black hover:bg-white/10">
                         <Link href="/admin/manage-gigs">Manage Services</Link>
                       </Button>
@@ -818,7 +823,7 @@ export default function Home() {
           <div className="mb-8 flex items-center justify-between">
             <h2 className="text-2xl font-bold dark:text-white">Top Picks</h2>
             <Button variant="ghost" asChild>
-              <Link href="/search" className="flex items-center gap-1">
+              <Link href="/search?seller=top_rated" className="flex items-center gap-1">
                 View All <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>

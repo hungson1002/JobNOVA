@@ -11,22 +11,22 @@ export function BannedOverlay() {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70">
       <div className="bg-white rounded-lg p-8 shadow-lg text-center max-w-md">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">Tài khoản của bạn đã bị khóa</h2>
-        <p className="mb-6">Vui lòng liên hệ admin để biết thêm chi tiết hoặc gửi yêu cầu hỗ trợ.</p>
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Your account has been banned</h2>
+        <p className="mb-6">Please contact admin for more details or submit a support request.</p>
         <div className="flex flex-col gap-3">
           <Button
             variant="outline"
             className="w-full"
             onClick={() => setShowModal(true)}
           >
-            Liên hệ hỗ trợ
+            Contact Support
           </Button>
           <Button
             className="w-full"
             variant="destructive"
             onClick={() => signOut()}
           >
-            Đăng xuất
+            Sign out
           </Button>
         </div>
       </div>
@@ -36,15 +36,15 @@ export function BannedOverlay() {
             <button
               className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition"
               onClick={() => setShowModal(false)}
-              aria-label="Đóng"
+              aria-label="Close"
             >
               <X className="w-6 h-6" />
             </button>
             <div className="flex flex-col items-center mb-4">
               <MessageSquare className="w-12 h-12 text-emerald-500 mb-2" />
-              <h3 className="text-2xl font-bold mb-1 text-gray-800">Liên hệ hỗ trợ</h3>
+              <h3 className="text-2xl font-bold mb-1 text-gray-800">Contact Support</h3>
               <p className="mb-4 text-gray-500 text-center">
-                Bạn có thể liên hệ với chúng tôi qua các kênh sau:
+                You can contact us via the following channels:
               </p>
             </div>
             <div className="space-y-4">

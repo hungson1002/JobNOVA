@@ -130,14 +130,22 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
       setTickets((prev) => {
         const updated = prev.map((t) => {
           if (orderId && t.order_id === Number(orderId)) {
-            return { ...t, unread_count: 0 };
+            return {
+              ...t,
+              unread_count: 0,
+              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
+            };
           }
           if (
             receiverId &&
             t.is_direct &&
             (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)
           ) {
-            return { ...t, unread_count: 0 };
+            return {
+              ...t,
+              unread_count: 0,
+              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
+            };
           }
           return t;
         });
@@ -218,11 +226,11 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
           ...directTickets
         ]);
       } else {
-        setError("Không thể tải danh sách tin nhắn");
+        setError("Cannot load message list");
       }
     } catch (err) {
       console.error("Fetch messages error:", err);
-      setError("Lỗi kết nối mạng hoặc server không phản hồi");
+      setError("Network error or server not responding");
     } finally {
       setLoading(false);
     }
@@ -256,12 +264,12 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
         setMessagesMap(prev => ({ ...prev, [key]: msgs }));
         return msgs;
       } else {
-        setError(data.message || "Không thể tải tin nhắn");
+        setError(data.message || "Cannot load messages");
         return [];
       }
     } catch (err) {
       console.error("Fetch messages error:", err);
-      setError("Lỗi kết nối mạng hoặc server không phản hồi");
+      setError("Network error or server not responding");
       return [];
     } finally {
       setLoading(false);
@@ -328,7 +336,7 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
       return new Promise((resolve) => {
         messageSocket.emit("sendMessage", messageData, (response: any) => {
           if (!response.success) {
-            setError(response.message || "Không thể gửi tin nhắn");
+            setError(response.message || "Cannot send message");
           } else {
             // Cập nhật messagesMap ngay cho sender
             const msg = response.message && response.message.message ? response.message.message : response.message;
@@ -349,9 +357,9 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
         });
       });
     } catch (err) {
-      setError("Lỗi gửi tin nhắn");
+      setError("Failed to send message");
       console.error("Send message error:", err);
-      return { success: false, message: "Lỗi gửi tin nhắn" };
+      return { success: false, message: "Failed to send message" };
     }
   };
 
@@ -360,11 +368,26 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
     if (!messageSocket) return;
     if (orderId) {
       const orderIdNum = Number(orderId);
-      // Luôn set unread_count về 0 khi gọi, không cần kiểm tra unread
-      setTickets(prev => prev.map(t => t.order_id === orderIdNum ? { ...t, unread_count: 0 } : t));
+      setTickets(prev => prev.map(t =>
+        t.order_id === orderIdNum
+          ? {
+              ...t,
+              unread_count: 0,
+              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
+            }
+          : t
+      ));
       messageSocket.emit("viewChat", { orderId, userId });
     } else if (receiverId) {
-      setTickets(prev => prev.map(t => (t.is_direct && (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)) ? { ...t, unread_count: 0 } : t));
+      setTickets(prev => prev.map(t =>
+        t.is_direct && (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)
+          ? {
+              ...t,
+              unread_count: 0,
+              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
+            }
+          : t
+      ));
       messageSocket.emit("viewChat", { receiverId, userId });
     }
   }, 400);

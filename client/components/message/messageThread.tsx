@@ -12,21 +12,58 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Message } from "@/hooks/useMessages";
+import io from "socket.io-client";
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 interface MessageThreadProps {
   messages: Message[];
   recipient: { id: string; name: string; avatar: string; online?: boolean };
   onSendMessage: (content: string) => void;
+  userId: string;
 }
+
+const socket = io("http://localhost:8800");
 
 const MessageThreadComponent = ({
   messages,
   recipient,
   onSendMessage,
+  userId,
 }: MessageThreadProps) => {
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<number | null>(null);
+  const [online, setOnline] = useState(!!recipient.online);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiPickerMounted, setEmojiPickerMounted] = useState(false);
+  const emojiRef = useRef<HTMLDivElement>(null);
+
+  // Lọc messages chỉ giữa userId và recipient.id
+  const filteredMessages = messages.filter(
+    (msg) =>
+      (msg.sender_clerk_id === userId && msg.receiver_clerk_id === recipient.id) ||
+      (msg.sender_clerk_id === recipient.id && msg.receiver_clerk_id === userId)
+  );
+
+  // Realtime online status
+  useEffect(() => {
+    if (!recipient.id) return;
+    // Lắng nghe event online/offline
+    const handleOnline = ({ userId }: { userId: string }) => {
+      if (userId === recipient.id) setOnline(true);
+    };
+    const handleOffline = ({ userId }: { userId: string }) => {
+      if (userId === recipient.id) setOnline(false);
+    };
+    socket.on("userOnline", handleOnline);
+    socket.on("userOffline", handleOffline);
+    // Hỏi trạng thái online khi mount
+    socket.emit("checkOnline", { userId: recipient.id }, (isOnline: boolean) => setOnline(isOnline));
+    return () => {
+      socket.off("userOnline", handleOnline);
+      socket.off("userOffline", handleOffline);
+    };
+  }, [recipient.id]);
 
   // Scroll xuống cuối nếu có tin nhắn mới thực sự
   useEffect(() => {
@@ -42,6 +79,22 @@ const MessageThreadComponent = ({
     return () => observer.disconnect();
   }, [messages.length]);
   
+  // Preload emoji picker
+  useEffect(() => {
+    setEmojiPickerMounted(true);
+  }, []);
+
+  // Đóng emoji picker khi click ra ngoài
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (emojiRef.current && !emojiRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +110,10 @@ const MessageThreadComponent = ({
     });
   };
 
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setNewMessage((prev) => prev + emojiData.emoji);
+  };
+
   return (
     <div className="flex h-full flex-col rounded-2xl border bg-gradient-to-br from-white via-gray-50 to-emerald-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 shadow-lg">
       {/* Header */}
@@ -69,11 +126,6 @@ const MessageThreadComponent = ({
             height={56}
             className="rounded-full border-2 border-emerald-100 shadow-md group-hover:scale-105 transition-transform duration-200"
           />
-          <span
-            className={`absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-white dark:border-gray-900 ${
-              recipient.online ? "bg-emerald-500" : "bg-gray-400"
-            }`}
-          ></span>
         </div>
         <div>
           <h3 className="font-bold text-lg text-gray-900 dark:text-white group-hover:underline cursor-pointer">
@@ -82,11 +134,11 @@ const MessageThreadComponent = ({
           <div className="flex items-center gap-2 mt-1">
             <span
               className={`h-2 w-2 rounded-full ${
-                recipient.online ? "bg-emerald-500" : "bg-gray-400"
+                online ? "bg-emerald-500" : "bg-gray-400"
               }`}
             ></span>
             <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              {recipient.online ? "Online" : "Offline"}
+              {online ? "Online" : "Offline"}
             </span>
           </div>
         </div>
@@ -94,7 +146,7 @@ const MessageThreadComponent = ({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-transparent custom-scrollbar">
-        {messages.length === 0 ? (
+        {filteredMessages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center">
             <div className="mb-4 rounded-full bg-gray-100 p-4 dark:bg-gray-800">
               <Send className="h-8 w-8 text-gray-400" />
@@ -106,7 +158,7 @@ const MessageThreadComponent = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {messages.map((message, index) => {
+            {filteredMessages.map((message, index) => {
               const isMe = message.sender_clerk_id !== recipient.id;
               return (
                 <div
@@ -161,49 +213,36 @@ const MessageThreadComponent = ({
 
       {/* Input */}
       <div className="border-t p-4 bg-white/90 dark:bg-gray-900/90 rounded-b-2xl">
-        <form onSubmit={handleSend} className="flex gap-3 items-center">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 hover:bg-emerald-100 dark:hover:bg-gray-800"
-                >
-                  <Paperclip className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Đính kèm file</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <form onSubmit={handleSend} className="flex gap-3 items-center relative">
           <Input
             type="text"
-            placeholder="Nhập tin nhắn..."
+            placeholder="Type a message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             className="flex-1 rounded-full border-2 border-gray-200 focus:border-emerald-500 px-4 py-2 text-base bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:focus:border-emerald-500 transition"
             autoComplete="off"
           />
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 hover:bg-emerald-100 dark:hover:bg-gray-800"
-                >
-                  <Smile className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Thêm emoji</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="relative" ref={emojiRef}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="shrink-0 hover:bg-emerald-100 dark:hover:bg-gray-800"
+              onClick={() => setShowEmojiPicker((v) => !v)}
+              tabIndex={-1}
+            >
+              <Smile className="h-5 w-5" />
+            </Button>
+            {/* Preload emoji picker, chỉ hiển thị khi showEmojiPicker */}
+            {emojiPickerMounted && (
+              <div
+                className="absolute bottom-full right-0 z-50"
+                style={{ display: showEmojiPicker ? "block" : "none" }}
+              >
+                <EmojiPicker onEmojiClick={handleEmojiClick} autoFocusSearch={false} />
+              </div>
+            )}
+          </div>
           <Button
             type="submit"
             disabled={!newMessage.trim()}

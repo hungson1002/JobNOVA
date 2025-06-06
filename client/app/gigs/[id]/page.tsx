@@ -599,7 +599,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                       onClick={scrollToReviews}
                       className="ml-1 text-gray-600 hover:text-emerald-600 transition-colors"
                     >
-                      ({ratingSummary?.total || 156})
+                      ({typeof ratingSummary?.total === 'number' ? ratingSummary.total : 0})
                     </button>
                   </div>
                   <span className="text-gray-300">|</span>
@@ -618,6 +618,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     name={chatWindows[0].name}
                     status={"Online"}
                     onClick={() => setShowChatBubble(true)}
+                    userId={gig?.seller_clerk_id}
                   />
                 )}
                 {showChatBubble && (
@@ -629,6 +630,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     <ChatBubble
                       key={chatWindows[0].userId}
                       userId={userId || ""}
+                      recipientId={gig?.seller_clerk_id}
                       messages={messagesMap[chatKey] || []}
                       avatar={chatWindows[0].avatar}
                       name={chatWindows[0].name}
@@ -786,7 +788,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                     <div className="flex items-center">
                       <span className="text-2xl font-bold">{ratingSummary.average}</span>
                       <span className="ml-2 text-sm text-gray-500">
-                        ({ratingSummary.total} reviews for this Gig)
+                        ({typeof ratingSummary?.total === 'number' ? ratingSummary.total : 0} reviews for this Gig)
                       </span>
                     </div>
                     <div className="flex items-center">
@@ -911,7 +913,7 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
             </div>
 
             {/* Render ReviewForm */}
-            {isSignedIn && userOrder && !userReview && user?.id !== gig?.seller_clerk_id && (
+            {isSignedIn && userOrder && !userOrder.review && user?.id !== gig?.seller_clerk_id && (
               <div className="my-8">
                 <ReviewForm orderId={userOrder.id} gigId={Number(gigId)} buyerInfo={{
                   name: user?.fullName || user?.username || 'User',

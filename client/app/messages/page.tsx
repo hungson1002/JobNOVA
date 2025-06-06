@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, memo, useMemo } from "react";
+import { useState, useEffect, memo, useMemo, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { fetchUser } from "@/lib/api";
 import { useMessages, Message } from "@/hooks/useMessages";
@@ -19,95 +19,88 @@ function MessagesPage() {
   });
   const [initialLoading, setInitialLoading] = useState(true);
   const searchParams = useSearchParams();
+  const [firstTicket, setFirstTicket] = useState<any>(null);
+  const [showList, setShowList] = useState(true); // responsive: show/hide list
 
-const messageParams = useMemo(() => {
-  if (!selectedTicket || !userId) return null;
-  // Xác định id người đối diện (otherId)
-  let otherId = null;
-  if (selectedTicket.is_direct) {
-    otherId = selectedTicket.buyer_clerk_id === userId
-      ? selectedTicket.seller_clerk_id
-      : selectedTicket.buyer_clerk_id;
-  }
-  return {
-    orderId: selectedTicket.order_id ?? null,
-    receiverId: otherId,
-    isDirect: selectedTicket.is_direct ?? false,
-  };
-}, [selectedTicket, userId]);
-
-const {
-  tickets,
-  messagesMap,
-  loading,
-  error,
-  sendMessage,
-  fetchMessagesData,
-  fetchTicketsData,
-  markMessagesAsRead,
-  setTickets,
-} = useMessages(messageParams || {});
-
-// Xác định key của hội thoại hiện tại giống hệt logic trong handleNewMessage
-const key = messageParams
-  ? messageParams.isDirect && messageParams.receiverId
-    ? `direct_${messageParams.receiverId}`
-    : messageParams.orderId
-    ? `order_${messageParams.orderId}`
-    : ""
-  : "";
-
-const messages = messagesMap[key] || [];
-
-useEffect(() => {
-  const type = searchParams.get("type");
-  const id = searchParams.get("id");
-
-  if (tickets.length > 0 && !selectedTicket) {
-    let foundTicket = null;
-    if (type === "direct") {
-      foundTicket = tickets.find(t => {
-        const otherUser = t.buyer_clerk_id === userId ? t.seller_clerk_id : t.buyer_clerk_id;
-        return otherUser === id;
-      });
-    } else if (type === "order") {
-      foundTicket = tickets.find(t => String(t.order_id) === id);
+  const messageParams = useMemo(() => {
+    if (!selectedTicket || !userId) return null;
+    // Xác định id người đối diện (otherId)
+    let otherId = null;
+    if (selectedTicket.is_direct) {
+      otherId = selectedTicket.buyer_clerk_id === userId
+        ? selectedTicket.seller_clerk_id
+        : selectedTicket.buyer_clerk_id;
     }
+    return {
+      orderId: selectedTicket.order_id ?? null,
+      receiverId: otherId,
+      isDirect: selectedTicket.is_direct ?? false,
+    };
+  }, [selectedTicket, userId]);
 
-    if (foundTicket) {
-      setSelectedTicket(foundTicket);
-    } else if (!type && !id) {
-      setSelectedTicket(tickets[0]);
+  const {
+    tickets,
+    messagesMap,
+    loading,
+    error,
+    sendMessage,
+    fetchMessagesData,
+    fetchTicketsData,
+    markMessagesAsRead,
+    setTickets,
+  } = useMessages(messageParams || {});
+
+  // Xác định key của hội thoại hiện tại giống hệt logic trong handleNewMessage
+  const key = messageParams
+    ? messageParams.isDirect && messageParams.receiverId
+      ? `direct_${messageParams.receiverId}`
+      : messageParams.orderId
+      ? `order_${messageParams.orderId}`
+      : ""
+    : "";
+
+  const messages = messagesMap[key] || [];
+
+  useEffect(() => {
+    // Ưu tiên direct nếu có ?seller trên URL
+    const sellerParam = searchParams.get('seller');
+    if (sellerParam && tickets.length > 0) {
+      // Tìm direct ticket với seller này
+      const directTicket = tickets.find(t => t.is_direct && (t.buyer_clerk_id === sellerParam || t.seller_clerk_id === sellerParam));
+      if (directTicket) {
+        setSelectedTicket(directTicket);
+        setShowList(false);
+        return;
+      } else {
+        // Nếu chưa có, tạo ticket tạm thời để chat trực tiếp
+        const tempTicket = {
+          ticket_id: `direct_${userId}_${sellerParam}`,
+          order_id: null,
+          buyer_clerk_id: userId,
+          seller_clerk_id: sellerParam,
+          order_status: null,
+          status: 'open',
+          last_message: null,
+          message_count: 0,
+          unread_count: 0,
+          is_direct: true,
+        };
+        setSelectedTicket(tempTicket);
+        setShowList(false);
+        return;
+      }
     }
-  }
-  // Nếu đã có selectedTicket thì không làm gì cả, kể cả tickets thay đổi
-}, [tickets, userId, selectedTicket, searchParams.get("type"), searchParams.get("id")]);
+    if (!selectedTicket && firstTicket) {
+      setSelectedTicket(firstTicket);
+    }
+    // Nếu đã có selectedTicket thì không làm gì cả, kể cả tickets thay đổi
+  }, [firstTicket, selectedTicket, searchParams, tickets, userId]);
 
   useEffect(() => {
     if (!loading) {
       setInitialLoading(false);
     }
   }, [loading]);
-
-  useEffect(() => {
-    if (tickets.length > 0 && !selectedTicket) {
-      setSelectedTicket(tickets[0]);
-      const t = tickets[0];
-      if (t && userId) {
-        const isDirect = t.is_direct;
-        const receiverId = isDirect
-          ? t.buyer_clerk_id === userId
-            ? t.seller_clerk_id
-            : t.buyer_clerk_id
-          : null;
-        let key = isDirect && receiverId ? `direct_${receiverId}` : `order_${t.order_id}`;
-        if (!messagesMap[key]) {
-          if (isDirect && receiverId) fetchMessagesData(undefined, receiverId);
-          else fetchMessagesData(String(t.order_id), undefined);
-        }
-      }
-    }
-  }, [tickets, selectedTicket, userId]);
 
   useEffect(() => {
     const fetchRecipient = async () => {
@@ -154,32 +147,51 @@ useEffect(() => {
         <div className="text-gray-500 text-sm mb-4">No messages to display.</div>
       )}
 
-      <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-white lg:flex-row">
-        <MessageList
-          tickets={tickets}
-          selectedTicketId={selectedTicketId}
-          onSelectTicket={setSelectedTicket}
-          userId={userId}
-        />
-        <div className="flex flex-1 flex-col h-full min-h-0 overflow-y-auto">
+      <div className="flex flex-1 min-h-0 overflow-hidden rounded-lg border bg-white lg:flex-row relative">
+        {/* MessageList responsive */}
+        <div className={`h-full w-full md:w-auto md:block ${selectedTicket && !showList ? 'hidden' : 'block'} fixed md:static inset-0 z-30 bg-white md:bg-transparent transition-all duration-200`}>
+          <MessageList
+            tickets={tickets}
+            selectedTicketId={selectedTicketId}
+            onSelectTicket={(ticket) => {
+              setSelectedTicket(ticket);
+              setShowList(false); // ẩn list khi chọn hội thoại trên mobile
+            }}
+            userId={userId}
+            setFirstTicket={setFirstTicket}
+            messagesMap={messagesMap}
+          />
+        </div>
+        {/* MessageThread responsive */}
+        <div className={`flex flex-1 flex-col h-full min-h-0 overflow-y-auto ${selectedTicket ? 'block' : 'hidden'} md:block`}>
           {selectedTicket ? (
-            <MessageThread
-              messages={messages}
-              recipient={recipientInfo}
-              onSendMessage={async (content) => {
-                const receiverId = selectedTicket.is_direct
-                  ? selectedTicket.buyer_clerk_id === userId
-                    ? selectedTicket.seller_clerk_id
-                    : selectedTicket.buyer_clerk_id
-                  : selectedTicket.seller_clerk_id;
-                await sendMessage(
-                  content,
-                  userId,
-                  receiverId,
-                  selectedTicket.order_id ? String(selectedTicket.order_id) : undefined
-                );
-              }}
-            />
+            <div className="relative h-full">
+              {/* Nút back trên mobile */}
+              <button
+                className="md:hidden absolute top-2 left-2 z-40 bg-white rounded-full shadow p-2 border border-gray-200"
+                onClick={() => setShowList(true)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <MessageThread
+                messages={messages}
+                recipient={recipientInfo}
+                userId={userId}
+                onSendMessage={async (content) => {
+                  const receiverId = selectedTicket.is_direct
+                    ? selectedTicket.buyer_clerk_id === userId
+                      ? selectedTicket.seller_clerk_id
+                      : selectedTicket.buyer_clerk_id
+                    : selectedTicket.seller_clerk_id;
+                  await sendMessage(
+                    content,
+                    userId,
+                    receiverId,
+                    selectedTicket.order_id ? String(selectedTicket.order_id) : undefined
+                  );
+                }}
+              />
+            </div>
           ) : (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <div className="mb-4 rounded-full bg-gray-100 p-6">

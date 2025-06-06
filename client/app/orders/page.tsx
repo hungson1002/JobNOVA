@@ -272,7 +272,7 @@ function OrderCard({
   };
 
   const handleMessageSeller = () => {
-    router.push(`/messages?order=${order.id}&seller=${order.seller_clerk_id}`);
+    router.push(`/messages?seller=${order.seller_clerk_id}`);
   };
 
   const getStatusBadge = (status: string) => {

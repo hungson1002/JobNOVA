@@ -50,8 +50,8 @@ export const createReview = async (req, res, next) => {
       // 1. Lưu notification vào DB
       const notification = await models.Notification.create({
         clerk_id: gig.seller_clerk_id,
-        title: "Bạn có đánh giá mới",
-        message: `Gig của bạn vừa nhận được đánh giá ${rating} sao.`,
+        title: "New review received",
+        message: `Your gig has received a new review with ${rating} stars.`,
         is_read: false,
         gig_id,
         notification_type: "review",
@@ -358,6 +358,25 @@ export const updateSellerResponse = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Only the seller can update the response" });
     }
     await review.update({ sellerResponse });
+    // Gửi thông báo cho reviewer
+    try {
+      const reviewerId = review.reviewer_clerk_id;
+      const gigId = review.gig_id;
+      const gigTitle = review.gig?.title || "The gig you reviewed";
+      const notification = await models.Notification.create({
+        clerk_id: reviewerId,
+        title: "Seller replied to your review",
+        message: `The seller has replied to your review for gig '${gigTitle}'.`,
+        is_read: false,
+        gig_id: gigId,
+        notification_type: "review_reply",
+      });
+      if (req.io) {
+        req.io.to(reviewerId).emit("new_notification", notification);
+      }
+    } catch (notifyErr) {
+      console.error("Error sending notification to reviewer:", notifyErr);
+    }
     console.log(`Seller response updated: reviewId=${id}`);
     return res.status(200).json({ success: true, message: "Seller response updated successfully", review });
   } catch (error) {

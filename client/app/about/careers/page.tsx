@@ -72,21 +72,21 @@ export default function CareersPage() {
   ]
 
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="container mx-auto px-4 py-8 sm:py-12">
       {/* Hero Section */}
-      <section className="mb-16 text-center">
-        <h1 className="text-4xl font-bold mb-6">Join Our Team</h1>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+      <section className="mb-8 sm:mb-16 text-center">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-4 sm:mb-6">Join Our Team</h1>
+        <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-6 sm:mb-8">
           Help us change how the world works together. Explore opportunities to grow your career at JobNOVA.
         </p>
-        <div className="relative max-w-xl mx-auto">
+        <div className="relative max-w-xl mx-auto px-4 sm:px-0">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
           <Input placeholder="Search for jobs..." className="pl-10 h-12" />
         </div>
       </section>
 
       {/* Why JobNOVA Section */}
-      <section className="mb-16 grid md:grid-cols-2 gap-12 items-center">
+      <section className="mb-8 sm:mb-16 grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 items-center">
         <div className="rounded-lg overflow-hidden">
           <img
             src="/banner/banner-career.jpg?height=400&width=600"

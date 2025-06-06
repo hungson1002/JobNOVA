@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Loader2 } from "lucide-react";
+import { Eye, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@clerk/nextjs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -19,12 +19,115 @@ interface Report {
   description?: string;
 }
 
+// Add Pagination component
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const maxVisiblePages = 5;
+  let visiblePages = pages;
+  if (totalPages > maxVisiblePages) {
+    const start = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    const end = Math.min(totalPages, start + maxVisiblePages - 1);
+    visiblePages = pages.slice(start - 1, end);
+  }
+  return (
+    <div className="flex flex-col gap-2 py-4 border-t bg-gray-50/50">
+      <div className="flex justify-center">
+        <span className="text-sm font-medium text-gray-600">
+          Page {currentPage} of {totalPages}
+        </span>
+      </div>
+      <div className="flex items-center justify-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="h-8 w-8 p-0 hover:bg-gray-100"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        {visiblePages[0] > 1 && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(1)}
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+            >
+              1
+            </Button>
+            {visiblePages[0] > 2 && (
+              <span className="px-2 text-gray-500">...</span>
+            )}
+          </>
+        )}
+        {visiblePages.map((page) => (
+          <Button
+            key={page}
+            variant={currentPage === page ? "default" : "outline"}
+            size="sm"
+            onClick={() => onPageChange(page)}
+            className={`h-8 w-8 p-0 ${
+              currentPage === page
+                ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                : "hover:bg-gray-100"
+            }`}
+          >
+            {page}
+          </Button>
+        ))}
+        {visiblePages[visiblePages.length - 1] < totalPages && (
+          <>
+            {visiblePages[visiblePages.length - 1] < totalPages - 1 && (
+              <span className="px-2 text-gray-500">...</span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(totalPages)}
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+            >
+              {totalPages}
+            </Button>
+          </>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="h-8 w-8 p-0 hover:bg-gray-100"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function ManageReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const { getToken } = useAuth()
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Pagination state
+  const PAGE_SIZE = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => { setCurrentPage(1); }, [reports]);
+  const totalPages = Math.max(1, Math.ceil(reports.length / PAGE_SIZE));
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const reportsToShow = reports.slice(startIdx, startIdx + PAGE_SIZE);
+
   useEffect(() => {
     async function fetchReports() {
       try {
@@ -76,7 +179,7 @@ export default function ManageReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.length > 0 ? reports.map(report => (
+                  {reportsToShow.length > 0 ? reportsToShow.map(report => (
                     <TableRow key={report.id} className="hover:bg-emerald-50 transition-all">
                       <TableCell className="py-3 px-6 text-base">{report.id}</TableCell>
                       <TableCell className="py-3 px-6">
@@ -117,6 +220,11 @@ export default function ManageReportsPage() {
                   )}
                 </TableBody>
               </Table>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </CardContent>
