@@ -220,129 +220,138 @@ export default function ManageUsers() {
         </div>
       </div>
       {/* Data Table */}
-      <Card className="rounded-2xl border-2 border-gray-100">
+      <Card className="rounded-3xl border-2 border-gray-100 shadow-xl hover:shadow-2xl transition-shadow duration-300">
         <CardContent className="p-0">
           <div className="p-6">
-            <div className="overflow-x-auto">
-              <Table className="min-w-full">
-                <TableHeader>
-                  <TableRow className="bg-gray-50 dark:bg-gray-900">
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[180px]">User ID</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[150px]">Username</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[200px]">Roles</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Country</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[150px]">Registration Date</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[100px]">Status</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 w-[100px] text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    Array.from({ length: pageSize }).map((_, idx) => (
-                      <TableRow key={idx} className="hover:bg-muted/50">
-                        <TableCell><div className="h-5 w-32 animate-pulse rounded bg-muted"></div></TableCell>
-                        <TableCell><div className="h-5 w-24 animate-pulse rounded bg-muted"></div></TableCell>
-                        <TableCell><div className="h-5 w-32 animate-pulse rounded bg-muted"></div></TableCell>
-                        <TableCell><div className="h-5 w-24 animate-pulse rounded bg-muted"></div></TableCell>
-                        <TableCell><div className="h-5 w-28 animate-pulse rounded bg-muted"></div></TableCell>
-                        <TableCell><div className="h-5 w-16 animate-pulse rounded bg-muted"></div></TableCell>
-                        <TableCell><div className="flex justify-end"><div className="h-8 w-8 animate-pulse rounded bg-muted"></div></div></TableCell>
-                      </TableRow>
-                    ))
-                  ) : paginatedUsers.length > 0 ? (
-                    paginatedUsers.map((user) => (
-                      <TableRow key={user.id} className="hover:bg-emerald-50 transition-all">
-                        <TableCell className="py-3 px-6 font-medium">{user.clerk_id}</TableCell>
-                        <TableCell className="py-3 px-6">
-                          <span className="font-medium text-emerald-600">{user.username || "N/A"}</span>
-                        </TableCell>
-                        <TableCell className="py-3 px-6">
-                          <div className="flex flex-wrap gap-1 items-center">
-                            {user.user_roles.map((role) => (
-                              <Badge
-                                key={role}
-                                className={
-                                  role === "admin"
-                                    ? "bg-emerald-600 text-white px-2 py-0.5"
+            {isLoading ? (
+              <div className="animate-pulse space-y-4">
+                <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table className="min-w-full rounded-2xl overflow-hidden shadow-md">
+                  <TableHeader>
+                    <TableRow className="bg-emerald-50 dark:bg-emerald-900">
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 dark:text-gray-200 w-[180px]">User ID</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 dark:text-gray-200 w-[150px]">Username</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 dark:text-gray-200 w-[200px]">Roles</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 dark:text-gray-200">Country</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 dark:text-gray-200 w-[150px]">Registration Date</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 dark:text-gray-200 w-[100px]">Status</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 dark:text-gray-200 w-[100px] text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      Array.from({ length: pageSize }).map((_, idx) => (
+                        <TableRow key={idx} className="hover:bg-muted/50">
+                          <TableCell><div className="h-5 w-32 animate-pulse rounded bg-muted"></div></TableCell>
+                          <TableCell><div className="h-5 w-24 animate-pulse rounded bg-muted"></div></TableCell>
+                          <TableCell><div className="h-5 w-32 animate-pulse rounded bg-muted"></div></TableCell>
+                          <TableCell><div className="h-5 w-24 animate-pulse rounded bg-muted"></div></TableCell>
+                          <TableCell><div className="h-5 w-28 animate-pulse rounded bg-muted"></div></TableCell>
+                          <TableCell><div className="h-5 w-16 animate-pulse rounded bg-muted"></div></TableCell>
+                          <TableCell><div className="flex justify-end"><div className="h-8 w-8 animate-pulse rounded bg-muted"></div></div></TableCell>
+                        </TableRow>
+                      ))
+                    ) : paginatedUsers.length > 0 ? (
+                      paginatedUsers.map((user) => (
+                        <TableRow key={user.id} className="hover:bg-emerald-50 transition-all">
+                          <TableCell className="py-3 px-6 font-medium">{user.clerk_id}</TableCell>
+                          <TableCell className="py-3 px-6">
+                            <span className="font-medium text-emerald-600">{user.username || "N/A"}</span>
+                          </TableCell>
+                          <TableCell className="py-3 px-6">
+                            <div className="flex flex-wrap gap-1 items-center">
+                              {user.user_roles.map((role) => (
+                                <Badge
+                                  key={role}
+                                  className={
+                                    role === "admin"
+                                      ? "bg-emerald-600 text-white px-2 py-0.5"
+                                      : role === "employer"
+                                      ? "bg-blue-100 text-blue-700 px-2 py-0.5"
+                                      : "bg-gray-200 text-gray-700 px-2 py-0.5"
+                                  }
+                                >
+                                  {role === "admin"
+                                    ? "Admin"
                                     : role === "employer"
-                                    ? "bg-blue-100 text-blue-700 px-2 py-0.5"
-                                    : "bg-gray-200 text-gray-700 px-2 py-0.5"
-                                }
-                              >
-                                {role === "admin"
-                                  ? "Admin"
-                                  : role === "employer"
-                                  ? "Employer"
-                                  : "Seeker"}
-                              </Badge>
-                            ))}
+                                    ? "Employer"
+                                    : "Seeker"}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-3 px-6">{user.country}</TableCell>
+                          <TableCell className="py-3 px-6">{new Date(user.registration_date).toLocaleDateString()}</TableCell>
+                          <TableCell className="py-3 px-6">
+                            {user.is_banned ? (
+                              <Badge className="bg-red-100 text-red-700 px-2 py-0.5">Banned</Badge>
+                            ) : (
+                              <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-0.5">Active</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-3 px-6 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted rounded-full">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-[180px] rounded-xl">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleViewDetails(user.id)}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className={user.is_banned ? "text-emerald-600" : "text-red-600"}
+                                  onClick={() => handleBanUser(user.clerk_id)}
+                                >
+                                  {user.is_banned ? (
+                                    <>
+                                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                                      Unban User
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Ban className="mr-2 h-4 w-4" />
+                                      Ban User
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onClick={() => handleDelete(user.id)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete User
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-32 text-center py-8 text-gray-400 text-lg">
+                          <div className="flex flex-col items-center justify-center">
+                            <User className="h-8 w-8 mb-2" />
+                            <p>No users found</p>
                           </div>
                         </TableCell>
-                        <TableCell className="py-3 px-6">{user.country}</TableCell>
-                        <TableCell className="py-3 px-6">{new Date(user.registration_date).toLocaleDateString()}</TableCell>
-                        <TableCell className="py-3 px-6">
-                          {user.is_banned ? (
-                            <Badge className="bg-red-100 text-red-700 px-2 py-0.5">Banned</Badge>
-                          ) : (
-                            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-0.5">Active</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-3 px-6 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted rounded-full">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-[180px] rounded-xl">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleViewDetails(user.id)}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className={user.is_banned ? "text-emerald-600" : "text-red-600"}
-                                onClick={() => handleBanUser(user.clerk_id)}
-                              >
-                                {user.is_banned ? (
-                                  <>
-                                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                                    Unban User
-                                  </>
-                                ) : (
-                                  <>
-                                    <Ban className="mr-2 h-4 w-4" />
-                                    Ban User
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => handleDelete(user.id)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-32 text-center py-8 text-gray-400 text-lg">
-                        <div className="flex flex-col items-center justify-center">
-                          <User className="h-8 w-8 mb-2" />
-                          <p>No users found</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
             {/* Pagination */}
             {!isLoading && filteredUsers.length > 0 && (
               <div className="mt-6 space-y-4">

@@ -7,7 +7,7 @@ import requireAuth from '../middleware/requireAuth.js';
 const router = express.Router();
 
 // Add JSON parsing middleware
-router.use(express.json());
+//router.use(express.json());
 
 // Webhook từ Clerk
 router.post('/', express.raw({ type: 'application/json' }), handleClerkWebhook);
