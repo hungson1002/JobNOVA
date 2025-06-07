@@ -616,7 +616,13 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                 {!showChatBubble && (
                   <ChatPrompt
                     avatar={chatWindows[0].avatar}
-                    name={chatWindows[0].name}
+                    name={
+                      [gig?.seller?.firstname, gig?.seller?.lastname].filter(Boolean).join(" ").trim()
+                        || gig?.seller?.username
+                        || gig?.seller?.name
+                        || chatWindows[0].name
+                        || "Seller"
+                    }
                     status={"Online"}
                     onClick={() => setShowChatBubble(true)}
                     userId={gig?.seller_clerk_id}
@@ -634,7 +640,13 @@ export default function GigDetailPage({ params }: { params: Promise<PageParams> 
                       recipientId={gig?.seller_clerk_id}
                       messages={messagesMap[chatKey] || []}
                       avatar={chatWindows[0].avatar}
-                      name={chatWindows[0].name}
+                      name={
+                        [gig?.seller?.firstname, gig?.seller?.lastname].filter(Boolean).join(" ").trim()
+                          || gig?.seller?.username
+                          || gig?.seller?.name
+                          || chatWindows[0].name
+                          || "Seller"
+                      }
                       onSendMessage={(content) => handleSendMessage(content, chatWindows[0].userId)}
                       onClose={() => setShowChatBubble(false)}
                       isMinimized={false}

@@ -14,10 +14,11 @@ import {
 import { Message } from "@/hooks/useMessages";
 import io from "socket.io-client";
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import Link from "next/link";
 
 interface MessageThreadProps {
   messages: Message[];
-  recipient: { id: string; name: string; avatar: string; online?: boolean };
+  recipient: { id: string; name: string; avatar: string; online?: boolean; username?: string };
   onSendMessage: (content: string) => void;
   userId: string;
 }
@@ -128,8 +129,13 @@ const MessageThreadComponent = ({
           />
         </div>
         <div>
-          <h3 className="font-bold text-lg text-gray-900 dark:text-white group-hover:underline cursor-pointer">
-            {recipient.name}
+          <h3 className="font-bold text-lg">
+            <Link
+              href={recipient.username ? `/users/${recipient.username}` : (recipient.id ? `/users/${recipient.id}` : "#")}
+              className="text-black-700 dark:text-emerald-300 cursor-pointer hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors"
+            >
+              {recipient.name}
+            </Link>
           </h3>
           <div className="flex items-center gap-2 mt-1">
             <span

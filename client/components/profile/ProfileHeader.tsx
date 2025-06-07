@@ -5,10 +5,12 @@ import SidebarEdit from './SidebarEdit';
 import { useAuth } from '@clerk/nextjs';
 import { toast } from 'sonner';
 import React, { useState, useEffect } from 'react';
+import { ReportModal } from "@/components/report-modal";
 
 interface ProfileHeaderProps {
   profile: any;
   isOwner: boolean;
+  onContactMe?: () => void;
 }
 
 const roleBadgeColor = (role: string) => {
@@ -17,7 +19,7 @@ const roleBadgeColor = (role: string) => {
   return 'bg-gray-100 text-gray-700 border border-gray-300';
 };
 
-export default function ProfileHeader({ profile, isOwner }: ProfileHeaderProps) {
+export default function ProfileHeader({ profile, isOwner, onContactMe }: ProfileHeaderProps) {
   // Xác định role buyer
   const isBuyer = Array.isArray(profile.user_roles)
     ? profile.user_roles.includes('buyer') || profile.user_roles.includes('seeker')
@@ -193,14 +195,21 @@ export default function ProfileHeader({ profile, isOwner }: ProfileHeaderProps) 
             </Button>
         ) : (
           <>
-            <Button className="bg-emerald-500 hover:bg-emerald-600">
+            <Button className="bg-emerald-500 hover:bg-emerald-600" onClick={onContactMe}>
               <MessageSquare className="mr-2 h-4 w-4" />
               Contact Me
             </Button>
-            <Button variant="outline">
-              <Flag className="mr-2 h-4 w-4" />
-              Report User
-            </Button>
+            <ReportModal
+              type="user"
+              id={profile.clerk_id}
+              name={profile.firstname || profile.username || profile.name || "User"}
+              trigger={
+                <Button variant="outline">
+                  <Flag className="mr-2 h-4 w-4" />
+                  Report User
+                </Button>
+              }
+            />
           </>
         )}
       </div>

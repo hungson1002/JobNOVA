@@ -21,6 +21,9 @@ interface ServiceCardProps {
     seller: {
       name: string
       avatar: string
+      firstname?: string
+      lastname?: string
+      username?: string
     }
     rating: number
     reviewCount: number
@@ -196,9 +199,6 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
               )}
             </div>
           )}
-
-          {/* Badge online realtime */}
-          <div className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white dark:ring-gray-800 ${sellerOnline ? "bg-green-500" : "bg-gray-300"}`}></div>
         </div>
 
         {/* Content */}
@@ -208,16 +208,34 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
               <div className="relative h-6 w-6 overflow-hidden rounded-full ring-2 ring-white ring-offset-1 dark:ring-gray-800">
                 <Image
                   src={service.seller.avatar || "/placeholder.svg"}
-                  alt={service.seller.name}
+                  alt={
+                    service.seller.name ||
+                    service.seller.username ||
+                    [service.seller.firstname, service.seller.lastname].filter(Boolean).join(" ") ||
+                    "Seller Avatar"
+                  }
                   width={24}
                   height={24}
                   className="h-full w-full object-cover"
                 />
               </div>
-              {/* Badge online realtime */}
-              <div className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white dark:ring-gray-800 ${sellerOnline ? "bg-green-500" : "bg-gray-300"}`}></div>
             </div>
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{service.seller.name}</span>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
+              {(() => {
+                const seller = service.seller as any;
+                if (seller.firstname || seller.lastname) {
+                  return `${seller.firstname || ''} ${seller.lastname || ''}`.trim();
+                } else if (seller.username) {
+                  return seller.username;
+                } else if (seller.name) {
+                  return seller.name;
+                } else if (seller.id) {
+                  return seller.id;
+                } else {
+                  return "User";
+                }
+              })()}
+            </span>
           </div>
 
           <h3 className="mb-2 line-clamp-2 text-sm font-semibold leading-snug text-gray-900 dark:text-white">

@@ -14,6 +14,10 @@ import EducationSection from '@/components/profile/EducationSection';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import SkillsSection from '@/components/profile/SkillsSection';
 import LanguageSection from '@/components/profile/LanguageSection';
+import { ChatPrompt } from "@/components/message/ChatPrompt";
+import { ChatBubble } from "@/components/message/chatBubble";
+import { useMessages } from "@/hooks/useMessages";
+import { ReportModal } from "@/components/report-modal";
 
 async function getUser(username: string): Promise<any> {
   try {
@@ -81,6 +85,9 @@ export default function SellerProfilePage() {
   const [profileUser, setProfileUser] = useState<any>(null);
   const [portfolios, setPortfolios] = useState<any[]>([]);
   const [gigs, setGigs] = useState<any[]>([]);
+  const [showChatBubble, setShowChatBubble] = useState(false);
+  const { user: currentUser } = useUser();
+  const { messages = [] } = useMessages({ receiverId: profileUser?.clerk_id, isDirect: true });
 
   useEffect(() => {
     getUser(username).then(setProfileUser);
@@ -124,8 +131,62 @@ export default function SellerProfilePage() {
       <div className="container px-4">
         {/* Profile Header */}
         <div className="mb-8">
-          <ProfileHeader profile={profileUser} isOwner={isOwner} />
+          <ProfileHeader
+            profile={profileUser}
+            isOwner={isOwner}
+            onContactMe={isOwner ? undefined : () => setShowChatBubble(true)}
+          />
+          {/* Report User Modal */}
+          {!isOwner && (
+            <div className="absolute right-8 top-8">
+              <ReportModal
+                type="user"
+                id={profileUser.clerk_id}
+                name={profileUser.firstname || profileUser.username || profileUser.name || "User"}
+                trigger={
+                  <button className="w-full flex items-center gap-2 px-4 py-2 rounded bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 font-medium shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a5 5 0 00-10 0v2a2 2 0 00-2 2v7a2 2 0 002 2h10a2 2 0 002-2v-7a2 2 0 00-2-2z" /></svg>
+                    Report User
+                  </button>
+                }
+              />
+            </div>
+          )}
         </div>
+        {/* ChatPrompt và ChatBubble */}
+        {!isOwner && !showChatBubble && (
+          <ChatPrompt
+            avatar={profileUser.avatar || "/placeholder.svg"}
+            name={
+              [profileUser.firstname, profileUser.lastname].filter(Boolean).join(" ").trim()
+                || profileUser.username
+                || profileUser.name
+                || "Seller"
+            }
+            userId={profileUser.clerk_id}
+            onClick={() => setShowChatBubble(true)}
+          />
+        )}
+        {!isOwner && showChatBubble && (
+          <ChatBubble
+            userId={currentUser?.id || ""}
+            recipientId={profileUser.clerk_id}
+            messages={messages}
+            avatar={profileUser.avatar || "/placeholder.svg"}
+            name={
+              [profileUser.firstname, profileUser.lastname].filter(Boolean).join(" ").trim()
+                || profileUser.username
+                || profileUser.name
+                || "Seller"
+            }
+            onSendMessage={() => {}}
+            onClose={() => {
+              setShowChatBubble(false);
+            }}
+            isMinimized={false}
+            onToggleMinimize={() => {}}
+          />
+        )}
 
         {/* Profile Content */}
         <div className="flex flex-col gap-8 lg:flex-row">
@@ -177,7 +238,16 @@ export default function SellerProfilePage() {
                   {gigs.length > 0 ? (
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                       {gigs.map((gig: any) => (
-                        <ServiceCard key={gig.id} service={gig} />
+                        <ServiceCard key={gig.id} service={{
+                          ...gig,
+                          seller: {
+                            ...gig.seller,
+                            id: gig.seller_clerk_id,
+                            firstname: gig.seller?.firstname,
+                            lastname: gig.seller?.lastname,
+                            username: gig.seller?.username,
+                          }
+                        }} />
                       ))}
                     </div>
                   ) : (

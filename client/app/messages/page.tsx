@@ -11,7 +11,7 @@ import { useSearchParams } from "next/navigation";
 function MessagesPage() {
   const { userId, isLoaded } = useAuth();
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
-  const [recipientInfo, setRecipientInfo] = useState<{ id: string; name: string; avatar: string; online?: boolean }>({
+  const [recipientInfo, setRecipientInfo] = useState<{ id: string; name: string; avatar: string; online?: boolean; username?: string }>({
     id: "",
     name: "User",
     avatar: "/placeholder.svg",
@@ -113,18 +113,17 @@ function MessagesPage() {
         const user = await fetchUser(recipientId, "");
         setRecipientInfo({
           id: recipientId,
-          name: user.lastname && user.firstname
-            ? `${user.lastname} ${user.firstname}`
-            : user.firstname || user.lastname || user.username || "User",
-          avatar: user.avatar || "/placeholder.svg",
-          online: true,
+          name: (user.lastname && user.firstname) ? `${user.lastname} ${user.firstname}` : (user.firstname || user.lastname || user.username || "User"),
+          avatar: (user.avatar) ? (user.avatar) : ("/placeholder"),
+          online: (user.online) ? (user.online) : (false),
+          username: (user.username) ? (user.username) : (undefined)
         });
-      } catch {
-        setRecipientInfo({ id: recipientId, name: "User", avatar: "/placeholder.svg", online: true });
+      } catch (err) {
+        setRecipientInfo({ id: (recipientId), name: ("User"), avatar: ("/placeholder"), online: (false), username: (undefined) });
       }
     };
     fetchRecipient();
-  }, [selectedTicket, userId]);
+  }, [selectedTicket, (userId)]);
 
   const selectedTicketId = useMemo(() => {
     if (!selectedTicket) return null;

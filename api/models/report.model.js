@@ -19,6 +19,7 @@ const defineReportModel = (sequelize) => {
       },
       target_id: {
         type: DataTypes.INTEGER,
+        type: DataTypes.STRING(255),
         allowNull: false,
       },
       reason: {

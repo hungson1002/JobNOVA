@@ -40,6 +40,9 @@ export interface Gig {
     name: string;
     avatar: string;
     level: string;
+    firstname?: string;
+    lastname?: string;
+    username?: string;
   };
   rating?: number;
   review_count?: number;
@@ -239,6 +242,9 @@ function mapGigToServiceCard(gig: Gig): any {
       id: gig.seller_clerk_id,
       name: gig.seller?.name || gig.seller_clerk_id || "Người dùng",
       avatar: gig.seller?.avatar || "/placeholder.svg",
+      firstname: gig.seller?.firstname,
+      lastname: gig.seller?.lastname,
+      username: gig.seller?.username,
     },
     rating: typeof gig.rating === "number" ? gig.rating : 0,
     reviewCount: typeof gig.review_count === "number" ? gig.review_count : 0,

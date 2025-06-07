@@ -244,7 +244,14 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId,
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center justify-between">
                       <h3 className="font-bold text-base truncate text-gray-900 dark:text-white">
-                        {isDirect ? userInfo.name : `Order #${ticket.order_id}`}
+                        {isDirect ? (
+                          <span
+                            className="text-black-700 dark:text-emerald-300 cursor-pointer"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {userInfo.name}
+                          </span>
+                        ) : `Order #${ticket.order_id}`}
                       </h3>
                       <span className="text-xs text-gray-400 font-semibold">
                         {lastMsg?.sent_at ? formatDate(lastMsg.sent_at) : ""}
@@ -309,7 +316,14 @@ export function MessageList({ tickets, selectedTicketId, onSelectTicket, userId,
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center justify-between">
                       <h3 className="font-bold text-base truncate text-gray-900 dark:text-white">
-                        {isDirect ? userInfo.name : `Order #${ticket.order_id}`}
+                        {isDirect ? (
+                          <span
+                            className="text-emerald-700 dark:text-emerald-300 cursor-pointer"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {userInfo.name}
+                          </span>
+                        ) : `Order #${ticket.order_id}`}
                       </h3>
                       <span className="text-xs text-gray-400 font-semibold">
                         {lastMsg?.sent_at ? formatDate(lastMsg.sent_at) : ""}
