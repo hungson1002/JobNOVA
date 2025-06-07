@@ -27,12 +27,13 @@ export default function SidebarEdit({
   const [form, setForm] = useState(() => Object.fromEntries(fields.map(f => [f.name, f.value || ""])));
   const [loading, setLoading] = useState(false);
 
-  // Reset form state when fields or open changes
+  // Reset form state chỉ khi open chuyển từ false -> true
   useEffect(() => {
     if (open) {
       setForm(Object.fromEntries(fields.map(f => [f.name, f.value || ""])));
     }
-  }, [fields, open]);
+    // eslint-disable-next-line
+  }, [open]);
 
   if (!open) return null;
 
