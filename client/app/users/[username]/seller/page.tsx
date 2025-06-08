@@ -236,7 +236,7 @@ export default function SellerProfilePage() {
                 <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
                   <h2 className="mb-4 text-xl font-bold">Gigs</h2>
                   {gigs.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                       {gigs.map((gig: any) => (
                         <ServiceCard key={gig.id} service={{
                           ...gig,

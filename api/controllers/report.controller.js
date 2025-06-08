@@ -27,6 +27,42 @@ export const createReport = async (req, res) => {
 // Lấy tất cả report (admin)
 export const getAllReports = async (req, res) => {
   try {
+    const type = req.query.type;
+    if (type === "user") {
+      // Lấy report user
+      const reports = await models.Report.findAll({
+        where: { target_type: "user" },
+        order: [["created_at", "DESC"]],
+        include: [
+          {
+            model: models.User,
+            as: "targetUser",
+            attributes: ["firstname", "lastname", "username"],
+            required: false,
+          },
+          {
+            model: models.User,
+            as: "reporter",
+            attributes: ["firstname", "lastname"],
+            required: false,
+          },
+        ],
+      });
+      const formatted = reports.map((r) => ({
+        id: r.id,
+        target_user: r.targetUser
+          ? `${r.targetUser.firstname ?? ""} ${r.targetUser.lastname ?? ""}`.trim() || r.targetUser.username
+          : r.target_id,
+        report_reason: r.reason,
+        description: r.description,
+        reported_by: r.reporter
+          ? `${r.reporter.firstname ?? ""} ${r.reporter.lastname ?? ""}`.trim()
+          : r.reporter_clerk_id,
+        report_date: r.created_at,
+        status: "pending",
+      }));
+      return res.status(200).json({ success: true, reports: formatted });
+    }
     const reports = await models.Report.findAll({
       where: {
         target_type: "service", // lọc chỉ report gig

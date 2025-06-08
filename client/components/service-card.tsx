@@ -48,7 +48,7 @@ export function ServiceCard({ service, showCategory = false }: ServiceCardProps)
 
   const mediaList = service.gig_images && service.gig_images.length > 0 ? service.gig_images : [service.image]
   const currentMedia = mediaList[currentIndex]
-  const isVideo = currentMedia.endsWith(".mp4") || currentMedia.includes("/video/")
+  const isVideo = typeof currentMedia === "string" && (currentMedia.endsWith(".mp4") || currentMedia.includes("/video/"))
 
   useEffect(() => {
     if (!sellerId) return

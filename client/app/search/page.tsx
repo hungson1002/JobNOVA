@@ -26,6 +26,7 @@ interface Gig {
   category?: {
     id: number;
     name: string;
+    slug?: string;
   };
   job_type_id: number;
   title: string;
@@ -59,10 +60,14 @@ function mapGigToServiceCard(gig: Gig): any {
     : ["/placeholder.svg"];
 
   let categoryName = "";
+  let categorySlug = "";
+  let categoryId = "";
   if (typeof gig.category === "string") {
     categoryName = gig.category;
   } else if (typeof gig.category === "object" && gig.category?.name) {
     categoryName = gig.category.name;
+    categorySlug = gig.category.slug || "";
+    categoryId = gig.category.id ? String(gig.category.id) : "";
   }
 
   // Badge logic
@@ -95,6 +100,8 @@ function mapGigToServiceCard(gig: Gig): any {
     rating: typeof gig.rating === "number" ? gig.rating : 0,
     reviewCount: typeof gig.review_count === "number" ? gig.review_count : 0,
     category: categoryName || "Uncategorized",
+    categorySlug,
+    categoryId,
     deliveryTime: gig.delivery_time,
     badges,
     isSaved: false,
@@ -261,7 +268,12 @@ export default function SearchPage() {
 
     // Filter by category
     if (selectedCategory) {
-      services = services.filter((service) => service.category === selectedCategory)
+      services = services.filter(
+        (service) =>
+          service.categorySlug === selectedCategory ||
+          service.categoryId === selectedCategory ||
+          service.category === selectedCategory
+      )
     }
 
     // Filter by price range
@@ -277,18 +289,6 @@ export default function SearchPage() {
         if (deliveryTime.includes(3) && service.deliveryTime <= 3 && service.deliveryTime > 1) return true
         if (deliveryTime.includes(7) && service.deliveryTime <= 7 && service.deliveryTime > 3) return true
         if (deliveryTime.includes(0)) return true // Any time
-        return false
-      })
-    }
-
-    // Filter by seller level
-    if (sellerLevels.length > 0) {
-      services = services.filter((service) => {
-        const level = service.seller.level.toLowerCase()
-        if (sellerLevels.includes("top_rated") && level.includes("top rated")) return true
-        if (sellerLevels.includes("level_2") && level.includes("level 2")) return true
-        if (sellerLevels.includes("level_1") && level.includes("level 1")) return true
-        if (sellerLevels.includes("new_seller") && level.includes("new")) return true
         return false
       })
     }
@@ -410,9 +410,6 @@ export default function SearchPage() {
     } else if (type === "seller") {
       setSellerLevels([])
     }
-
-    // Update URL with remaining filters
-    setTimeout(updateSearchParams, 0)
   }
   
   // Apply filters button click
@@ -477,8 +474,8 @@ export default function SearchPage() {
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Filters Sidebar - responsive */}
-        <div className={`fixed inset-0 z-40 bg-black/30 transition-all duration-200 ${showFilter ? 'block' : 'hidden'} lg:hidden`} onClick={() => setShowFilter(false)} />
-        <div className={`fixed top-0 left-0 bottom-0 z-50 w-80 max-w-full bg-white dark:bg-gray-900 shadow-lg p-5 transition-transform duration-200 ${showFilter ? 'translate-x-0' : '-translate-x-full'} lg:static lg:w-72 lg:max-w-xs lg:translate-x-0 lg:block rounded-xl`}>
+        <div className={`fixed inset-0 z-1 bg-black/30 transition-all duration-200 ${showFilter ? 'block' : 'hidden'} lg:hidden`} onClick={() => setShowFilter(false)} />
+        <div className={`fixed top-16 left-0 bottom-0 z-1 w-80 max-w-full bg-white dark:bg-gray-900 shadow-lg p-5 transition-transform duration-200 ${showFilter ? 'translate-x-0' : '-translate-x-full'} lg:static lg:w-72 lg:max-w-xs lg:translate-x-0 lg:block rounded-xl`}>
           <div className="flex items-center justify-between mb-5 lg:mb-5">
             <h2 className="text-lg font-semibold dark:text-white">Filters</h2>
             <Button

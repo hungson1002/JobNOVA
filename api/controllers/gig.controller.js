@@ -255,7 +255,7 @@ export const updateGig = async (req, res, next) => {
       country,
       status,
       ...(topRateValue !== undefined ? { isToprate: topRateValue } : {}),
-      gig_images: req.body.gig_images ? JSON.stringify(req.body.gig_images) : null,
+      ...(req.body.gig_images !== undefined ? { gig_images: JSON.stringify(req.body.gig_images) } : {}),
     });
     console.log(`Gig updated: id=${id}, isToprate=${topRateValue}`);
     const gigData = gig.toJSON();
@@ -271,73 +271,106 @@ export const updateGig = async (req, res, next) => {
 export const deleteGig = async (req, res, next) => {
   try {
     const { id } = req.params;
+    console.log(`[DeleteGig] Starting deletion for gig ${id}`);
+
     const gig = await models.Gig.findByPk(id);
     if (!gig) {
+      console.log(`[DeleteGig] Gig ${id} not found`);
       return res.status(404).json({ success: false, message: 'Gig not found' });
     }
+    console.log(`[DeleteGig] Found gig ${id}: ${gig.title}`);
 
-    // Kiểm tra xem có orders nào chưa completed không
-    const pendingOrders = await models.Order.findAll({
-      where: {
-        gig_id: id,
-        order_status: {
-          [Op.notIn]: ['completed', 'cancelled']
+    // Kiểm tra xem có orders nào không
+    try {
+      const orders = await models.Order.findAll({
+        where: {
+          gig_id: id
         }
-      }
-    });
-
-    if (pendingOrders.length > 0) {
-      return res.status(409).json({ 
-        success: false, 
-        message: 'Cannot delete gig because it has pending orders. Please complete or cancel all orders first.' 
       });
+      console.log(`[DeleteGig] Found ${orders.length} orders for gig ${id}`);
+
+      if (orders.length > 0) {
+        console.log(`[DeleteGig] Cannot delete gig ${id} - has ${orders.length} orders`);
+        return res.status(409).json({ 
+          success: false, 
+          message: 'Cannot delete this gig because it has associated orders. Please complete or cancel all orders first.' 
+        });
+      }
+    } catch (orderError) {
+      console.error(`[DeleteGig] Error checking orders:`, orderError);
+      throw orderError;
     }
 
+    console.log(`[DeleteGig] Starting to delete related records for gig ${id}`);
     // Xóa các bản ghi liên quan trước
-    await Promise.all([
-      models.Review.destroy({ where: { gig_id: id } }),
-      models.SavedGig.destroy({ where: { gig_id: id } }),
-      models.GigFaq.destroy({ where: { gig_id: id } }),
-      models.GigExtra.destroy({ where: { gig_id: id } }),
-      models.GigSkill.destroy({ where: { gig_id: id } }),
-      models.GigTranslation.destroy({ where: { gig_id: id } }),
-      models.GigView.destroy({ where: { gig_id: id } }),
-      models.GigViewCount.destroy({ where: { gig_id: id } }),
-      models.Notification.destroy({ where: { gig_id: id } }),
-      models.AdminLog.destroy({ where: { gig_id: id } })
-    ]);
+    try {
+      const deletePromises = [
+        models.Review.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted reviews for gig ${id}`)),
+        models.SavedGig.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted saved gigs for gig ${id}`)),
+        models.GigFaq.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted FAQs for gig ${id}`)),
+        models.GigSkill.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted skills for gig ${id}`)),
+        models.GigTranslation.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted translations for gig ${id}`)),
+        models.GigView.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted views for gig ${id}`)),
+        models.GigViewCount.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted view counts for gig ${id}`)),
+        models.Notification.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted notifications for gig ${id}`)),
+        models.AdminLog.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted admin logs for gig ${id}`)),
+        models.Portfolio.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted portfolio items for gig ${id}`)),
+        models.GigRequirementTemplate.destroy({ where: { gig_id: id } }).then(() => console.log(`[DeleteGig] Deleted requirement templates for gig ${id}`))
+      ];
+
+      await Promise.all(deletePromises);
+      console.log(`[DeleteGig] Successfully deleted all related records for gig ${id}`);
+    } catch (deleteError) {
+      console.error(`[DeleteGig] Error deleting related records:`, deleteError);
+      throw deleteError;
+    }
 
     // Lưu lại seller_clerk_id và title trước khi xóa gig
     const sellerClerkId = gig.seller_clerk_id;
     const gigTitle = gig.title;
     const reason = req.body?.reason || "";
 
-    // Sau đó xóa gig
-    await gig.destroy();
-    console.log(`Gig deleted: id=${id}`);
+    console.log(`[DeleteGig] Attempting to delete gig ${id}`);
+    try {
+      // Sau đó xóa gig
+      await gig.destroy();
+      console.log(`[DeleteGig] Successfully deleted gig ${id}`);
+    } catch (destroyError) {
+      console.error(`[DeleteGig] Error during gig.destroy():`, destroyError);
+      throw destroyError;
+    }
 
     // Chỉ gửi notification nếu người xóa là admin
     const roles = req.user?.user_roles || [];
     if (roles.includes("admin") && sellerClerkId && req.io) {
       try {
+        console.log(`[DeleteGig] Creating notification for seller ${sellerClerkId}`);
         const notification = await models.Notification.create({
           clerk_id: sellerClerkId,
           title: "Your gig has been deleted",
           message: `Your gig \"${gigTitle}\" was deleted by an admin.${reason ? ` Reason: ${reason}` : ""}`,
           is_read: false,
-          gig_id: null, // gig đã bị xóa nên để null
+          gig_id: null,
           notification_type: "system",
         });
         req.io.to(sellerClerkId).emit("new_notification", notification);
+        console.log(`[DeleteGig] Successfully sent notification to seller ${sellerClerkId}`);
       } catch (err) {
-        console.error("Error creating notification after gig delete:", err.message);
+        console.error("[DeleteGig] Error creating notification:", err);
+        // Không throw error ở đây vì notification không phải là phần quan trọng
       }
     }
 
     return res.status(200).json({ success: true, message: 'Gig deleted successfully' });
   } catch (error) {
-    console.error('Error deleting gig:', error.message);
-    return res.status(500).json({ success: false, message: 'Error deleting gig', error: error.message });
+    console.error('[DeleteGig] Error:', error);
+    console.error('[DeleteGig] Error stack:', error.stack);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting gig', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+    });
   }
 };
 

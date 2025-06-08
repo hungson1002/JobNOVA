@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@clerk/nextjs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface Report {
   id: number;
@@ -17,6 +18,9 @@ interface Report {
   report_date: string;
   status: string;
   description?: string;
+  target_user?: string;
+  target_id?: string;
+  reason?: string;
 }
 
 // Add Pagination component
@@ -115,28 +119,29 @@ function Pagination({
 
 export default function ManageReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
+  const [userReports, setUserReports] = useState<Report[]>([]);
   const { getToken } = useAuth()
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("service");
 
   // Pagination state
   const PAGE_SIZE = 5;
   const [currentPage, setCurrentPage] = useState(1);
-  useEffect(() => { setCurrentPage(1); }, [reports]);
-  const totalPages = Math.max(1, Math.ceil(reports.length / PAGE_SIZE));
+  useEffect(() => { setCurrentPage(1); }, [reports, userReports, tab]);
+  const totalPages = Math.max(1, Math.ceil((tab === "service" ? reports.length : userReports.length) / PAGE_SIZE));
   const startIdx = (currentPage - 1) * PAGE_SIZE;
-  const reportsToShow = reports.slice(startIdx, startIdx + PAGE_SIZE);
+  const reportsToShow = (tab === "service" ? reports : userReports).slice(startIdx, startIdx + PAGE_SIZE);
 
   useEffect(() => {
     async function fetchReports() {
       try {
         setLoading(true);
         const token = await getToken()
+        // Fetch gig/service reports
         const res = await fetch("http://localhost:8800/api/reports", {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
         const data = await res.json()
         setReports(Array.isArray(data.reports) ? data.reports : [])
@@ -149,14 +154,41 @@ export default function ManageReportsPage() {
     fetchReports()
   }, [getToken])
 
+  useEffect(() => {
+    if (tab !== "user") return;
+    async function fetchUserReports() {
+      try {
+        setLoading(true);
+        const token = await getToken();
+        // Giả định API hỗ trợ query type=user
+        const res = await fetch("http://localhost:8800/api/reports?type=user", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        setUserReports(Array.isArray(data.reports) ? data.reports : []);
+      } catch (err) {
+        setUserReports([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchUserReports();
+  }, [tab, getToken]);
+
   return (
     <div className="container max-w-5xl mx-auto px-4 py-10">
       <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-extrabold text-emerald-700 tracking-tight mb-2">Report Management</h1>
-          <p className="text-lg text-gray-500">View and manage all reported gigs/services</p>
+          <p className="text-lg text-gray-500">View and manage all reported gigs/services and users</p>
         </div>
       </div>
+      <Tabs value={tab} onValueChange={setTab} className="mb-6">
+        <TabsList>
+          <TabsTrigger value="service">Gig/Service Reports</TabsTrigger>
+          <TabsTrigger value="user">User Reports</TabsTrigger>
+        </TabsList>
+      </Tabs>
       <Card className="rounded-2xl border-2 border-gray-100">
         <CardContent className="p-0">
           {loading ? (
@@ -166,60 +198,107 @@ export default function ManageReportsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table className="min-w-full">
-                <TableHeader>
-                  <TableRow className="bg-gray-50 dark:bg-gray-900">
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">ID</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Gig/Service</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Seller</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Reason</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Reporter</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Date</TableHead>
-                    <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reportsToShow.length > 0 ? reportsToShow.map(report => (
-                    <TableRow key={report.id} className="hover:bg-emerald-50 transition-all">
-                      <TableCell className="py-3 px-6 text-base">{report.id}</TableCell>
-                      <TableCell className="py-3 px-6">
-                        {report.gig_title === 'N/A' ? (
-                          <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Deleted</span>
-                        ) : report.gig_title}
-                      </TableCell>
-                      <TableCell className="py-3 px-6">
-                        {report.seller === 'Unknown' ? (
-                          <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Unknown</span>
-                        ) : report.seller}
-                      </TableCell>
-                      <TableCell className="py-3 px-6">
-                        <span className="inline-block px-2 py-0.5 text-xs rounded bg-amber-100 text-amber-700 font-semibold capitalize">
-                          {report.report_reason}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-3 px-6">{report.reported_by}</TableCell>
-                      <TableCell className="py-3 px-6">{new Date(report.report_date).toLocaleDateString()}</TableCell>
-                      <TableCell className="py-3 px-6 text-right">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => { setSelectedReport(report); setShowDetail(true); }}
-                          className="rounded-full border-emerald-200 hover:bg-emerald-100"
-                          aria-label="View Details"
-                        >
-                          <Eye className="h-5 w-5 text-emerald-600" />
-                        </Button>
-                      </TableCell>
+              {tab === "service" ? (
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 dark:bg-gray-900">
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">ID</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Gig/Service</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Seller</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Reason</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Reporter</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Date</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 text-right">Actions</TableHead>
                     </TableRow>
-                  )) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-400 text-lg">
-                        No reports found
-                      </TableCell>
+                  </TableHeader>
+                  <TableBody>
+                    {reportsToShow.length > 0 ? reportsToShow.map(report => (
+                      <TableRow key={report.id} className="hover:bg-emerald-50 transition-all">
+                        <TableCell className="py-3 px-6 text-base">{report.id}</TableCell>
+                        <TableCell className="py-3 px-6">
+                          {report.gig_title === 'N/A' ? (
+                            <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Deleted</span>
+                          ) : report.gig_title}
+                        </TableCell>
+                        <TableCell className="py-3 px-6">
+                          {report.seller === 'Unknown' ? (
+                            <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Unknown</span>
+                          ) : report.seller}
+                        </TableCell>
+                        <TableCell className="py-3 px-6">
+                          <span className="inline-block px-2 py-0.5 text-xs rounded bg-amber-100 text-amber-700 font-semibold capitalize">
+                            {report.report_reason}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-3 px-6">{report.reported_by}</TableCell>
+                        <TableCell className="py-3 px-6">{new Date(report.report_date).toLocaleDateString()}</TableCell>
+                        <TableCell className="py-3 px-6 text-right">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={() => { setSelectedReport(report); setShowDetail(true); }}
+                            className="rounded-full border-emerald-200 hover:bg-emerald-100"
+                            aria-label="View Details"
+                          >
+                            <Eye className="h-5 w-5 text-emerald-600" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-400 text-lg">
+                          No reports found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              ) : (
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 dark:bg-gray-900">
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">ID</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">User</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Reason</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Reporter</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700">Date</TableHead>
+                      <TableHead className="py-4 px-6 text-lg font-bold text-gray-700 text-right">Actions</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {reportsToShow.length > 0 ? reportsToShow.map(report => (
+                      <TableRow key={report.id} className="hover:bg-emerald-50 transition-all">
+                        <TableCell className="py-3 px-6 text-base">{report.id}</TableCell>
+                        <TableCell className="py-3 px-6">{report.target_user || report.target_id || "Unknown"}</TableCell>
+                        <TableCell className="py-3 px-6">
+                          <span className="inline-block px-2 py-0.5 text-xs rounded bg-amber-100 text-amber-700 font-semibold capitalize">
+                            {report.report_reason || report.reason}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-3 px-6">{report.reported_by}</TableCell>
+                        <TableCell className="py-3 px-6">{new Date(report.report_date).toLocaleDateString()}</TableCell>
+                        <TableCell className="py-3 px-6 text-right">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            onClick={() => { setSelectedReport(report); setShowDetail(true); }}
+                            className="rounded-full border-emerald-200 hover:bg-emerald-100"
+                            aria-label="View Details"
+                          >
+                            <Eye className="h-5 w-5 text-emerald-600" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-gray-400 text-lg">
+                          {userReports.length === 0 ? "No user reports found or API not supported" : "No reports found"}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -243,27 +322,34 @@ export default function ManageReportsPage() {
                 <span className="text-gray-500">ID:</span>
                 <span>{selectedReport.id}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">Gig/Service:</span>
-                <span>
-                  {selectedReport.gig_title === 'N/A' ? (
-                    <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Deleted</span>
-                  ) : selectedReport.gig_title}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">Seller:</span>
-                <span>
-                  {selectedReport.seller === 'Unknown' ? (
-                    <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Unknown</span>
-                  ) : selectedReport.seller}
-                </span>
-              </div>
+              {tab === "service" ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Gig/Service:</span>
+                    <span>
+                      {selectedReport.gig_title === 'N/A' ? (
+                        <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Deleted</span>
+                      ) : selectedReport.gig_title}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Seller:</span>
+                    <span>
+                      {selectedReport.seller === 'Unknown' ? (
+                        <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-200 text-gray-500 font-semibold">Unknown</span>
+                      ) : selectedReport.seller}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">User:</span>
+                  <span>{selectedReport.target_user || selectedReport.target_id || "Unknown"}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Reason:</span>
-                <span className="inline-block px-2 py-0.5 text-xs rounded bg-amber-100 text-amber-700 font-semibold capitalize">
-                  {selectedReport.report_reason}
-                </span>
+                <span>{selectedReport.report_reason || selectedReport.reason}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Reporter:</span>
@@ -273,12 +359,12 @@ export default function ManageReportsPage() {
                 <span className="text-gray-500">Date:</span>
                 <span>{new Date(selectedReport.report_date).toLocaleDateString()}</span>
               </div>
-              <div>
-                <span className="text-gray-500 font-medium">Description:</span>
-                <div className="whitespace-pre-line text-gray-700 bg-gray-50 rounded p-2 border border-gray-200 min-h-[32px] mt-1">
-                  {selectedReport.description ? selectedReport.description : <span className="text-gray-400">N/A</span>}
+              {selectedReport.description && (
+                <div>
+                  <span className="text-gray-500">Description:</span>
+                  <div className="mt-1 text-gray-700 whitespace-pre-line">{selectedReport.description}</div>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </DialogContent>

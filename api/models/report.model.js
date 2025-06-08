@@ -57,6 +57,14 @@ const defineReportModel = (sequelize) => {
       as: "reporter",
       constraints: false,
     });
+
+    // Thêm association tới user bị report (target user)
+    Report.belongsTo(models.User, {
+      foreignKey: "target_id",
+      targetKey: "clerk_id",
+      as: "targetUser",
+      constraints: false,
+    });
   };
 
   return Report;

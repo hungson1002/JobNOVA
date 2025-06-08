@@ -16,14 +16,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Search, Filter, MoreHorizontal, Shield, User, Star, CheckCircle, Eye, Trash2, Ban, CheckCircle2, X } from "lucide-react"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -56,13 +55,14 @@ export default function ManageUsers() {
   const [users, setUsers] = useState<User[]>([])
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [userIdToDelete, setUserIdToDelete] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [isLoading, setIsLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [statusFilter, setStatusFilter] = useState("all")
-  const { toast } = useToast()
 
   const fetchUsers = async () => {
     setIsLoading(true)
@@ -71,10 +71,8 @@ export default function ManageUsers() {
       const data = await response.json()
       setUsers(data)
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch users",
-        variant: "destructive",
+      toast.error("Failed to fetch users", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred"
       })
     } finally {
       setIsLoading(false)
@@ -86,28 +84,35 @@ export default function ManageUsers() {
   }, [])
 
   const handleDelete = async (userId: number) => {
-    if (!confirm("Are you sure you want to delete this user?")) return
+    setUserIdToDelete(userId)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!userIdToDelete) return
 
     try {
-      const response = await fetch(`http://localhost:8800/api/users/${userId}`, {
+      const response = await fetch(`http://localhost:8800/api/users/${userIdToDelete}`, {
         method: "DELETE",
       })
 
+      const data = await response.json()
+
       if (response.ok) {
-        toast({
-          title: "Success",
-          description: "User deleted successfully",
+        toast.success("User deleted successfully", {
+          description: data.message || "User and all related data have been successfully deleted"
         })
         fetchUsers() // Refresh the list
       } else {
-        throw new Error("Failed to delete user")
+        throw new Error(data.message || "Failed to delete user")
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete user",
-        variant: "destructive",
+      toast.error("Failed to delete user", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred"
       })
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setUserIdToDelete(null)
     }
   }
 
@@ -121,10 +126,8 @@ export default function ManageUsers() {
       setSelectedUser(user)
       setIsViewDialogOpen(true)
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch user details",
-        variant: "destructive",
+      toast.error("Failed to fetch user details", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred"
       })
     }
   }
@@ -134,21 +137,19 @@ export default function ManageUsers() {
       const response = await fetch(`http://localhost:8800/api/users/${clerkId}/ban`, {
         method: "PATCH",
       });
+      const data = await response.json();
+      
       if (response.ok) {
-        const data = await response.json();
-        toast({
-          title: "Success",
-          description: data.message,
+        toast.success("User status updated", {
+          description: data.message
         });
         fetchUsers(); // Refresh lại danh sách
       } else {
-        throw new Error("Failed to update user status");
+        throw new Error(data.message || "Failed to update user status");
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update user status",
-        variant: "destructive",
+      toast.error("Failed to update user status", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred"
       });
     }
   };
@@ -498,8 +499,13 @@ export default function ManageUsers() {
                   <h3 className="font-semibold text-sm text-gray-500">Languages</h3>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {selectedUser.languages && Array.isArray(selectedUser.languages) && selectedUser.languages.length > 0 ? (
-                      selectedUser.languages.map((lang: string) => (
-                        <Badge key={lang} className="bg-gray-100 text-gray-700 px-2 py-0.5">{lang}</Badge>
+                      selectedUser.languages.map((lang: any) => (
+                        <Badge key={typeof lang === 'string' ? lang : lang.name} className="bg-gray-100 text-gray-700 px-2 py-0.5">
+                          {typeof lang === 'string' ? lang : lang.name}
+                          {lang.level && (
+                            <span className="text-xs text-gray-400 ml-1">({lang.level})</span>
+                          )}
+                        </Badge>
                       ))
                     ) : (
                       <span className='text-gray-400 italic'>Not provided</span>
@@ -549,6 +555,38 @@ export default function ManageUsers() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md rounded-2xl border-2 border-red-100">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-red-700">
+              Delete User
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete this user? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteDialogOpen(false)
+                  setUserIdToDelete(null)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+              >
+                Delete User
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

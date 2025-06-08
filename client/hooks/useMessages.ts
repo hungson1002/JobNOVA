@@ -71,95 +71,6 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
     setUnreadCount(count);
   }, [tickets]);
 
-  // Join user room và lắng nghe event chỉ 1 lần
-  useEffect(() => {
-    if (!isLoaded || !userId) return;
-    messageSocket.emit("joinUser", { userId });
-    const handleNewMessage = (newMessage: Message) => {
-      const msg = (newMessage && (newMessage as any).message) ? (newMessage as any).message : newMessage;
-      if (!msg.id || !msg.sent_at) return;
-      if (msg.sender_clerk_id === userId || msg.receiver_clerk_id === userId) {
-        // Lấy id người đối diện
-        const otherId = msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id;
-        const key = msg.is_direct_message ? `direct_${otherId}` : `order_${msg.order_id}`;
-        setMessagesMap(prev => {
-          const exists = (prev[key] || []).some(m => m.id === msg.id);
-          if (exists) return prev;
-          return {
-            ...prev,
-            [key]: [...(prev[key] || []), msg]
-          };
-        });
-        setTickets((prev) => {
-          return prev.map((t) => {
-            if (
-              (msg.order_id && t.order_id === Number(msg.order_id)) ||
-              (!msg.order_id && t.is_direct && (t.buyer_clerk_id === msg.sender_clerk_id || t.seller_clerk_id === msg.sender_clerk_id))
-            ) {
-              if (t.last_message && (t.last_message as any).id === msg.id) return t;
-              const isSender = msg.sender_clerk_id === userId;
-              return {
-                ...t,
-                last_message: {
-                  message_content: msg.message_content,
-                  sent_at: msg.sent_at,
-                  is_read: isSender ? true : msg.is_read,
-                  receiver_clerk_id: msg.receiver_clerk_id,
-                  sender_clerk_id: msg.sender_clerk_id,
-                  id: msg.id,
-                },
-                unread_count: isSender ? 0 : (msg.receiver_clerk_id === userId && !msg.is_read ? (t.unread_count || 0) + 1 : t.unread_count),
-                message_count: (t.message_count || 0) + 1,
-              };
-            }
-            return t;
-          });
-        });
-      }
-    };
-    const handleMessagesRead = (data: { orderId?: string; receiverId?: string; messageIds: number[]; userId?: string }) => {
-      const { orderId, receiverId, messageIds, userId: readUserId } = data;
-      if (readUserId && readUserId !== userId) return; // Chỉ update nếu là user mình
-      setMessagesMap(prev => ({
-        ...prev,
-        [`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`]:
-          (prev[`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`] || []).map((m) =>
-            messageIds.includes(m.id) ? { ...m, is_read: true } : m
-          )
-      }));
-      setTickets((prev) => {
-        const updated = prev.map((t) => {
-          if (orderId && t.order_id === Number(orderId)) {
-            return {
-              ...t,
-              unread_count: 0,
-              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
-            };
-          }
-          if (
-            receiverId &&
-            t.is_direct &&
-            (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)
-          ) {
-            return {
-              ...t,
-              unread_count: 0,
-              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
-            };
-          }
-          return t;
-        });
-        return [...updated];
-      });
-    };
-    messageSocket.on("newMessage", handleNewMessage);
-    messageSocket.on("messagesRead", handleMessagesRead);
-    return () => {
-      messageSocket.off("newMessage", handleNewMessage);
-      messageSocket.off("messagesRead", handleMessagesRead);
-    };
-  }, [isLoaded, userId]);
-
   // Fetch tickets và direct messages
   const fetchTicketsData = useCallback(async () => {
     if (!userId) return;
@@ -235,6 +146,114 @@ export const useMessages = ({ orderId, receiverId, isDirect = false }: UseMessag
       setLoading(false);
     }
   }, [userId, getToken]);
+
+  // Join user room và lắng nghe event chỉ 1 lần
+  useEffect(() => {
+    if (!isLoaded || !userId) return;
+    messageSocket.emit("joinUser", { userId });
+    const handleNewMessage = (newMessage: Message) => {
+      const msg = (newMessage && (newMessage as any).message) ? (newMessage as any).message : newMessage;
+      if (!msg.id || !msg.sent_at) return;
+      if (msg.sender_clerk_id === userId || msg.receiver_clerk_id === userId) {
+        // Lấy id người đối diện
+        const otherId = msg.sender_clerk_id === userId ? msg.receiver_clerk_id : msg.sender_clerk_id;
+        const key = msg.is_direct_message ? `direct_${otherId}` : `order_${msg.order_id}`;
+        
+        // Cập nhật messagesMap
+        setMessagesMap(prev => {
+          const exists = (prev[key] || []).some(m => m.id === msg.id);
+          if (exists) return prev;
+          return {
+            ...prev,
+            [key]: [...(prev[key] || []), msg]
+          };
+        });
+
+        // Cập nhật tickets và unreadCount
+        setTickets((prev) => {
+          const updated = prev.map((t) => {
+            if (
+              (msg.order_id && t.order_id === Number(msg.order_id)) ||
+              (!msg.order_id && t.is_direct && (t.buyer_clerk_id === msg.sender_clerk_id || t.seller_clerk_id === msg.sender_clerk_id))
+            ) {
+              if (t.last_message && (t.last_message as any).id === msg.id) return t;
+              const isSender = msg.sender_clerk_id === userId;
+              return {
+                ...t,
+                last_message: {
+                  message_content: msg.message_content,
+                  sent_at: msg.sent_at,
+                  is_read: isSender ? true : msg.is_read,
+                  receiver_clerk_id: msg.receiver_clerk_id,
+                  sender_clerk_id: msg.sender_clerk_id,
+                  id: msg.id,
+                },
+                unread_count: isSender ? 0 : (msg.receiver_clerk_id === userId && !msg.is_read ? (t.unread_count || 0) + 1 : t.unread_count),
+                message_count: (t.message_count || 0) + 1,
+              };
+            }
+            return t;
+          });
+
+          // Fetch lại tickets từ BE để đảm bảo đồng bộ
+          fetchTicketsData();
+          
+          return updated;
+        });
+      }
+    };
+
+    const handleMessagesRead = (data: { orderId?: string; receiverId?: string; messageIds: number[]; userId?: string }) => {
+      const { orderId, receiverId, messageIds, userId: readUserId } = data;
+      if (readUserId && readUserId !== userId) return; // Chỉ update nếu là user mình
+      
+      // Cập nhật messagesMap
+      setMessagesMap(prev => ({
+        ...prev,
+        [`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`]:
+          (prev[`${orderId ? `order_${orderId}` : receiverId ? `direct_${receiverId}` : ''}`] || []).map((m) =>
+            messageIds.includes(m.id) ? { ...m, is_read: true } : m
+          )
+      }));
+
+      // Cập nhật tickets
+      setTickets((prev) => {
+        const updated = prev.map((t) => {
+          if (orderId && t.order_id === Number(orderId)) {
+            return {
+              ...t,
+              unread_count: 0,
+              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
+            };
+          }
+          if (
+            receiverId &&
+            t.is_direct &&
+            (t.buyer_clerk_id === receiverId || t.seller_clerk_id === receiverId)
+          ) {
+            return {
+              ...t,
+              unread_count: 0,
+              last_message: t.last_message ? { ...t.last_message, is_read: true } : t.last_message
+            };
+          }
+          return t;
+        });
+
+        // Fetch lại tickets từ BE để đảm bảo đồng bộ
+        fetchTicketsData();
+        
+        return updated;
+      });
+    };
+
+    messageSocket.on("newMessage", handleNewMessage);
+    messageSocket.on("messagesRead", handleMessagesRead);
+    return () => {
+      messageSocket.off("newMessage", handleNewMessage);
+      messageSocket.off("messagesRead", handleMessagesRead);
+    };
+  }, [isLoaded, userId, fetchTicketsData]);
 
   // Fetch messages
   const fetchMessagesData = useCallback(async (orderIdParam?: string, receiverIdParam?: string) => {

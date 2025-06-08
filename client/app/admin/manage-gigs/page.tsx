@@ -250,26 +250,44 @@ export default function ManageGigsPage() {
       toast.error("Please enter a reason for deletion!");
       return;
     }
-    let notificationOk = true;
     try {
-      // 1. Gửi notification trước (nếu cần, nhưng BE sẽ xử lý)
-      // 2. Xóa gig sau khi gửi notification
-      await fetch(`http://localhost:8800/api/gigs/${gigToDelete.id}`, {
+      const response = await fetch(`http://localhost:8800/api/gigs/${gigToDelete.id}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${await getToken()}`,
           "Content-Type": "application/json"
           },
-        body: JSON.stringify({ reason: deleteReason }) // Gửi lý do xóa lên BE
+        body: JSON.stringify({ reason: deleteReason })
       });
+      
+      const data = await response.json();
+      
+      if (response.status === 409) {
+        // Xử lý trường hợp có orders
+        toast.error("Cannot delete gig", {
+          description: data.message || "This gig has associated orders and cannot be deleted."
+        });
+        setDeleteDialogOpen(false);
+        setDeleteReason("");
+        setGigToDelete(null);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete gig');
+      }
+
       setGigs(prev => prev.filter(gig => gig.id !== gigToDelete.id));
       fetchCounts();
-      toast.success("Xóa thành công!");
+      toast.success("Gig deleted successfully");
       setDeleteDialogOpen(false);
       setDeleteReason("");
       setGigToDelete(null);
     } catch (error) {
-      toast.error("Xóa thất bại!");
+      console.error('Error deleting gig:', error);
+      toast.error("Failed to delete gig", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred"
+      });
     }
   };
 

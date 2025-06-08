@@ -3,6 +3,7 @@ import { handleClerkWebhook, banUser, updateUserProfile, addEducation, updateEdu
 import { models } from "../models/Sequelize-mysql.js";
 import { authenticateAndLoadUser } from '../middleware/getAuth.js';
 import requireAuth from '../middleware/requireAuth.js';
+import { Op } from 'sequelize';
 
 const router = express.Router();
 
@@ -49,14 +50,81 @@ router.get("/:clerk_id", async (req, res, next) => {
 // Delete user
 router.delete("/:id", async (req, res, next) => {
   try {
-    const user = await models.User.findByPk(req.params.id);
+    // Tìm user trong danh sách users để lấy clerk_id
+    const users = await models.User.findAll();
+    const user = users.find(u => u.id === parseInt(req.params.id));
+    
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found" 
+      });
     }
-    await user.destroy();
-    res.status(200).json({ message: "User deleted successfully" });
+
+    const clerk_id = user.clerk_id;
+    console.log(`[DeleteUser] Starting deletion for user ${clerk_id}`);
+
+    // Xóa các dữ liệu liên quan trước
+    try {
+      const deletePromises = [
+        models.SeekerSkill.destroy({ where: { clerk_id } }).then(() => console.log(`[DeleteUser] Deleted seeker skills for user ${clerk_id}`)),
+        models.SavedGig.destroy({ where: { clerk_id } }).then(() => console.log(`[DeleteUser] Deleted saved gigs for user ${clerk_id}`)),
+        models.Review.destroy({ where: { reviewer_clerk_id: clerk_id } }).then(() => console.log(`[DeleteUser] Deleted reviews for user ${clerk_id}`)),
+        models.Message.destroy({ 
+          where: { 
+            [Op.or]: [
+              { sender_clerk_id: clerk_id },
+              { receiver_clerk_id: clerk_id }
+            ]
+          }
+        }).then(() => console.log(`[DeleteUser] Deleted messages for user ${clerk_id}`)),
+        models.Payment.destroy({ where: { buyer_clerk_id: clerk_id } }).then(() => console.log(`[DeleteUser] Deleted payments for user ${clerk_id}`)),
+        models.ContactForm.destroy({ where: { clerk_id } }).then(() => console.log(`[DeleteUser] Deleted contact forms for user ${clerk_id}`)),
+        models.AdminLog.destroy({ 
+          where: { 
+            [Op.or]: [
+              { admin_clerk_id: clerk_id },
+              { target_clerk_id: clerk_id }
+            ]
+          }
+        }).then(() => console.log(`[DeleteUser] Deleted admin logs for user ${clerk_id}`)),
+        models.UserSearchHistory.destroy({ where: { clerk_id } }).then(() => console.log(`[DeleteUser] Deleted search history for user ${clerk_id}`)),
+        models.Notification.destroy({ where: { clerk_id } }).then(() => console.log(`[DeleteUser] Deleted notifications for user ${clerk_id}`)),
+        models.Portfolio.destroy({ where: { seller_clerk_id: clerk_id } }).then(() => console.log(`[DeleteUser] Deleted portfolio items for user ${clerk_id}`)),
+        models.Education.destroy({ where: { clerk_id } }).then(() => console.log(`[DeleteUser] Deleted education records for user ${clerk_id}`)),
+        models.Certification.destroy({ where: { clerk_id } }).then(() => console.log(`[DeleteUser] Deleted certifications for user ${clerk_id}`))
+      ];
+
+      await Promise.all(deletePromises);
+      console.log(`[DeleteUser] Successfully deleted all related records for user ${clerk_id}`);
+    } catch (deleteError) {
+      console.error(`[DeleteUser] Error deleting related records:`, deleteError);
+      throw deleteError;
+    }
+
+    // Sau đó xóa user
+    await models.User.destroy({
+      where: { clerk_id }
+    });
+    console.log(`[DeleteUser] Successfully deleted user ${clerk_id}`);
+
+    res.status(200).json({ 
+      success: true,
+      message: "User and all related data have been successfully deleted",
+      deletedUser: {
+        id: user.id,
+        clerk_id: user.clerk_id,
+        username: user.username || "N/A",
+        roles: user.user_roles
+      }
+    });
   } catch (err) {
-    next(err);
+    console.error('[DeleteUser] Error:', err);
+    res.status(500).json({ 
+      success: false,
+      message: "Error deleting user",
+      error: err.message
+    });
   }
 });
 
